@@ -1,3 +1,4 @@
+use tauri::Manager;
 use base64::{
     engine::general_purpose::URL_SAFE_NO_PAD,
     Engine as _,
@@ -57,6 +58,17 @@ use zip::ZipArchive;
 
 const ALPHACLIENT_VERSION: &str = "0.3.79";
 
+// Set this environment variable on the machine/build that distributes the launcher
+// to enable the live AlphaClient release manifest. If it is not configured,
+// the launcher safely continues with the installed client version.
+const ALPHACLIENT_UPDATE_MANIFEST_ENV: &str = "ALPHACLIENT_UPDATE_MANIFEST_URL";
+
+const ALPHACLIENT_VERSION_FILE: &str = "alpha-client-version.json";
+const ALPHACLIENT_UPDATE_ZIP_NAME: &str = "alphaclient-update.jar";
+const ALPHACLIENT_GITHUB_RELEASES_URL: &str = "https://api.github.com/repos/MsAlexTsuki/AlphaClient/releases?per_page=20";
+const ALPHACLIENT_OFFICIAL_MOD_JAR_NAME: &str = "AlphaClient.jar";
+const ALPHACLIENT_0_3_81_SHA256: &str = "fb2451cb5ce671a6f5b2f5229374ff1df02f0164eef83367d692f74cbb97fec2";
+
 const MINECRAFT_VERSION: &str = "1.8.9";
 
 const FORGE_VERSION: &str = "11.15.1.2318";
@@ -93,7 +105,6 @@ const MICROSOFT_TOKEN_URL: &str =
 const MICROSOFT_USERINFO_URL: &str =
     "https://graph.microsoft.com/oidc/userinfo";
 
-// XboxLive.signin is required for the Xbox Live authentication step.
 const MICROSOFT_SCOPES: &str =
     "XboxLive.signin openid profile email offline_access";
 
@@ -132,14 +143,32 @@ const MINECRAFT_PROFILE_URL: &str =
 
 #[derive(Clone, Debug, Serialize)]
 struct MicrosoftAccount {
-    // Echte Minecraft Java gebruikersnaam.
     name: String,
-
-    // Microsoft account e-mail.
     email: String,
-
-    // Minecraft UUID.
     uuid: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct InstalledAlphaClientVersion {
+    version: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct AlphaClientReleaseManifest {
+    version: String,
+    download_url: String,
+    sha256: String,
+    #[serde(default)]
+    changelog: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct AlphaClientUpdateInfo {
+    current_version: String,
+    latest_version: String,
+    update_available: bool,
+    update_configured: bool,
+    changelog: String,
 }
 
 
@@ -147,36 +176,29 @@ static MICROSOFT_ACCOUNT: OnceLock<
     Mutex<Option<MicrosoftAccount>>
 > = OnceLock::new();
 
-
 static MICROSOFT_ACCESS_TOKEN: OnceLock<
     Mutex<Option<String>>
 > = OnceLock::new();
-
 
 static MICROSOFT_REFRESH_TOKEN: OnceLock<
     Mutex<Option<String>>
 > = OnceLock::new();
 
-
 static XBOX_LIVE_TOKEN: OnceLock<
     Mutex<Option<String>>
 > = OnceLock::new();
-
 
 static XSTS_TOKEN: OnceLock<
     Mutex<Option<String>>
 > = OnceLock::new();
 
-
 static XBOX_USER_HASH: OnceLock<
     Mutex<Option<String>>
 > = OnceLock::new();
 
-
 static MINECRAFT_ACCESS_TOKEN: OnceLock<
     Mutex<Option<String>>
 > = OnceLock::new();
-
 
 static MINECRAFT_UUID: OnceLock<
     Mutex<Option<String>>
@@ -290,6 +312,10 @@ struct MicrosoftUserInfo {
 
     #[serde(default)]
     sub: Option<String>,
+
+    // PKCE/OIDC nonce.
+    #[serde(default)]
+    nonce: Option<String>,
 }
 
 
@@ -368,16 +394,58 @@ struct MinecraftEntitlement {
 }
 
 
-// Clear all in-memory credentials so failed logins cannot leave stale tokens.
+// ============================================================
+// CLEAR AUTH STATE
+// ============================================================
+
 fn clear_microsoft_auth_state() {
-    if let Ok(mut value) = microsoft_account_state().lock() { *value = None; }
-    if let Ok(mut value) = microsoft_access_token_state().lock() { *value = None; }
-    if let Ok(mut value) = microsoft_refresh_token_state().lock() { *value = None; }
-    if let Ok(mut value) = xbox_live_token_state().lock() { *value = None; }
-    if let Ok(mut value) = xsts_token_state().lock() { *value = None; }
-    if let Ok(mut value) = xbox_user_hash_state().lock() { *value = None; }
-    if let Ok(mut value) = minecraft_access_token_state().lock() { *value = None; }
-    if let Ok(mut value) = minecraft_uuid_state().lock() { *value = None; }
+    if let Ok(mut value) =
+        microsoft_account_state().lock()
+    {
+        *value = None;
+    }
+
+    if let Ok(mut value) =
+        microsoft_access_token_state().lock()
+    {
+        *value = None;
+    }
+
+    if let Ok(mut value) =
+        microsoft_refresh_token_state().lock()
+    {
+        *value = None;
+    }
+
+    if let Ok(mut value) =
+        xbox_live_token_state().lock()
+    {
+        *value = None;
+    }
+
+    if let Ok(mut value) =
+        xsts_token_state().lock()
+    {
+        *value = None;
+    }
+
+    if let Ok(mut value) =
+        xbox_user_hash_state().lock()
+    {
+        *value = None;
+    }
+
+    if let Ok(mut value) =
+        minecraft_access_token_state().lock()
+    {
+        *value = None;
+    }
+
+    if let Ok(mut value) =
+        minecraft_uuid_state().lock()
+    {
+        *value = None;
+    }
 }
 
 
@@ -389,17 +457,27 @@ fn clear_microsoft_auth_state() {
 async fn start_microsoft_login()
     -> Result<MicrosoftAccount, String>
 {
-    tauri::async_runtime::spawn_blocking(perform_microsoft_login)
-        .await
-        .map_err(|error| format!("Microsoft login task failed: {}", error))?
+    tauri::async_runtime::spawn_blocking(
+        perform_microsoft_login
+    )
+    .await
+    .map_err(|error| {
+        format!(
+            "Microsoft login task failed: {}",
+            error
+        )
+    })?
 }
 
 
 #[tauri::command]
-fn logout_microsoft() -> Result<(), String> {
+fn logout_microsoft()
+    -> Result<(), String>
+{
     clear_microsoft_auth_state();
     Ok(())
 }
+
 
 #[tauri::command]
 fn get_microsoft_account()
@@ -458,10 +536,13 @@ fn perform_microsoft_login()
         );
 
     // --------------------------------------------------------
-    // PKCE
+    // PKCE + STATE + NONCE
     // --------------------------------------------------------
 
     let state =
+        random_string(32);
+
+    let nonce =
         random_string(32);
 
     let code_verifier =
@@ -512,6 +593,10 @@ fn perform_microsoft_login()
         .append_pair(
             "state",
             state.as_str()
+        )
+        .append_pair(
+            "nonce",
+            nonce.as_str()
         )
         .append_pair(
             "code_challenge",
@@ -693,25 +778,7 @@ fn perform_microsoft_login()
         };
 
     // --------------------------------------------------------
-    // IMPORTANT:
-    //
-    // We do NOT send "success" to the browser here.
-    //
-    // The entire authentication chain must succeed first:
-    //
-    // Microsoft
-    //      ↓
-    // Xbox Live
-    //      ↓
-    // XSTS
-    //      ↓
-    // Minecraft Services
-    //      ↓
-    // Ownership
-    //      ↓
-    // Minecraft profile
-    //
-    // Only then do we send the success page.
+    // Complete authentication chain
     // --------------------------------------------------------
 
     let login_result:
@@ -719,7 +786,7 @@ fn perform_microsoft_login()
         (|| {
 
             // ------------------------------------------------
-            // Exchange authorization code
+            // Exchange authorization code using PKCE
             // ------------------------------------------------
 
             let token_response =
@@ -764,7 +831,7 @@ fn perform_microsoft_login()
             }
 
             // ------------------------------------------------
-            // Microsoft account information
+            // Microsoft ID token
             // ------------------------------------------------
 
             let id_token =
@@ -776,13 +843,14 @@ fn perform_microsoft_login()
                             .to_string()
                     })?;
 
-            // The Microsoft access token requested with XboxLive.signin
-            // is intended for Xbox authentication, not Microsoft Graph.
-            // Read display-only account details from the OIDC ID token instead
-            // of sending the Xbox-scoped access token to Graph's userinfo API.
+            // ------------------------------------------------
+            // Validate OIDC nonce
+            // ------------------------------------------------
+
             let microsoft_info =
                 get_microsoft_user_info_from_id_token(
-                    id_token
+                    id_token,
+                    &nonce
                 )?;
 
             // ------------------------------------------------
@@ -942,7 +1010,7 @@ fn perform_microsoft_login()
         })();
 
     // --------------------------------------------------------
-    // ONLY NOW tell the browser whether login succeeded.
+    // Browser response
     // --------------------------------------------------------
 
     match login_result {
@@ -1758,30 +1826,52 @@ fn exchange_authorization_code(
 
 
 // ============================================================
-// MICROSOFT USER INFO
+// MICROSOFT USER INFO / OIDC ID TOKEN
 // ============================================================
 
 fn get_microsoft_user_info_from_id_token(
-    id_token: &str
+    id_token: &str,
+    expected_nonce: &str
 ) -> Result<MicrosoftAccount, String>
 {
-    // OIDC ID tokens are JWTs. We decode the claims only to display the
-    // account label/email in the launcher. Authentication and Minecraft
-    // entitlement decisions must continue to use the Xbox/Minecraft tokens
-    // and their server responses, never these display-only claims.
-    let mut parts = id_token.split('.');
+    // JWT bestaat uit:
+    // header.payload.signature
 
-    let _header = parts.next().ok_or_else(|| {
-        "Microsoft returned an invalid ID token (missing header).".to_string()
-    })?;
+    let mut parts =
+        id_token.split('.');
 
-    let payload = parts.next().ok_or_else(|| {
-        "Microsoft returned an invalid ID token (missing claims).".to_string()
-    })?;
+    let _header =
+        parts.next()
+            .ok_or_else(|| {
+                "Microsoft returned an invalid ID token (missing header)."
+                    .to_string()
+            })?;
 
-    if parts.next().is_none() || parts.next().is_some() {
+    let payload =
+        parts.next()
+            .ok_or_else(|| {
+                "Microsoft returned an invalid ID token (missing claims)."
+                    .to_string()
+            })?;
+
+    let signature =
+        parts.next()
+            .ok_or_else(|| {
+                "Microsoft returned an invalid ID token (missing signature)."
+                    .to_string()
+            })?;
+
+    if parts.next().is_some() {
         return Err(
-            "Microsoft returned an invalid ID token format.".to_string()
+            "Microsoft returned an invalid ID token format."
+                .to_string()
+        );
+    }
+
+    if signature.is_empty() {
+        return Err(
+            "Microsoft returned an ID token without a signature."
+                .to_string()
         );
     }
 
@@ -1806,15 +1896,44 @@ fn get_microsoft_user_info_from_id_token(
             )
         })?;
 
+    // --------------------------------------------------------
+    // NONCE VALIDATION
+    // --------------------------------------------------------
+
+    let returned_nonce =
+        info.nonce
+            .as_deref()
+            .ok_or_else(|| {
+                "Microsoft ID token does not contain a nonce."
+                    .to_string()
+            })?;
+
+    if returned_nonce != expected_nonce {
+        return Err(
+            "Microsoft ID token nonce validation failed."
+                .to_string()
+        );
+    }
+
+    // --------------------------------------------------------
+    // DISPLAY EMAIL
+    // --------------------------------------------------------
+
     let email =
         info.email
             .or(info.preferred_username)
-            .unwrap_or_else(|| "Microsoft Account".to_string());
+            .unwrap_or_else(|| {
+                "Microsoft Account".to_string()
+            });
 
     Ok(MicrosoftAccount {
-        name: "Minecraft Account".to_string(),
+        name:
+            "Minecraft Account".to_string(),
+
         email,
-        uuid: String::new(),
+
+        uuid:
+            String::new(),
     })
 }
 
@@ -1908,6 +2027,201 @@ fn create_alpha_directories()
 
 
 // ============================================================
+// ALPHACLIENT MOD JAR
+// ============================================================
+
+const ALPHACLIENT_MOD_JAR_ENV: &str = "ALPHACLIENT_MOD_JAR";
+const ALPHASTAFFMOD_MODID: &str = "alphastaffmod";
+
+fn jar_is_alphastaffmod(
+    path: &Path
+) -> bool
+{
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(_) => return false,
+    };
+
+    let mut archive = match ZipArchive::new(file) {
+        Ok(archive) => archive,
+        Err(_) => return false,
+    };
+
+    let mut entry = match archive.by_name("mcmod.info") {
+        Ok(entry) => entry,
+        Err(_) => return false,
+    };
+
+    let mut contents = String::new();
+
+    if entry.read_to_string(&mut contents).is_err() {
+        return false;
+    }
+
+    contents.contains("\"modid\"")
+        && contents.contains(ALPHASTAFFMOD_MODID)
+}
+
+fn find_built_alphastaffmod_jar()
+    -> Result<PathBuf, String>
+{
+    // An explicit path always wins. This is useful for release/build machines.
+    if let Ok(value) = env::var(ALPHACLIENT_MOD_JAR_ENV) {
+        let path = PathBuf::from(value.trim());
+
+        if path.is_file() && jar_is_alphastaffmod(&path) {
+            return Ok(path);
+        }
+
+        return Err(format!(
+            "ALPHACLIENT_MOD_JAR points to an invalid Alpha Staff Mod JAR: {}",
+            path.display()
+        ));
+    }
+
+    let mut build_directories = Vec::<PathBuf>::new();
+
+    if let Ok(user_profile) = env::var("USERPROFILE") {
+        let profile = PathBuf::from(user_profile);
+
+        build_directories.push(
+            profile
+                .join("Desktop")
+                .join("Staffmods")
+                .join("build")
+                .join("libs")
+        );
+
+        build_directories.push(
+            profile
+                .join("Desktop")
+                .join("AlphaStaffmods")
+                .join("build")
+                .join("libs")
+        );
+    }
+
+    // Also support running the launcher from inside a copied project.
+    if let Ok(current_dir) = env::current_dir() {
+        build_directories.push(
+            current_dir
+                .join("build")
+                .join("libs")
+        );
+    }
+
+    let mut candidates = Vec::<PathBuf>::new();
+
+    for directory in build_directories {
+        if !directory.is_dir() {
+            continue;
+        }
+
+        let entries = fs::read_dir(&directory)
+            .map_err(|error| {
+                format!(
+                    "Could not read Alpha Staff Mod build directory {}: {}",
+                    directory.display(),
+                    error
+                )
+            })?;
+
+        for entry in entries {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(_) => continue,
+            };
+
+            let path = entry.path();
+
+            if path.extension()
+                .and_then(|extension| extension.to_str())
+                .map(|extension| extension.eq_ignore_ascii_case("jar"))
+                != Some(true)
+            {
+                continue;
+            }
+
+            if jar_is_alphastaffmod(&path) {
+                candidates.push(path);
+            }
+        }
+    }
+
+    candidates.sort_by(|a, b| {
+        let a_time = fs::metadata(a)
+            .and_then(|metadata| metadata.modified())
+            .ok();
+        let b_time = fs::metadata(b)
+            .and_then(|metadata| metadata.modified())
+            .ok();
+
+        b_time.cmp(&a_time)
+    });
+
+    candidates.into_iter().next().ok_or_else(|| {
+        "Could not find a built Alpha Staff Mod JAR. Build the mod first (Staffmods\\build\\libs) or set ALPHACLIENT_MOD_JAR to the JAR path."
+            .to_string()
+    })
+}
+
+fn copy_alphaclient_mod_to_mods(
+    root: &Path
+) -> Result<PathBuf, String>
+{
+    let source = find_built_alphastaffmod_jar()?;
+    let mods_dir = root.join("mods");
+
+    fs::create_dir_all(&mods_dir)
+        .map_err(|error| {
+            format!(
+                "Could not create AlphaClient mods directory {}: {}",
+                mods_dir.display(),
+                error
+            )
+        })?;
+
+    // Remove an older Alpha Staff Mod build first so Forge cannot load two
+    // different versions of the same mod at the same time.
+    if let Ok(entries) = fs::read_dir(&mods_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+
+            if path.extension()
+                .and_then(|extension| extension.to_str())
+                .map(|extension| extension.eq_ignore_ascii_case("jar"))
+                != Some(true)
+            {
+                continue;
+            }
+
+            if path != source && jar_is_alphastaffmod(&path) {
+                let _ = fs::remove_file(&path);
+            }
+        }
+    }
+
+    let destination = mods_dir.join(
+        source
+            .file_name()
+            .ok_or_else(|| "Alpha Staff Mod JAR has no filename.".to_string())?
+    );
+
+    fs::copy(&source, &destination)
+        .map_err(|error| {
+            format!(
+                "Could not copy Alpha Staff Mod JAR from {} to {}: {}",
+                source.display(),
+                destination.display(),
+                error
+            )
+        })?;
+
+    Ok(destination)
+}
+
+
+// ============================================================
 // JAVA 8
 // ============================================================
 
@@ -1951,10 +2265,6 @@ fn java_version_is_8(
 fn find_java_8()
     -> Result<PathBuf, String>
 {
-    // --------------------------------------------------------
-    // JAVA_HOME
-    // --------------------------------------------------------
-
     if let Ok(java_home) =
         env::var("JAVA_HOME")
     {
@@ -1973,10 +2283,6 @@ fn find_java_8()
             return Ok(java);
         }
     }
-
-    // --------------------------------------------------------
-    // PATH
-    // --------------------------------------------------------
 
     let java =
         PathBuf::from("java");
@@ -2294,8 +2600,17 @@ fn maven_path_from_name(
     name: &str
 ) -> Option<String>
 {
+    let (coordinate, extension) =
+        match name.rsplit_once('@') {
+            Some((coordinate, extension)) =>
+                (coordinate, extension),
+
+            None =>
+                (name, "jar"),
+        };
+
     let parts =
-        name
+        coordinate
             .split(':')
             .collect::<Vec<_>>();
 
@@ -2304,8 +2619,7 @@ fn maven_path_from_name(
     }
 
     let group =
-        parts[0]
-            .replace('.', "/");
+        parts[0].replace('.', "/");
 
     let artifact =
         parts[1];
@@ -2314,39 +2628,26 @@ fn maven_path_from_name(
         parts[2];
 
     let classifier =
-        if parts.len() >= 4 {
-            Some(parts[3])
-        } else {
-            None
-        };
-
-    let extension =
-        if parts.len() >= 5 {
-            parts[4]
-        } else {
-            "jar"
-        };
+        parts.get(3).copied();
 
     let file_name =
         match classifier {
-            Some(classifier) => {
+            Some(classifier) =>
                 format!(
                     "{}-{}-{}.{}",
                     artifact,
                     version,
                     classifier,
                     extension
-                )
-            }
+                ),
 
-            None => {
+            None =>
                 format!(
                     "{}-{}.{}",
                     artifact,
                     version,
                     extension
-                )
-            }
+                ),
         };
 
     Some(
@@ -2476,10 +2777,6 @@ fn install_forge_from_installer(
             )
         })?;
 
-    // --------------------------------------------------------
-    // Read install profile
-    // --------------------------------------------------------
-
     let mut install_profile =
         String::new();
 
@@ -2550,10 +2847,6 @@ fn install_forge_from_installer(
         )
     })?;
 
-    // --------------------------------------------------------
-    // Extract Forge universal JAR
-    // --------------------------------------------------------
-
     let forge_library_path =
         root
             .join("libraries")
@@ -2616,10 +2909,6 @@ fn install_forge_from_installer(
         })?;
     }
 
-    // --------------------------------------------------------
-    // Download Forge libraries
-    // --------------------------------------------------------
-
     if let Some(libraries) =
         version_info
             .get("libraries")
@@ -2633,10 +2922,6 @@ fn install_forge_from_installer(
             )?;
         }
     }
-
-    // --------------------------------------------------------
-    // Write Forge version JSON
-    // --------------------------------------------------------
 
     let forge_json_path =
         target_directory
@@ -2657,6 +2942,1197 @@ fn install_forge_from_installer(
 
 
 // ============================================================
+// MINECRAFT LIBRARIES, ASSETS AND LEGACY FORGE LAUNCH
+// ============================================================
+
+fn library_is_allowed(
+    library: &Value
+) -> bool
+{
+    let rules =
+        match library
+            .get("rules")
+            .and_then(Value::as_array)
+        {
+            Some(rules) => rules,
+            None => return true,
+        };
+
+    let mut allowed =
+        false;
+
+    for rule in rules {
+        let os_name =
+            rule
+                .get("os")
+                .and_then(|os| {
+                    os.get("name")
+                })
+                .and_then(Value::as_str);
+
+        if os_name
+            .map(|name| name != "windows")
+            .unwrap_or(false)
+        {
+            continue;
+        }
+
+        match rule
+            .get("action")
+            .and_then(Value::as_str)
+            .unwrap_or("allow")
+        {
+            "allow" =>
+                allowed = true,
+
+            "disallow" =>
+                allowed = false,
+
+            _ => {}
+        }
+    }
+
+    allowed
+}
+
+
+fn library_relative_path(
+    library: &Value
+) -> Option<String>
+{
+    library
+        .get("downloads")
+        .and_then(|d| {
+            d.get("artifact")
+        })
+        .and_then(|a| {
+            a.get("path")
+        })
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .or_else(|| {
+            library
+                .get("name")
+                .and_then(Value::as_str)
+                .and_then(maven_path_from_name)
+        })
+}
+
+
+fn download_metadata_libraries(
+    root: &Path,
+    client: &Client,
+    metadata: &Value
+) -> Result<(), String>
+{
+    let libraries =
+        match metadata
+            .get("libraries")
+            .and_then(Value::as_array)
+        {
+            Some(libraries) => libraries,
+            None => return Ok(()),
+        };
+
+    for library in libraries {
+        if !library_is_allowed(
+            library
+        ) {
+            continue;
+        }
+
+        let has_artifact =
+            library
+                .get("downloads")
+                .and_then(|d| {
+                    d.get("artifact")
+                })
+                .is_some();
+
+        if !has_artifact
+            && library
+                .get("natives")
+                .is_some()
+        {
+            continue;
+        }
+
+        let relative =
+            match library_relative_path(
+                library
+            ) {
+                Some(path) => path,
+                None => continue,
+            };
+
+        let destination =
+            root
+                .join("libraries")
+                .join(&relative);
+
+        if destination.exists() {
+            continue;
+        }
+
+        let explicit_url =
+            library
+                .get("downloads")
+                .and_then(|d| {
+                    d.get("artifact")
+                })
+                .and_then(|a| {
+                    a.get("url")
+                })
+                .and_then(Value::as_str);
+
+        let base_url =
+            library
+                .get("url")
+                .and_then(Value::as_str)
+                .unwrap_or(
+                    "https://libraries.minecraft.net/"
+                );
+
+        let url =
+            explicit_url
+                .map(str::to_string)
+                .unwrap_or_else(|| {
+                    format!(
+                        "{}{}",
+                        base_url,
+                        relative
+                    )
+                });
+
+        download_file(
+            client,
+            &url,
+            &destination
+        )?;
+    }
+
+    Ok(())
+}
+
+
+fn download_assets(
+    root: &Path,
+    client: &Client,
+    version_json: &Value
+) -> Result<String, String>
+{
+    let index =
+        version_json
+            .get("assetIndex")
+            .ok_or_else(|| {
+                "Minecraft metadata is missing assetIndex."
+                    .to_string()
+            })?;
+
+    let index_id =
+        index
+            .get("id")
+            .and_then(Value::as_str)
+            .unwrap_or("1.8");
+
+    let index_url =
+        index
+            .get("url")
+            .and_then(Value::as_str)
+            .ok_or_else(|| {
+                "Minecraft asset index URL is missing."
+                    .to_string()
+            })?;
+
+    let index_path =
+        root
+            .join("assets")
+            .join("indexes")
+            .join(
+                format!(
+                    "{}.json",
+                    index_id
+                )
+            );
+
+    if !index_path.exists() {
+        download_file(
+            client,
+            index_url,
+            &index_path
+        )?;
+    }
+
+    let index_json =
+        read_json_file(
+            &index_path
+        )?;
+
+    let objects =
+        index_json
+            .get("objects")
+            .and_then(Value::as_object)
+            .ok_or_else(|| {
+                "Minecraft asset index has no objects map."
+                    .to_string()
+            })?;
+
+    for (logical_name, object) in objects {
+        let hash =
+            match object
+                .get("hash")
+                .and_then(Value::as_str)
+            {
+                Some(hash)
+                    if hash.len() >= 2 =>
+                    hash,
+
+                _ => continue,
+            };
+
+        let relative =
+            format!(
+                "{}/{}",
+                &hash[..2],
+                hash
+            );
+
+        let destination =
+            root
+                .join("assets")
+                .join("objects")
+                .join(&relative);
+
+        if !destination.exists() {
+            download_file(
+                client,
+                &format!(
+                    "https://resources.download.minecraft.net/{}",
+                    relative
+                ),
+                &destination
+            )?;
+        }
+
+        if index_json
+            .get("virtual")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+        {
+            let virtual_path =
+                root
+                    .join("assets")
+                    .join("virtual")
+                    .join("legacy")
+                    .join(logical_name);
+
+            if !virtual_path.exists() {
+                if let Some(parent) =
+                    virtual_path.parent()
+                {
+                    fs::create_dir_all(
+                        parent
+                    )
+                    .map_err(|e| {
+                        format!(
+                            "Could not create legacy asset directory: {}",
+                            e
+                        )
+                    })?;
+                }
+
+                fs::copy(
+                    &destination,
+                    &virtual_path
+                )
+                .map_err(|e| {
+                    format!(
+                        "Could not prepare legacy asset {}: {}",
+                        logical_name,
+                        e
+                    )
+                })?;
+            }
+        }
+    }
+
+    Ok(
+        index_id.to_string()
+    )
+}
+
+
+fn extract_native_jar(
+    jar_path: &Path,
+    destination: &Path
+) -> Result<(), String>
+{
+    let file =
+        File::open(
+            jar_path
+        )
+        .map_err(|e| {
+            format!(
+                "Could not open native library {}: {}",
+                jar_path.display(),
+                e
+            )
+        })?;
+
+    let mut archive =
+        ZipArchive::new(
+            file
+        )
+        .map_err(|e| {
+            format!(
+                "Could not read native library {}: {}",
+                jar_path.display(),
+                e
+            )
+        })?;
+
+    fs::create_dir_all(
+        destination
+    )
+    .map_err(|e| {
+        format!(
+            "Could not create native directory: {}",
+            e
+        )
+    })?;
+
+    for i in 0..archive.len() {
+        let mut entry =
+            archive
+                .by_index(i)
+                .map_err(|e| {
+                    format!(
+                        "Could not read native archive entry: {}",
+                        e
+                    )
+                })?;
+
+        let name =
+            entry
+                .name()
+                .replace('\\', "/");
+
+        if name.starts_with("META-INF/")
+            || name.ends_with('/')
+            || name.starts_with('/')
+            || name
+                .split('/')
+                .any(|part| {
+                    part == ".."
+                        || part.contains(':')
+                })
+        {
+            continue;
+        }
+
+        let output =
+            destination.join(
+                &name
+            );
+
+        if let Some(parent) =
+            output.parent()
+        {
+            fs::create_dir_all(
+                parent
+            )
+            .map_err(|e| {
+                format!(
+                    "Could not create native subdirectory: {}",
+                    e
+                )
+            })?;
+        }
+
+        let mut file =
+            File::create(
+                &output
+            )
+            .map_err(|e| {
+                format!(
+                    "Could not create native file: {}",
+                    e
+                )
+            })?;
+
+        std::io::copy(
+            &mut entry,
+            &mut file
+        )
+        .map_err(|e| {
+            format!(
+                "Could not extract native file: {}",
+                e
+            )
+        })?;
+    }
+
+    Ok(())
+}
+
+
+fn download_native_libraries(
+    root: &Path,
+    client: &Client,
+    metadata: &Value,
+    natives_dir: &Path
+) -> Result<(), String>
+{
+    let libraries =
+        match metadata
+            .get("libraries")
+            .and_then(Value::as_array)
+        {
+            Some(libraries) => libraries,
+            None => return Ok(()),
+        };
+
+    for library in libraries {
+        if !library_is_allowed(
+            library
+        ) {
+            continue;
+        }
+
+        let natives =
+            match library
+                .get("natives")
+                .and_then(|n| {
+                    n.get("windows")
+                })
+                .and_then(Value::as_str)
+            {
+                Some(value) =>
+                    value.replace(
+                        "${arch}",
+                        "64"
+                    ),
+
+                None => continue,
+            };
+
+        let classifier =
+            library
+                .get("downloads")
+                .and_then(|d| {
+                    d.get("classifiers")
+                })
+                .and_then(|c| {
+                    c.get(
+                        natives.as_str()
+                    )
+                });
+
+        let (relative, url) =
+            if let Some(classifier) =
+                classifier
+            {
+                let path =
+                    classifier
+                        .get("path")
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                        .or_else(|| {
+                            library
+                                .get("name")
+                                .and_then(Value::as_str)
+                                .and_then(|name| {
+                                    let (
+                                        coord,
+                                        ext
+                                    ) =
+                                        name
+                                            .rsplit_once('@')
+                                            .unwrap_or(
+                                                (name, "jar")
+                                            );
+
+                                    let mut parts =
+                                        coord
+                                            .split(':')
+                                            .collect::<Vec<_>>();
+
+                                    if parts.len() < 3 {
+                                        return None;
+                                    }
+
+                                    if parts.len() == 3 {
+                                        parts.push(
+                                            &natives
+                                        );
+                                    }
+
+                                    Some(
+                                        maven_path_from_name(
+                                            &format!(
+                                                "{}@{}",
+                                                parts.join(":"),
+                                                ext
+                                            )
+                                        )?
+                                    )
+                                })
+                        })
+                        .ok_or_else(|| {
+                            "Could not determine native library path."
+                                .to_string()
+                        })?;
+
+                let url =
+                    classifier
+                        .get("url")
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                        .unwrap_or_else(|| {
+                            format!(
+                                "https://libraries.minecraft.net/{}",
+                                path
+                            )
+                        });
+
+                (
+                    path,
+                    url
+                )
+            } else {
+                let name =
+                    match library
+                        .get("name")
+                        .and_then(Value::as_str)
+                    {
+                        Some(name) => name,
+                        None => continue,
+                    };
+
+                let (coord, ext) =
+                    name
+                        .rsplit_once('@')
+                        .unwrap_or(
+                            (name, "jar")
+                        );
+
+                let parts =
+                    coord
+                        .split(':')
+                        .collect::<Vec<_>>();
+
+                if parts.len() < 3 {
+                    continue;
+                }
+
+                let relative =
+                    maven_path_from_name(
+                        &format!(
+                            "{}:{}:{}:{}@{}",
+                            parts[0],
+                            parts[1],
+                            parts[2],
+                            natives,
+                            ext
+                        )
+                    )
+                    .ok_or_else(|| {
+                        format!(
+                            "Could not parse native library name: {}",
+                            name
+                        )
+                    })?;
+
+                let base =
+                    library
+                        .get("url")
+                        .and_then(Value::as_str)
+                        .unwrap_or(
+                            "https://libraries.minecraft.net/"
+                        );
+
+                (
+                    relative.clone(),
+                    format!(
+                        "{}{}",
+                        base,
+                        relative
+                    )
+                )
+            };
+
+        let jar =
+            root
+                .join("libraries")
+                .join(&relative);
+
+        if !jar.exists() {
+            download_file(
+                client,
+                &url,
+                &jar
+            )?;
+        }
+
+        extract_native_jar(
+            &jar,
+            natives_dir
+        )?;
+    }
+
+    Ok(())
+}
+
+
+fn build_classpath(
+    root: &Path,
+    vanilla: &Value,
+    forge: &Value
+) -> Result<String, String>
+{
+    let mut paths =
+        Vec::<String>::new();
+
+    let mut seen =
+        std::collections::HashSet::<String>::new();
+
+    for metadata in [
+        vanilla,
+        forge
+    ] {
+        if let Some(libraries) =
+            metadata
+                .get("libraries")
+                .and_then(Value::as_array)
+        {
+            for library in libraries {
+                if !library_is_allowed(
+                    library
+                ) {
+                    continue;
+                }
+
+                if library
+                    .get("natives")
+                    .is_some()
+                    && library
+                        .get("downloads")
+                        .and_then(|d| {
+                            d.get("artifact")
+                        })
+                        .is_none()
+                {
+                    continue;
+                }
+
+                let relative =
+                    match library_relative_path(
+                        library
+                    ) {
+                        Some(path) => path,
+                        None => continue,
+                    };
+
+                let path =
+                    root
+                        .join("libraries")
+                        .join(relative);
+
+                if path.exists() {
+                    let value =
+                        path
+                            .to_string_lossy()
+                            .to_string();
+
+                    if seen.insert(
+                        value.clone()
+                    ) {
+                        paths.push(
+                            value
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    let client_jar =
+        root
+            .join("versions")
+            .join(MINECRAFT_VERSION)
+            .join(
+                format!(
+                    "{}.jar",
+                    MINECRAFT_VERSION
+                )
+            );
+
+    if !client_jar.exists() {
+        return Err(
+            "Minecraft client JAR is missing after installation."
+                .to_string()
+        );
+    }
+
+    paths.insert(
+        0,
+        client_jar
+            .to_string_lossy()
+            .to_string()
+    );
+
+    Ok(
+        paths.join(
+            if cfg!(windows) {
+                ";"
+            } else {
+                ":"
+            }
+        )
+    )
+}
+
+
+fn replace_launch_placeholders(
+    argument: &str,
+    values: &std::collections::HashMap<&str, String>
+) -> String
+{
+    let mut result =
+        argument.to_string();
+
+    for (key, value) in values {
+        result =
+            result.replace(
+                &format!(
+                    "${{{}}}",
+                    key
+                ),
+                value.as_str()
+            );
+    }
+
+    result
+}
+
+
+// ============================================================
+// ALPHACLIENT RELEASE / UPDATE SYSTEM
+// ============================================================
+
+fn alpha_client_version_file(
+    root: &Path
+) -> PathBuf
+{
+    root.join(ALPHACLIENT_VERSION_FILE)
+}
+
+
+fn installed_alphaclient_version(
+    root: &Path
+) -> Result<String, String>
+{
+    let path =
+        alpha_client_version_file(root);
+
+    if !path.exists() {
+        return Ok(ALPHACLIENT_VERSION.to_string());
+    }
+
+    let value =
+        read_json_file(&path)?;
+
+    Ok(
+        value
+            .get("version")
+            .and_then(Value::as_str)
+            .unwrap_or(ALPHACLIENT_VERSION)
+            .to_string()
+    )
+}
+
+
+fn write_installed_alphaclient_version(
+    root: &Path,
+    version: &str
+) -> Result<(), String>
+{
+    let value =
+        serde_json::json!({
+            "version": version,
+        });
+
+    write_json_file(
+        &alpha_client_version_file(root),
+        &value
+    )
+}
+
+
+fn update_manifest_url()
+    -> Option<String>
+{
+    env::var(ALPHACLIENT_UPDATE_MANIFEST_ENV)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+
+fn parse_version_parts(
+    version: &str
+) -> Vec<u64>
+{
+    version
+        .trim()
+        .trim_start_matches('v')
+        .split('.')
+        .map(|part| {
+            part
+                .chars()
+                .take_while(|character| character.is_ascii_digit())
+                .collect::<String>()
+                .parse::<u64>()
+                .unwrap_or(0)
+        })
+        .collect()
+}
+
+
+fn version_is_newer(
+    latest: &str,
+    current: &str
+) -> bool
+{
+    let latest_parts = parse_version_parts(latest);
+    let current_parts = parse_version_parts(current);
+    let length = latest_parts.len().max(current_parts.len());
+
+    for index in 0..length {
+        let latest_part =
+            *latest_parts.get(index).unwrap_or(&0);
+        let current_part =
+            *current_parts.get(index).unwrap_or(&0);
+
+        if latest_part != current_part {
+            return latest_part > current_part;
+        }
+    }
+
+    false
+}
+
+
+fn fetch_alpha_client_manifest()
+    -> Result<AlphaClientReleaseManifest, String>
+{
+    let client = http_client()?;
+
+    // Keep support for a custom manifest, but use GitHub Releases by default so
+    // end users do not need to configure an environment variable.
+    if let Some(url) = update_manifest_url() {
+        return client
+            .get(&url)
+            .send()
+            .map_err(|error| format!("Could not download AlphaClient update manifest: {}", error))?
+            .error_for_status()
+            .map_err(|error| format!("AlphaClient update manifest returned an error: {}", error))?
+            .json::<AlphaClientReleaseManifest>()
+            .map_err(|error| format!("Could not parse AlphaClient update manifest: {}", error));
+    }
+
+    let releases = client
+        .get(ALPHACLIENT_GITHUB_RELEASES_URL)
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28")
+        .send()
+        .map_err(|error| format!("Could not contact GitHub Releases: {}", error))?
+        .error_for_status()
+        .map_err(|error| format!("GitHub Releases returned an error: {}", error))?
+        .json::<Vec<Value>>()
+        .map_err(|error| format!("Could not parse GitHub Releases response: {}", error))?;
+
+    for release in releases {
+        let assets = match release.get("assets").and_then(Value::as_array) {
+            Some(assets) => assets,
+            None => continue,
+        };
+
+        let jar_asset = assets.iter().find(|asset| {
+            let name = asset.get("name").and_then(Value::as_str).unwrap_or("");
+            let lower = name.to_ascii_lowercase();
+            lower.starts_with("alphaclient-") && lower.ends_with(".jar")
+        });
+        let jar_asset = match jar_asset {
+            Some(asset) => asset,
+            None => continue,
+        };
+
+        let asset_name = jar_asset.get("name").and_then(Value::as_str).unwrap_or("");
+        let version = asset_name
+            .strip_prefix("AlphaClient-")
+            .and_then(|name| name.strip_suffix(".jar"))
+            .or_else(|| asset_name.strip_prefix("alphaclient-").and_then(|name| name.strip_suffix(".jar")))
+            .ok_or_else(|| format!("Could not determine version from GitHub asset {}.", asset_name))?;
+        if parse_version_parts(version).is_empty() || !version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+            continue;
+        }
+
+        let download_url = jar_asset.get("browser_download_url").and_then(Value::as_str)
+            .ok_or_else(|| format!("GitHub asset {} has no download URL.", asset_name))?
+            .to_string();
+
+        let mut sha256 = jar_asset.get("digest").and_then(Value::as_str)
+            .and_then(|digest| digest.strip_prefix("sha256:"))
+            .unwrap_or("")
+            .to_string();
+
+        // GitHub's asset digest is not populated for every older release.
+        // Retain the verified checksum for the currently published 0.3.81 asset.
+        if sha256.is_empty() && version == "0.3.81" {
+            sha256 = ALPHACLIENT_0_3_81_SHA256.to_string();
+        }
+        if sha256.is_empty() {
+            return Err(format!(
+                "GitHub release asset {} has no SHA-256 digest. Add a SHA-256 digest/checksum to the release before publishing updates.",
+                asset_name
+            ));
+        }
+
+        let changelog = release.get("body").and_then(Value::as_str).unwrap_or("").to_string();
+        return Ok(AlphaClientReleaseManifest {
+            version: version.to_string(),
+            download_url,
+            sha256,
+            changelog,
+        });
+    }
+
+    Err("No GitHub release containing an AlphaClient-<version>.jar asset was found.".to_string())
+}
+
+
+fn check_alphaclient_update_internal()
+    -> Result<AlphaClientUpdateInfo, String>
+{
+    let root =
+        create_alpha_directories()?;
+
+    let current_version =
+        installed_alphaclient_version(&root)?;
+
+    let manifest = fetch_alpha_client_manifest()?;
+
+    Ok(
+        AlphaClientUpdateInfo {
+            current_version: current_version.clone(),
+            latest_version: manifest.version.clone(),
+            update_available: version_is_newer(
+                &manifest.version,
+                &current_version
+            ),
+            update_configured: true,
+            changelog: manifest.changelog,
+        }
+    )
+}
+
+
+fn sha256_file(
+    path: &Path
+) -> Result<String, String>
+{
+    let mut file =
+        File::open(path)
+            .map_err(|error| {
+                format!(
+                    "Could not open {} for checksum verification: {}",
+                    path.display(),
+                    error
+                )
+            })?;
+
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 64 * 1024];
+
+    loop {
+        let read =
+            file.read(&mut buffer)
+                .map_err(|error| {
+                    format!(
+                        "Could not read {} for checksum verification: {}",
+                        path.display(),
+                        error
+                    )
+                })?;
+
+        if read == 0 {
+            break;
+        }
+
+        hasher.update(&buffer[..read]);
+    }
+
+    Ok(
+        format!("{:x}", hasher.finalize())
+    )
+}
+
+
+fn extract_alpha_client_update(
+    archive_path: &Path,
+    root: &Path
+) -> Result<(), String>
+{
+    let archive_file =
+        File::open(archive_path)
+            .map_err(|error| {
+                format!(
+                    "Could not open AlphaClient update archive: {}",
+                    error
+                )
+            })?;
+
+    let mut archive =
+        ZipArchive::new(archive_file)
+            .map_err(|error| {
+                format!(
+                    "Could not read AlphaClient update archive: {}",
+                    error
+                )
+            })?;
+
+    for index in 0..archive.len() {
+        let mut entry =
+            archive.by_index(index)
+                .map_err(|error| {
+                    format!(
+                        "Could not read AlphaClient update entry: {}",
+                        error
+                    )
+                })?;
+
+        let enclosed_name =
+            entry
+                .enclosed_name()
+                .ok_or_else(|| {
+                    "AlphaClient update archive contains an unsafe file path.".to_string()
+                })?
+                .to_path_buf();
+
+        let destination =
+            root.join(enclosed_name);
+
+        if entry.is_dir() {
+            fs::create_dir_all(&destination)
+                .map_err(|error| {
+                    format!(
+                        "Could not create AlphaClient update directory {}: {}",
+                        destination.display(),
+                        error
+                    )
+                })?;
+            continue;
+        }
+
+        if let Some(parent) = destination.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|error| {
+                    format!(
+                        "Could not create AlphaClient update directory {}: {}",
+                        parent.display(),
+                        error
+                    )
+                })?;
+        }
+
+        let mut output =
+            File::create(&destination)
+                .map_err(|error| {
+                    format!(
+                        "Could not create AlphaClient update file {}: {}",
+                        destination.display(),
+                        error
+                    )
+                })?;
+
+        std::io::copy(&mut entry, &mut output)
+            .map_err(|error| {
+                format!(
+                    "Could not extract AlphaClient update file {}: {}",
+                    destination.display(),
+                    error
+                )
+            })?;
+    }
+
+    Ok(())
+}
+
+
+fn update_alphaclient_internal()
+    -> Result<String, String>
+{
+    let root = create_alpha_directories()?;
+    let manifest = fetch_alpha_client_manifest()?;
+    let current_version = installed_alphaclient_version(&root)?;
+    let mods_dir = root.join("mods");
+    fs::create_dir_all(&mods_dir).map_err(|error| format!("Could not create mods directory: {}", error))?;
+    let destination = mods_dir.join(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME);
+
+    // Repair a missing/corrupt install even when the version marker claims it is current.
+    let jar_missing = !destination.is_file();
+    if !jar_missing && !version_is_newer(&manifest.version, &current_version) {
+        return Ok(format!("AlphaClient {} is already up to date.", current_version));
+    }
+
+    let download_path = root.join("downloads").join(ALPHACLIENT_UPDATE_ZIP_NAME);
+    let client = http_client()?;
+    download_file(&client, &manifest.download_url, &download_path)?;
+
+    let expected_hash = manifest.sha256.trim().to_ascii_lowercase();
+    if expected_hash.len() != 64 || !expected_hash.chars().all(|character| character.is_ascii_hexdigit()) {
+        let _ = fs::remove_file(&download_path);
+        return Err("AlphaClient release has an invalid SHA-256 checksum.".to_string());
+    }
+
+    let actual_hash = sha256_file(&download_path)?.to_ascii_lowercase();
+    if actual_hash != expected_hash {
+        let _ = fs::remove_file(&download_path);
+        return Err(format!("AlphaClient update checksum mismatch. Expected {}, got {}.", expected_hash, actual_hash));
+    }
+
+    // GitHub publishes the client as a single JAR, not a ZIP. Replace the mod JAR
+    // atomically after verifying the download and remove older copies to avoid duplicates.
+    let temporary_destination = mods_dir.join("AlphaClient.jar.new");
+    fs::copy(&download_path, &temporary_destination)
+        .map_err(|error| format!("Could not stage AlphaClient JAR: {}", error))?;
+    if destination.exists() {
+        fs::remove_file(&destination)
+            .map_err(|error| format!("Could not replace existing AlphaClient JAR: {}", error))?;
+    }
+    fs::rename(&temporary_destination, &destination)
+        .map_err(|error| format!("Could not install AlphaClient JAR: {}", error))?;
+
+    if let Ok(entries) = fs::read_dir(&mods_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path == destination || path == download_path || path.extension().and_then(|ext| ext.to_str()).map(|ext| !ext.eq_ignore_ascii_case("jar")).unwrap_or(true) {
+                continue;
+            }
+            if jar_is_alphastaffmod(&path) {
+                let _ = fs::remove_file(path);
+            }
+        }
+    }
+
+    write_installed_alphaclient_version(&root, &manifest.version)?;
+    let _ = fs::remove_file(&download_path);
+
+    Ok(format!("AlphaClient updated from {} to {}.", current_version, manifest.version))
+}
+
+// ============================================================
 // INSTALLATION
 // ============================================================
 
@@ -2666,43 +4142,34 @@ fn install_alphaclient_internal()
     let root =
         create_alpha_directories()?;
 
-    // --------------------------------------------------------
-    // Require Java 8
-    // --------------------------------------------------------
-
     let java =
         find_java_8()?;
 
-    // --------------------------------------------------------
-    // HTTP client
-    // --------------------------------------------------------
-
     let client =
         http_client()?;
-
-    // --------------------------------------------------------
-    // Minecraft 1.8.9
-    // --------------------------------------------------------
 
     download_minecraft_1_8_9(
         &root,
         &client
     )?;
 
-    // --------------------------------------------------------
-    // Forge 1.8.9
-    // --------------------------------------------------------
-
     install_forge_from_installer(
         &root,
         &client
     )?;
 
-    // --------------------------------------------------------
-    // Validate installation
-    // --------------------------------------------------------
+    let vanilla_json_path =
+        root
+            .join("versions")
+            .join(MINECRAFT_VERSION)
+            .join(
+                format!(
+                    "{}.json",
+                    MINECRAFT_VERSION
+                )
+            );
 
-    let forge_json =
+    let forge_json_path =
         root
             .join("versions")
             .join(FORGE_VERSION_NAME)
@@ -2712,6 +4179,54 @@ fn install_alphaclient_internal()
                     FORGE_VERSION_NAME
                 )
             );
+
+    let vanilla_json =
+        read_json_file(
+            &vanilla_json_path
+        )?;
+
+    let forge_json =
+        read_json_file(
+            &forge_json_path
+        )?;
+
+    download_metadata_libraries(
+        &root,
+        &client,
+        &vanilla_json
+    )?;
+
+    download_metadata_libraries(
+        &root,
+        &client,
+        &forge_json
+    )?;
+
+    let asset_index =
+        download_assets(
+            &root,
+            &client,
+            &vanilla_json
+        )?;
+
+    let natives_dir =
+        root
+            .join("runtime")
+            .join("natives");
+
+    download_native_libraries(
+        &root,
+        &client,
+        &vanilla_json,
+        &natives_dir
+    )?;
+
+    download_native_libraries(
+        &root,
+        &client,
+        &forge_json,
+        &natives_dir
+    )?;
 
     let forge_jar =
         root
@@ -2737,34 +4252,41 @@ fn install_alphaclient_internal()
                 )
             );
 
-    if !minecraft_jar.exists() {
+    if !minecraft_jar.exists()
+        || !forge_jar.exists()
+        || !forge_json_path.exists()
+    {
         return Err(
-            "Minecraft installation finished without creating the Minecraft JAR."
+            "Installatie onvolledig: Minecraft- of Forge-bestanden ontbreken."
                 .to_string()
         );
     }
 
-    if !forge_json.exists() {
-        return Err(
-            "Forge installation finished without creating its version JSON."
-                .to_string()
-        );
+    if !alpha_client_version_file(&root).exists() {
+        write_installed_alphaclient_version(
+            &root,
+            ALPHACLIENT_VERSION
+        )?;
     }
 
-    if !forge_jar.exists() {
-        return Err(
-            "Forge installation finished without creating the Forge JAR."
-                .to_string()
-        );
-    }
+    let official_mod_path = root.join("mods").join(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME);
+    let mod_path = if official_mod_path.is_file() {
+        official_mod_path
+    } else {
+        // A clean end-user install may not have a locally-built development JAR.
+        // Let the GitHub updater install the official release before launching.
+        copy_alphaclient_mod_to_mods(&root).unwrap_or(official_mod_path)
+    };
 
     Ok(
         format!(
-            "AlphaClient {} preparation completed. Java: {}. Minecraft {} + Forge {} are installed.",
+            "AlphaClient {} base-installatie is gereed. Java: {}. Minecraft {} + Forge {}. Asset-index: {}. Clientmod: {}.",
             ALPHACLIENT_VERSION,
             java.display(),
             MINECRAFT_VERSION,
-            FORGE_VERSION
+            FORGE_VERSION,
+            asset_index,
+            mod_path.display()
         )
     )
 }
@@ -2790,31 +4312,586 @@ fn greet(
 async fn launch_alphaclient()
     -> Result<String, String>
 {
-    /*
-     * Op dit moment wordt Minecraft + Forge voorbereid.
-     *
-     * De daadwerkelijke JVM launch komt hierna.
-     *
-     * Daarvoor gebruiken we:
-     *
-     * - Java 8
-     * - Minecraft 1.8.9
-     * - Forge 11.15.1.2318
-     * - Minecraft libraries
-     * - Minecraft assets
-     * - Forge libraries
-     * - Microsoft authentication
-     * - Xbox Live authentication
-     * - XSTS authentication
-     * - Minecraft Services authentication
-     * - Minecraft username
-     * - Minecraft UUID
-     * - Minecraft access token
-     */
+    tauri::async_runtime::spawn_blocking(
+        || {
+            let account =
+                microsoft_account_state()
+                    .lock()
+                    .map_err(|_| {
+                        "Could not access Microsoft account state."
+                            .to_string()
+                    })?
+                    .clone()
+                    .ok_or_else(|| {
+                        "Log eerst in met je Microsoft-account voordat je AlphaClient start."
+                            .to_string()
+                    })?;
 
-    tauri::async_runtime::spawn_blocking(install_alphaclient_internal)
-        .await
-        .map_err(|error| format!("AlphaClient launch preparation task failed: {}", error))?
+            let access_token =
+                minecraft_access_token_state()
+                    .lock()
+                    .map_err(|_| {
+                        "Could not access Minecraft token state."
+                            .to_string()
+                    })?
+                    .clone()
+                    .ok_or_else(|| {
+                        "Minecraft-sessietoken ontbreekt. Log opnieuw in."
+                            .to_string()
+                    })?;
+
+            let uuid =
+                minecraft_uuid_state()
+                    .lock()
+                    .map_err(|_| {
+                        "Could not access Minecraft UUID state."
+                            .to_string()
+                    })?
+                    .clone()
+                    .ok_or_else(|| {
+                        "Minecraft-UUID ontbreekt. Log opnieuw in."
+                            .to_string()
+                    })?;
+
+            install_alphaclient_internal()?;
+            update_alphaclient_internal()?;
+
+            let root =
+                alpha_client_directory()?;
+
+            let java =
+                find_java_8()?;
+
+            let vanilla_json =
+                read_json_file(
+                    &root
+                        .join("versions")
+                        .join(MINECRAFT_VERSION)
+                        .join(
+                            format!(
+                                "{}.json",
+                                MINECRAFT_VERSION
+                            )
+                        )
+                )?;
+
+            let forge_json =
+                read_json_file(
+                    &root
+                        .join("versions")
+                        .join(FORGE_VERSION_NAME)
+                        .join(
+                            format!(
+                                "{}.json",
+                                FORGE_VERSION_NAME
+                            )
+                        )
+                )?;
+
+            let asset_index =
+                vanilla_json
+                    .get("assetIndex")
+                    .and_then(|v| {
+                        v.get("id")
+                    })
+                    .and_then(Value::as_str)
+                    .unwrap_or("1.8")
+                    .to_string();
+
+            let classpath =
+                build_classpath(
+                    &root,
+                    &vanilla_json,
+                    &forge_json
+                )?;
+
+            let natives_dir =
+                root
+                    .join("runtime")
+                    .join("natives");
+
+            let main_class =
+                forge_json
+                    .get("mainClass")
+                    .and_then(Value::as_str)
+                    .unwrap_or(
+                        "net.minecraft.launchwrapper.Launch"
+                    );
+
+            let game_dir =
+                root
+                    .to_string_lossy()
+                    .to_string();
+
+            let assets_dir =
+                root
+                    .join("assets")
+                    .to_string_lossy()
+                    .to_string();
+
+            let natives_path =
+                natives_dir
+                    .to_string_lossy()
+                    .to_string();
+
+            let properties =
+                "{}".to_string();
+
+            let mut placeholders =
+                std::collections::HashMap::<
+                    &str,
+                    String
+                >::new();
+
+            placeholders.insert(
+                "auth_player_name",
+                account.name.clone()
+            );
+
+            placeholders.insert(
+                "version_name",
+                FORGE_VERSION_NAME.to_string()
+            );
+
+            placeholders.insert(
+                "game_directory",
+                game_dir.clone()
+            );
+
+            placeholders.insert(
+                "assets_root",
+                assets_dir
+            );
+
+            placeholders.insert(
+                "assets_index_name",
+                asset_index
+            );
+
+            placeholders.insert(
+                "auth_uuid",
+                uuid.clone()
+            );
+
+            placeholders.insert(
+                "auth_access_token",
+                access_token.clone()
+            );
+
+            placeholders.insert(
+                "auth_session",
+                access_token
+            );
+
+            placeholders.insert(
+                "user_type",
+                "mojang".to_string()
+            );
+
+            placeholders.insert(
+                "version_type",
+                format!(
+                    "AlphaClient {}",
+                    ALPHACLIENT_VERSION
+                )
+            );
+
+            placeholders.insert(
+                "user_properties",
+                properties
+            );
+
+            let raw_arguments =
+                forge_json
+                    .get("minecraftArguments")
+                    .and_then(Value::as_str)
+                    .or_else(|| {
+                        vanilla_json
+                            .get("minecraftArguments")
+                            .and_then(Value::as_str)
+                    })
+                    .unwrap_or(
+                        "${auth_player_name} ${version_name} --gameDir ${game_directory} --assetsDir ${assets_root} --assetIndex ${assets_index_name} --uuid ${auth_uuid} --accessToken ${auth_access_token} --userType ${user_type} --versionType ${version_type}"
+                    );
+
+            let game_arguments =
+                raw_arguments
+                    .split_whitespace()
+                    .map(|argument| {
+                        replace_launch_placeholders(
+                            argument,
+                            &placeholders
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
+            let mut command =
+                Command::new(
+                    &java
+                );
+
+            command
+                .current_dir(&root)
+                .arg("-Xms512M")
+                .arg("-Xmx2G")
+                .arg(
+                    format!(
+                        "-Djava.library.path={}",
+                        natives_path
+                    )
+                )
+                .arg("-cp")
+                .arg(classpath)
+                .arg(main_class)
+                .args(game_arguments);
+
+            command
+                .spawn()
+                .map_err(|e| {
+                    format!(
+                        "Minecraft kon niet worden gestart met Java {}: {}",
+                        java.display(),
+                        e
+                    )
+                })?;
+
+            Ok(
+                format!(
+                    "AlphaClient wordt gestart voor {}.",
+                    account.name
+                )
+            )
+        }
+    )
+    .await
+    .map_err(|error| {
+        format!(
+            "AlphaClient launch task failed: {}",
+            error
+        )
+    })?
+}
+
+
+fn start_offline_test_internal(
+    username: String
+) -> Result<String, String>
+{
+    let username =
+        username.trim().to_string();
+
+    if username.is_empty() {
+        return Err(
+            "Enter a test username before starting the offline test.".to_string()
+        );
+    }
+
+    if username.len() > 16 {
+        return Err(
+            "The test username may contain at most 16 characters.".to_string()
+        );
+    }
+
+    if !username
+        .chars()
+        .all(|character| {
+            character.is_ascii_alphanumeric()
+                || character == '_'
+        })
+    {
+        return Err(
+            "The test username may only contain letters, numbers and underscores.".to_string()
+        );
+    }
+
+    let root =
+        alpha_client_directory()?;
+
+    let java =
+        find_java_8()?;
+
+    let vanilla_json_path =
+        root
+            .join("versions")
+            .join(MINECRAFT_VERSION)
+            .join(
+                format!(
+                    "{}.json",
+                    MINECRAFT_VERSION
+                )
+            );
+
+    let forge_json_path =
+        root
+            .join("versions")
+            .join(FORGE_VERSION_NAME)
+            .join(
+                format!(
+                    "{}.json",
+                    FORGE_VERSION_NAME
+                )
+            );
+
+    if !vanilla_json_path.exists() {
+        return Err(
+            "Minecraft 1.8.9 is not installed yet. Use Install / Repair Selected Client first.".to_string()
+        );
+    }
+
+    if !forge_json_path.exists() {
+        return Err(
+            "Forge 1.8.9-11.15.1.2318 is not installed yet. Use Install / Repair Selected Client first.".to_string()
+        );
+    }
+
+    let vanilla_json =
+        read_json_file(
+            &vanilla_json_path
+        )?;
+
+    let forge_json =
+        read_json_file(
+            &forge_json_path
+        )?;
+
+    let asset_index =
+        vanilla_json
+            .get("assetIndex")
+            .and_then(|value| value.get("id"))
+            .and_then(Value::as_str)
+            .unwrap_or("1.8")
+            .to_string();
+
+    let classpath =
+        build_classpath(
+            &root,
+            &vanilla_json,
+            &forge_json
+        )?;
+
+    let natives_dir =
+        root
+            .join("runtime")
+            .join("natives");
+
+    let main_class =
+        forge_json
+            .get("mainClass")
+            .and_then(Value::as_str)
+            .unwrap_or(
+                "net.minecraft.launchwrapper.Launch"
+            );
+
+    let game_dir =
+        root
+            .to_string_lossy()
+            .to_string();
+
+    let assets_dir =
+        root
+            .join("assets")
+            .to_string_lossy()
+            .to_string();
+
+    let natives_path =
+        natives_dir
+            .to_string_lossy()
+            .to_string();
+
+    // A fixed valid UUID is sufficient for a local/offline test profile.
+    // It is deliberately not taken from Microsoft/Minecraft authentication state.
+    let offline_uuid =
+        "00000000-0000-0000-0000-000000000001".to_string();
+
+    let mut placeholders =
+        std::collections::HashMap::<
+            &str,
+            String
+        >::new();
+
+    placeholders.insert(
+        "auth_player_name",
+        username.clone()
+    );
+
+    placeholders.insert(
+        "version_name",
+        FORGE_VERSION_NAME.to_string()
+    );
+
+    placeholders.insert(
+        "game_directory",
+        game_dir
+    );
+
+    placeholders.insert(
+        "assets_root",
+        assets_dir
+    );
+
+    placeholders.insert(
+        "assets_index_name",
+        asset_index
+    );
+
+    placeholders.insert(
+        "auth_uuid",
+        offline_uuid
+    );
+
+    placeholders.insert(
+        "auth_access_token",
+        "0".to_string()
+    );
+
+    placeholders.insert(
+        "auth_session",
+        "0".to_string()
+    );
+
+    placeholders.insert(
+        "user_type",
+        "legacy".to_string()
+    );
+
+    placeholders.insert(
+        "version_type",
+        format!(
+            "AlphaClient {}",
+            ALPHACLIENT_VERSION
+        )
+    );
+
+    placeholders.insert(
+        "user_properties",
+        "{}".to_string()
+    );
+
+    let raw_arguments =
+        forge_json
+            .get("minecraftArguments")
+            .and_then(Value::as_str)
+            .or_else(|| {
+                vanilla_json
+                    .get("minecraftArguments")
+                    .and_then(Value::as_str)
+            })
+            .unwrap_or(
+                "${auth_player_name} ${version_name} --gameDir ${game_directory} --assetsDir ${assets_root} --assetIndex ${assets_index_name} --uuid ${auth_uuid} --accessToken ${auth_access_token} --userType ${user_type} --versionType ${version_type}"
+            );
+
+    let game_arguments =
+        raw_arguments
+            .split_whitespace()
+            .map(|argument| {
+                replace_launch_placeholders(
+                    argument,
+                    &placeholders
+                )
+            })
+            .collect::<Vec<_>>();
+
+    let mut command =
+        Command::new(&java);
+
+    command
+        .current_dir(&root)
+        .arg("-Xms512M")
+        .arg("-Xmx2G")
+        .arg(
+            format!(
+                "-Djava.library.path={}",
+                natives_path
+            )
+        )
+        .arg("-cp")
+        .arg(classpath)
+        .arg(main_class)
+        .args(game_arguments);
+
+    command
+        .spawn()
+        .map_err(|error| {
+            format!(
+                "Minecraft kon niet worden gestart met Java {}: {}",
+                java.display(),
+                error
+            )
+        })?;
+
+    Ok(
+        format!(
+            "AlphaClient offline test wordt gestart voor {}.",
+            username
+        )
+    )
+}
+
+
+#[tauri::command]
+async fn start_offline_test(
+    username: String
+) -> Result<String, String>
+{
+    tauri::async_runtime::spawn_blocking(
+        move || {
+            start_offline_test_internal(
+                username
+            )
+        }
+    )
+    .await
+    .map_err(|error| {
+        format!(
+            "Offline test launch task failed: {}",
+            error
+        )
+    })?
+}
+
+
+#[tauri::command]
+fn get_alphaclient_version()
+    -> Result<String, String>
+{
+    let root =
+        create_alpha_directories()?;
+
+    installed_alphaclient_version(&root)
+}
+
+
+#[tauri::command]
+async fn check_alphaclient_update()
+    -> Result<AlphaClientUpdateInfo, String>
+{
+    tauri::async_runtime::spawn_blocking(
+        check_alphaclient_update_internal
+    )
+    .await
+    .map_err(|error| {
+        format!(
+            "AlphaClient update check task failed: {}",
+            error
+        )
+    })?
+}
+
+
+#[tauri::command]
+async fn update_alphaclient()
+    -> Result<String, String>
+{
+    tauri::async_runtime::spawn_blocking(
+        update_alphaclient_internal
+    )
+    .await
+    .map_err(|error| {
+        format!(
+            "AlphaClient update task failed: {}",
+            error
+        )
+    })?
 }
 
 
@@ -2822,9 +4899,16 @@ async fn launch_alphaclient()
 async fn install_alphaclient()
     -> Result<String, String>
 {
-    tauri::async_runtime::spawn_blocking(install_alphaclient_internal)
-        .await
-        .map_err(|error| format!("AlphaClient installation task failed: {}", error))?
+    tauri::async_runtime::spawn_blocking(
+        install_alphaclient_internal
+    )
+    .await
+    .map_err(|error| {
+        format!(
+            "AlphaClient installation task failed: {}",
+            error
+        )
+    })?
 }
 
 
@@ -2840,6 +4924,23 @@ fn get_alphaclient_directory_path()
 }
 
 
+#[tauri::command]
+fn finish_startup(app: tauri::AppHandle) -> Result<(), String> {
+    let main = app
+        .get_webview_window("main")
+        .ok_or_else(|| "Main launcher window was not found.".to_string())?;
+
+    main.show().map_err(|error| error.to_string())?;
+    main.set_focus().map_err(|error| error.to_string())?;
+
+    if let Some(splash) = app.get_webview_window("splash") {
+        let _ = splash.close();
+    }
+
+    Ok(())
+}
+
+
 // ============================================================
 // TAURI APPLICATION
 // ============================================================
@@ -2848,13 +4949,46 @@ fn get_alphaclient_directory_path()
 pub fn run()
 {
     tauri::Builder::default()
+        .setup(|app| {
+            // Open the launcher at a comfortable, centered size by default.
+            // This avoids requiring the user to maximize the window every time.
+            if let Some(window) = app.get_webview_window("main") {
+                if let Ok(Some(monitor)) = window.current_monitor() {
+                    let scale_factor = monitor.scale_factor();
+                    let monitor_size = monitor.size();
+
+                    let screen_width = monitor_size.width as f64 / scale_factor;
+                    let screen_height = monitor_size.height as f64 / scale_factor;
+
+                    // Use most of the available screen while keeping the window
+                    // at a sensible size on both large and smaller displays.
+                    let width = (screen_width * 0.82).min(1440.0).max(1100.0_f64.min(screen_width));
+                    let height = (screen_height * 0.82).min(920.0).max(700.0_f64.min(screen_height));
+
+                    window.set_min_size(Some(tauri::Size::Logical(
+                        tauri::LogicalSize::new(1000.0_f64.min(screen_width), 650.0_f64.min(screen_height))
+                    )))?;
+                    window.set_size(tauri::Size::Logical(
+                        tauri::LogicalSize::new(width, height)
+                    ))?;
+                    window.center()?;
+                }
+            }
+
+            Ok(())
+        })
         .plugin(
             tauri_plugin_opener::init()
         )
         .invoke_handler(
             tauri::generate_handler![
                 greet,
+                finish_startup,
                 launch_alphaclient,
+                start_offline_test,
+                get_alphaclient_version,
+                check_alphaclient_update,
+                update_alphaclient,
                 install_alphaclient,
                 get_alphaclient_directory_path,
                 start_microsoft_login,
