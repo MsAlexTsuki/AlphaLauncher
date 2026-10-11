@@ -443,8 +443,9 @@ function LauncherApp() {
 
   const handleSaveChangelog = async (draft: ChangelogDraft) => {
     if (!developerAuthorized) {
-      setChangelogMessage("Je hebt geen toestemming om changelogs te wijzigen.");
-      return;
+      const message = "Je hebt geen toestemming om changelogs te wijzigen. Controleer of je developer-account is ingelogd en geautoriseerd.";
+      setChangelogMessage(message);
+      throw new Error(message);
     }
 
     const version = draft.version.trim();
