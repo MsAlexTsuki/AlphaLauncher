@@ -5411,3 +5411,32 @@ button:not(:disabled):active {
 .changelog-editor > .news-list::-webkit-scrollbar-thumb:hover {
   background: #666975;
 }
+
+
+/* Audit Timeline: keep audit entries in their own scrollable area. */
+.audit-timeline .audit-list {
+  max-height: 360px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #494b55 transparent;
+}
+
+.audit-timeline .audit-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.audit-timeline .audit-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.audit-timeline .audit-list::-webkit-scrollbar-thumb {
+  background: #494b55;
+  border-radius: 8px;
+}
+
+.audit-timeline .audit-list::-webkit-scrollbar-thumb:hover {
+  background: #666975;
+}
