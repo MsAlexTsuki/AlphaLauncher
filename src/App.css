@@ -4863,3 +4863,490 @@ button:not(:disabled):active {
 @media (max-width: 540px) {
   .developer-tool-nav { grid-template-columns: 1fr; }
 }
+
+/* Product tabs in the changelog overview */
+.modal-changelog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.changelog-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+}
+
+.changelog-tab {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 9px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.72;
+}
+
+.changelog-tab.active {
+  background: var(--accent-color, rgba(255, 255, 255, 0.12));
+  opacity: 1;
+}
+
+.changelog-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.changelog-entry {
+  padding: 1rem;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+}
+
+.changelog-entry-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.changelog-entry-heading time {
+  flex-shrink: 0;
+  opacity: 0.65;
+  font-size: 0.85rem;
+}
+
+.changelog-entry p {
+  margin: 0.75rem 0 0;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 520px) {
+  .changelog-entry-heading {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+}
+
+
+/* Developer dashboard landing screen */
+.developer-dashboard {
+  margin-top: 18px;
+  padding: 24px;
+  border: 1px solid rgba(255, 200, 61, 0.14);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(20, 21, 25, 0.94), rgba(11, 12, 15, 0.94));
+}
+.developer-dashboard-heading { margin-bottom: 20px; }
+.developer-dashboard-heading h2 { margin: 8px 0 6px; font-size: 22px; }
+.developer-dashboard-heading p { margin: 0; color: var(--muted, #92949b); font-size: 12px; }
+.developer-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.developer-dashboard-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 94px;
+  padding: 16px;
+  color: var(--text, #f3f3f3);
+  text-align: left;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  background: rgba(255,255,255,.025);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+.developer-dashboard-card:hover {
+  border-color: rgba(255,200,61,.4);
+  background: rgba(255,200,61,.055);
+  transform: translateY(-1px);
+}
+.developer-dashboard-card-copy { display:flex; flex:1; flex-direction:column; gap:6px; min-width:0; }
+.developer-dashboard-card-copy strong { font-size:12px; }
+.developer-dashboard-card-copy small { color:var(--muted, #92949b); font-size:10px; line-height:1.5; }
+@media (max-width: 1000px) { .developer-dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .developer-dashboard { padding:16px; } .developer-dashboard-grid { grid-template-columns:1fr; } }
+
+
+/* AlphaClient Play hero: cinematic Minecraft scenery with the official Alpha mark. */
+.page .hero-card {
+  position: relative;
+  isolation: isolate;
+  min-height: 350px;
+  overflow: hidden;
+  border-color: rgba(255, 200, 61, 0.30);
+  background-color: #101116;
+  background-image: linear-gradient(90deg, rgba(10, 11, 15, 0.98) 0%, rgba(10, 11, 15, 0.91) 34%, rgba(10, 11, 15, 0.56) 57%, rgba(10, 11, 15, 0.12) 100%), url("/alpha-client-play-bg.png");
+  background-position: center, right center;
+  background-size: cover, cover;
+  box-shadow: inset 0 0 0 1px rgba(255, 216, 102, 0.035), 0 14px 36px rgba(0, 0, 0, 0.22);
+}
+
+.page .hero-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border: 1px solid rgba(255, 216, 102, 0.12);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.page .hero-glow {
+  z-index: -1;
+  background: rgba(255, 200, 61, 0.09);
+}
+
+.page .hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 540px;
+  padding: 28px 30px 30px;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.48);
+}
+
+.page .hero-brand {
+  gap: 11px;
+  align-items: center;
+}
+
+.page .hero-brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 200, 61, 0.32);
+  border-radius: 10px;
+  background: rgba(8, 9, 12, 0.72);
+  box-shadow: 0 0 22px rgba(255, 200, 61, 0.12);
+}
+
+.page .hero-brand-mark .alpha-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.page .hero-brand-copy strong {
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+}
+
+.page .version-badge {
+  border-color: rgba(255, 216, 102, 0.35);
+  background: rgba(20, 18, 11, 0.72);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+}
+
+.page .hero-content h2 {
+  color: #fff;
+  text-shadow: 0 3px 20px rgba(0, 0, 0, 0.62);
+}
+
+.page .hero-content > p:not(.launch-error):not(.launch-success) {
+  color: #d1d2d9;
+}
+
+.page .hero-meta {
+  color: #e4e5eb;
+}
+
+.page .play-button {
+  min-width: 190px;
+  min-height: 46px;
+  border-color: #ffe28a;
+  background: linear-gradient(110deg, #ffe56c 0%, #ffc400 100%);
+  box-shadow: 0 0 0 1px rgba(255, 216, 102, 0.12), 0 8px 26px rgba(255, 190, 0, 0.20);
+  text-shadow: none;
+}
+
+.page .play-button:hover:not(:disabled) {
+  box-shadow: 0 0 0 1px rgba(255, 226, 138, 0.35), 0 10px 32px rgba(255, 190, 0, 0.30);
+}
+
+@media (max-width: 760px) {
+  .page .hero-card {
+    background-image: linear-gradient(90deg, rgba(10, 11, 15, 0.97) 0%, rgba(10, 11, 15, 0.83) 65%, rgba(10, 11, 15, 0.50) 100%), url("/alpha-client-play-bg.png");
+    background-position: center, 62% center;
+  }
+
+  .page .hero-content {
+    max-width: 100%;
+    padding: 22px 20px 24px;
+  }
+}
+
+
+/* Alpha Community — Friends page */
+.friends-page { gap: 20px; }
+.friends-page .page-header { display:flex; align-items:center; justify-content:space-between; gap:18px; }
+.friends-page .page-header p { margin-top:8px; color:#9da0ad; }
+.friends-page .eyebrow { color:var(--yellow); font-size:10px; font-weight:800; letter-spacing:1.8px; margin-bottom:8px; }
+.friends-refresh,.friends-secondary,.friends-primary { border-radius:9px; padding:10px 14px; font:600 12px Inter,sans-serif; cursor:pointer; transition:background .16s,border-color .16s,transform .16s; }
+.friends-refresh,.friends-secondary { color:#e7e8ed; background:#ffffff08; border:1px solid #ffffff18; }
+.friends-refresh:hover,.friends-secondary:hover { background:#ffffff10; border-color:#ffffff30; }
+.friends-primary { color:#17130a; background:linear-gradient(110deg,#ffe477,#ffc329); border:1px solid #ffe18a; }
+.friends-primary:hover { filter:brightness(1.04); }
+.friends-primary:disabled,.friends-secondary:disabled,.friends-refresh:disabled { opacity:.55; cursor:wait; }
+.friends-page .section-card { padding:22px; }
+.friends-search-card { margin-bottom:0; }
+.friends-section-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+.friends-section-heading h2,.friends-signin h2 { font-size:16px; margin:0; font-weight:700; }
+.friends-section-heading p { margin:6px 0 0; color:#9699a6; font-size:12px; }
+.friends-handle,.friends-count { color:var(--yellow-light); border:1px solid #ffc83d30; background:#ffc83d0b; border-radius:8px; padding:7px 10px; font-size:11px; font-weight:700; }
+.friends-search { display:flex; align-items:center; gap:10px; padding:7px; border:1px solid #ffffff1b; background:#0c0d12a8; border-radius:11px; }
+.friends-search-icon { padding-left:7px; color:#9b9eaa; font-size:24px; line-height:1; }
+.friends-search input { flex:1; min-width:0; border:0; outline:0; color:#f5f5f7; background:transparent; font:13px Inter,sans-serif; padding:8px 2px; }
+.friends-search input::placeholder { color:#777b88; }
+.friends-user-list { margin-top:12px; border-top:1px solid #ffffff10; }
+.friends-columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
+.friends-list-card { min-width:0; }
+.friends-user-row { display:flex; align-items:center; gap:11px; min-width:0; padding:12px 0; border-top:1px solid #ffffff0c; }
+.friends-user-row:first-child { border-top:0; }
+.friends-avatar { width:36px; height:36px; flex:0 0 36px; display:grid; place-items:center; border-radius:11px; background:linear-gradient(145deg,#ffd86622,#ffc83d0a); border:1px solid #ffc83d30; color:var(--yellow-light); font-weight:800; font-size:13px; }
+.friends-user-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:4px; }
+.friends-user-copy strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:700; color:#f1f1f4; }
+.friends-user-copy span { color:#9295a2; font-size:11px; }
+.friends-primary.compact,.friends-secondary.compact { padding:7px 9px; font-size:10px; white-space:nowrap; }
+.friends-connected,.friends-pending { display:flex; align-items:center; gap:6px; color:#a5a8b2; font-size:10px; white-space:nowrap; }
+.friends-connected i { width:6px; height:6px; border-radius:50%; background:#65d69a; box-shadow:0 0 8px #65d69a55; }
+.friends-pending { color:#e6c66c; }
+.friends-empty { padding:20px 12px; border:1px dashed #ffffff16; border-radius:10px; color:#858996; font-size:12px; line-height:1.6; text-align:center; }
+.friends-notice { padding:12px 15px; border-radius:9px; font-size:12px; line-height:1.5; }
+.friends-notice.error { border:1px solid #ff767633; background:#ff55550d; color:#ffaaaa; }
+.friends-notice.success { border:1px solid #65d69a33; background:#65d69a0b; color:#9ce6bd; }
+.friends-signin { text-align:center; max-width:620px; margin:28px auto; padding:36px 28px !important; }
+.friends-empty-icon { display:grid; place-items:center; width:54px; height:54px; margin:0 auto 18px; border-radius:16px; border:1px solid #ffc83d35; background:#ffc83d0b; color:var(--yellow); font-size:27px; }
+.friends-signin p { color:#a0a3af; font-size:13px; line-height:1.7; max-width:490px; margin:12px auto 20px; }
+.friends-signin .friends-primary { cursor:default; opacity:.78; }
+.friends-loading { color:#a5a8b2; text-align:center; font-size:12px; padding:12px; }
+.friends-outgoing { margin-top:16px; }
+@media (max-width: 980px) { .friends-columns { grid-template-columns:1fr; } }
+@media (max-width: 600px) { .friends-page .page-header { align-items:flex-start; } .friends-page .section-card { padding:16px; } .friends-search { gap:6px; } .friends-search .friends-primary { padding:9px 10px; } .friends-user-row { flex-wrap:wrap; } .friends-user-copy { min-width:90px; } }
+
+/* First-time Alpha Community profile setup */
+.friends-modal-backdrop { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:24px; background:rgba(4,5,8,.82); backdrop-filter:blur(8px); }
+.friends-profile-setup { width:min(100%,480px); max-height:calc(100vh - 48px); overflow:auto; padding:32px !important; border:1px solid #ffc83d38 !important; background:linear-gradient(145deg,#191a20f7,#101116fa) !important; box-shadow:0 24px 90px #0009; }
+.friends-profile-setup > .friends-empty-icon { margin:0 0 18px; }
+.friends-profile-setup h2 { margin:8px 0; color:#f5f5f7; font-size:24px; }
+.friends-profile-setup > p { margin:0 0 22px; color:#a0a3af; font-size:12px; line-height:1.7; }
+.friends-profile-form { display:flex; flex-direction:column; gap:9px; }
+.friends-profile-form label { margin-top:7px; color:#e8e8ed; font-size:12px; font-weight:700; }
+.friends-profile-form input { width:100%; min-width:0; box-sizing:border-box; padding:12px 13px; border:1px solid #ffffff20; border-radius:9px; outline:none; background:#0b0c11; color:#f5f5f7; font:13px Inter,sans-serif; }
+.friends-profile-form input:focus { border-color:#ffc83d99; box-shadow:0 0 0 3px #ffc83d12; }
+.friends-profile-form small { color:#828694; font-size:10px; line-height:1.5; }
+.friends-username-field { display:flex; align-items:center; gap:8px; padding-left:12px; border:1px solid #ffffff20; border-radius:9px; background:#0b0c11; color:var(--yellow-light); }
+.friends-username-field:focus-within { border-color:#ffc83d99; box-shadow:0 0 0 3px #ffc83d12; }
+.friends-username-field span { font-size:13px; }
+.friends-username-field input { border:0; box-shadow:none !important; background:transparent; padding-left:0; }
+.friends-save-profile { margin-top:14px; padding:12px 16px; }
+.friends-save-profile:disabled { opacity:.65; cursor:wait; }
+@media (max-width:600px) { .friends-profile-setup { padding:22px !important; } }
+
+/* Keep received and sent friend requests visible side by side. */
+.friends-request-columns { margin-bottom: 16px; }
+.friends-pending i { display:inline-block; width:6px; height:6px; border-radius:50%; background:#e6c66c; box-shadow:0 0 7px #e6c66c55; }
+.friends-request-columns .friends-list-card { min-height:150px; }
+@media (max-width: 980px) {
+  .friends-request-columns { grid-template-columns:minmax(0,1fr); }
+}
+
+
+/* Friends layout refinement: requests stacked, friends list independently scrollable. */
+.friends-request-columns {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.friends-request-columns > .friends-list-card {
+  width: 100%;
+  min-height: 0;
+}
+.friends-scroll-list {
+  max-height: 290px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #494b55 transparent;
+}
+.friends-scroll-list .friends-user-row:first-child {
+  border-top: 1px solid #ffffff0c;
+}
+.friends-scroll-list::-webkit-scrollbar { width: 6px; }
+.friends-scroll-list::-webkit-scrollbar-track { background: transparent; }
+.friends-scroll-list::-webkit-scrollbar-thumb { background: #494b55; border-radius: 8px; }
+.friends-scroll-list::-webkit-scrollbar-thumb:hover { background: #666975; }
+
+
+/* Friends page: incoming/outgoing stacked on the left, roster in a tall rectangle on the right. */
+.friends-main-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.friends-main-layout .friends-request-columns {
+  min-width: 0;
+  margin-bottom: 0;
+}
+.friends-main-layout .friends-roster-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 360px;
+  max-height: 520px;
+}
+.friends-roster-card .friends-scroll-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+@media (max-width: 980px) {
+  .friends-main-layout { grid-template-columns: minmax(0, 1fr); }
+  .friends-main-layout .friends-roster-card { min-height: 260px; max-height: 390px; }
+}
+
+
+/* =========================================================
+   AlphaClient Profile page
+   ========================================================= */
+.profile-page { gap: 20px; }
+.profile-page .page-header { display:flex; align-items:center; justify-content:space-between; gap:18px; }
+.profile-page .page-header p { margin-top:8px; color:#9da0ad; }
+.profile-page .eyebrow { color:var(--yellow); font-size:10px; font-weight:800; letter-spacing:1.8px; margin-bottom:8px; }
+.profile-page .section-card { padding:24px; }
+.profile-layout { display:grid; grid-template-columns:minmax(245px, .78fr) minmax(0, 1.45fr); align-items:start; gap:18px; }
+.profile-preview-card { position:relative; overflow:hidden; text-align:center; min-height:390px; }
+.profile-preview-glow { position:absolute; width:220px; height:220px; border-radius:50%; background:#ffc83d0b; filter:blur(18px); top:12px; left:50%; transform:translateX(-50%); pointer-events:none; }
+.profile-preview-card > :not(.profile-preview-glow) { position:relative; }
+.profile-avatar-large { width:112px; height:112px; margin:24px auto 17px; border-radius:30px; display:grid; place-items:center; overflow:hidden; border:1px solid #ffc83d70; background:linear-gradient(145deg,#ffd86625,#ffc83d08); box-shadow:0 0 0 6px #ffc83d08; color:var(--yellow-light); font-size:42px; font-weight:800; }
+.profile-avatar-large img,.profile-avatar-small img { width:100%; height:100%; object-fit:cover; }
+.profile-preview-card h2 { font-size:22px; margin:0; color:#f7f7fa; overflow-wrap:anywhere; }
+.profile-username { color:#a6a8b4; font-size:13px; margin-top:5px; }
+.profile-bio-preview { max-width:300px; margin:18px auto 0; color:#c0c1ca; line-height:1.6; font-size:13px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.profile-preview-divider { height:1px; background:#ffffff12; margin:28px 0 17px; }
+.profile-preview-foot { display:flex; align-items:center; justify-content:center; gap:8px; font-size:11px; color:#9da0ad; }
+.profile-status-dot { width:7px; height:7px; border-radius:50%; background:#69d69b; box-shadow:0 0 9px #69d69b55; }
+.profile-edit-card { display:flex; flex-direction:column; gap:0; }
+.profile-section-heading { margin-bottom:22px; }
+.profile-section-heading h2 { font-size:18px; margin:0 0 7px; }
+.profile-section-heading p { color:#9da0ad; font-size:12px; margin:0; line-height:1.5; }
+.profile-avatar-editor { display:flex; align-items:center; gap:16px; padding:17px; margin-bottom:22px; border:1px solid #ffffff12; background:#ffffff04; border-radius:13px; }
+.profile-avatar-small { flex:0 0 72px; width:72px; height:72px; display:grid; place-items:center; overflow:hidden; border-radius:20px; border:1px solid #ffc83d50; background:#ffc83d0c; color:var(--yellow-light); font-size:26px; font-weight:800; }
+.profile-avatar-controls { display:flex; flex-direction:column; align-items:flex-start; gap:6px; min-width:0; }
+.profile-avatar-controls strong { font-size:13px; }
+.profile-avatar-controls > span { color:#9da0ad; font-size:11px; }
+.profile-upload-button { cursor:pointer; display:inline-flex; align-items:center; justify-content:center; margin-top:3px; }
+#profile-avatar-upload { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+#profile-avatar-upload:focus-visible + * { outline:2px solid var(--yellow); }
+.profile-field-label { color:#e8e8ed; font-size:12px; font-weight:700; margin:0 0 8px; }
+.profile-text-input,.profile-username-readonly,.profile-bio-input { width:100%; box-sizing:border-box; color:#f4f4f6; background:#111217; border:1px solid #ffffff19; border-radius:9px; outline:none; font:inherit; font-size:13px; transition:border-color .15s ease, box-shadow .15s ease; }
+.profile-text-input { padding:12px 13px; margin-bottom:7px; }
+.profile-text-input:focus,.profile-bio-input:focus { border-color:#ffc83d80; box-shadow:0 0 0 3px #ffc83d0c; }
+.profile-field-meta { display:flex; justify-content:space-between; gap:10px; color:#858895; font-size:10px; margin-bottom:19px; }
+.profile-username-readonly { display:flex; align-items:center; gap:8px; padding:0 12px; margin-bottom:7px; }
+.profile-username-readonly > span:first-child { color:var(--yellow); font-weight:700; }
+.profile-username-readonly input { min-width:0; flex:1; border:0; outline:0; padding:12px 0; color:#aeb0bb; background:transparent; font:inherit; font-size:13px; }
+.profile-lock { color:#858895; font-size:9px; letter-spacing:.8px; }
+.profile-field-help { color:#858895; font-size:10px; line-height:1.5; margin:0 0 19px; }
+.profile-bio-input { resize:vertical; min-height:100px; padding:12px 13px; line-height:1.55; margin-bottom:7px; }
+.profile-form-actions { display:flex; justify-content:flex-end; gap:10px; padding-top:4px; }
+.profile-form-actions button { min-height:39px; }
+.profile-signin { text-align:center; padding:40px 24px !important; }
+.profile-signin h2 { margin:0 0 8px; }
+.profile-signin p { max-width:430px; margin:0 auto; color:#9da0ad; line-height:1.6; font-size:13px; }
+.profile-signin .profile-avatar-large { margin-top:0; }
+@media (max-width: 850px) { .profile-layout { grid-template-columns:1fr; } .profile-preview-card { min-height:0; } .profile-preview-divider { margin:20px 0 14px; } }
+@media (max-width: 600px) { .profile-page .page-header { align-items:flex-start; } .profile-page .section-card { padding:17px; } .profile-avatar-editor { padding:12px; gap:12px; } .profile-avatar-small { width:60px; height:60px; flex-basis:60px; } .profile-form-actions { flex-direction:column-reverse; } .profile-form-actions button { width:100%; } }
+
+
+/* Sidebar bottom group refinement: keep Profile and Settings visually connected above the version footer. */
+.sidebar {
+  min-height: 0;
+}
+.navigation {
+  flex: 0 0 auto;
+}
+.sidebar-bottom-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-bottom-group .nav-item {
+  min-height: 40px;
+}
+.sidebar-version {
+  flex: 0 0 auto;
+  margin-top: 14px;
+  padding-top: 12px;
+}
+.sidebar.collapsed .sidebar-bottom-group {
+  padding-top: 10px;
+}
+.sidebar.collapsed .sidebar-bottom-group .nav-item {
+  min-height: 42px;
+}
+
+
+/* Minecraft skin head portraits for the connected Microsoft account */
+.avatar-skin {
+  overflow: hidden;
+  padding: 0;
+  image-rendering: pixelated;
+}
+
+.avatar-skin img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+
+/* Founder identity on the Alpha Community profile preview */
+.profile-preview-card h2.profile-name-row { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px; }
+.profile-founder-badge { display:inline-flex; align-items:center; justify-content:center; padding:4px 7px; border:1px solid #ffd86670; border-radius:5px; background:linear-gradient(135deg,#ffd86624,#ffc83d0b); color:#ffd866; font-size:9px; font-weight:900; line-height:1; letter-spacing:1px; vertical-align:middle; }
+.profile-founder-status { display:flex; align-items:center; justify-content:center; gap:7px; margin-top:13px; color:#ffd866; font-size:11px; font-weight:600; }
+.profile-founder-crown { color:#ffd866; font-size:15px; line-height:1; }
+
+
+/* Separate Profile view and Edit Profile screen */
+.profile-header-actions { display:flex; align-items:center; gap:9px; flex-shrink:0; }
+.profile-edit-icon-button { width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,216,102,.34); border-radius:10px; color:var(--yellow); background:rgba(255,216,102,.07); font-size:21px; line-height:1; cursor:pointer; transition:background .16s ease,border-color .16s ease,transform .16s ease; }
+.profile-edit-icon-button:hover { background:rgba(255,216,102,.15); border-color:var(--yellow); transform:translateY(-1px); }
+.profile-view-card { width:min(100%,680px); min-height:0; margin:0 auto; padding:34px 28px !important; }
+.profile-view-card .profile-avatar-large { margin:18px auto 16px; }
+.profile-edit-main-button { margin:24px auto 0; min-width:140px; }
+.profile-edit-page { width:min(100%,760px); margin:0 auto; }
+.profile-edit-page .profile-edit-card { width:100%; }
+.profile-back-button { min-height:34px; }
+@media (max-width:600px) { .profile-header-actions { gap:6px; } .profile-view-card { padding:24px 17px !important; } .profile-page .page-header { flex-wrap:wrap; } }
+
+
+/* Founder badge when rendered beside usernames in Community/Friends lists. */
+.friends-founder-badge { display: inline-flex; vertical-align: middle; margin-right: 6px; padding: 2px 5px; font-size: 8px; line-height: 1.2; }
+.friends-user-copy strong { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }

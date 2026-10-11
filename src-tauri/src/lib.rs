@@ -2027,6 +2027,119 @@ fn create_alpha_directories()
 
 
 // ============================================================
+// DEVELOPMENT SANDBOX
+// ============================================================
+
+// The offline developer test uses a separate game directory. It never writes
+// to %APPDATA%\AlphaClient, which remains the production installation.
+const ALPHACLIENT_DEV_DIRECTORY_NAME: &str = "AlphaClient-DevSandbox";
+
+fn alpha_client_dev_directory()
+    -> Result<PathBuf, String>
+{
+    let app_data =
+        env::var("APPDATA")
+            .map_err(|_| {
+                "APPDATA environment variable is not available.".to_string()
+            })?;
+
+    Ok(PathBuf::from(app_data).join(ALPHACLIENT_DEV_DIRECTORY_NAME))
+}
+
+// Copy only files that do not already exist in the sandbox. This lets the
+// sandbox borrow Minecraft/Forge libraries and assets from the normal install,
+// while preserving test-specific files and mods on later launches.
+fn copy_directory_missing_files(
+    source: &Path,
+    destination: &Path
+) -> Result<(), String>
+{
+    if !source.is_dir() {
+        return Ok(());
+    }
+
+    fs::create_dir_all(destination)
+        .map_err(|error| format!(
+            "Could not create sandbox directory {}: {}",
+            destination.display(), error
+        ))?;
+
+    let entries = fs::read_dir(source)
+        .map_err(|error| format!(
+            "Could not read source directory {}: {}",
+            source.display(), error
+        ))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("Could not read directory entry: {}", error))?;
+        let source_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+
+        if source_path.is_dir() {
+            copy_directory_missing_files(&source_path, &destination_path)?;
+        } else if !destination_path.exists() {
+            if let Some(parent) = destination_path.parent() {
+                fs::create_dir_all(parent).map_err(|error| format!(
+                    "Could not create sandbox directory {}: {}",
+                    parent.display(), error
+                ))?;
+            }
+            fs::copy(&source_path, &destination_path).map_err(|error| format!(
+                "Could not copy {} to sandbox: {}",
+                source_path.display(), error
+            ))?;
+        }
+    }
+
+    Ok(())
+}
+
+fn prepare_alpha_client_dev_sandbox()
+    -> Result<PathBuf, String>
+{
+    let production_root = alpha_client_directory()?;
+    if !production_root.is_dir() {
+        return Err(
+            "The normal AlphaClient installation was not found. Install/repair AlphaClient once before using the Development Sandbox.".to_string()
+        );
+    }
+
+    let sandbox_root = alpha_client_dev_directory()?;
+    fs::create_dir_all(&sandbox_root).map_err(|error| format!(
+        "Could not create AlphaClient Development Sandbox {}: {}",
+        sandbox_root.display(), error
+    ))?;
+
+    // Copy runtime files and assets, but never overwrite anything already in
+    // the sandbox. The mods folder is seeded only on first use and is then
+    // fully independent from the production mods folder.
+    for directory in ["versions", "libraries", "assets", "runtime"] {
+        copy_directory_missing_files(
+            &production_root.join(directory),
+            &sandbox_root.join(directory)
+        )?;
+    }
+
+    let sandbox_mods = sandbox_root.join("mods");
+    if !sandbox_mods.exists() {
+        copy_directory_missing_files(
+            &production_root.join("mods"),
+            &sandbox_mods
+        )?;
+    }
+
+    for directory in ["mods", "config", "logs", "downloads"] {
+        fs::create_dir_all(sandbox_root.join(directory)).map_err(|error| format!(
+            "Could not create sandbox directory {}: {}",
+            sandbox_root.join(directory).display(), error
+        ))?;
+    }
+
+    Ok(sandbox_root)
+}
+
+
+// ============================================================
 // ALPHACLIENT MOD JAR
 // ============================================================
 
@@ -3728,27 +3841,91 @@ fn alpha_client_version_file(
 }
 
 
+// Read the version from the actual installed mod JAR. The JSON version marker
+// is only bookkeeping and must never override the version of the JAR Minecraft loads.
+fn alphastaffmod_version_from_jar(path: &Path) -> Option<String>
+{
+    let file = File::open(path).ok()?;
+    let mut archive = ZipArchive::new(file).ok()?;
+    let mut entry = archive.by_name("mcmod.info").ok()?;
+    let mut contents = String::new();
+    entry.read_to_string(&mut contents).ok()?;
+
+    let metadata: Value = serde_json::from_str(&contents).ok()?;
+    let entries: Vec<&Value> = match &metadata {
+        Value::Array(items) => items.iter().collect(),
+        Value::Object(_) => vec![&metadata],
+        _ => return None,
+    };
+
+    for item in entries {
+        let modid = item.get("modid").and_then(Value::as_str).unwrap_or("");
+        if !modid.eq_ignore_ascii_case(ALPHASTAFFMOD_MODID) {
+            continue;
+        }
+
+        let version = item.get("version").and_then(Value::as_str)?.trim();
+        // Ignore unresolved Gradle placeholders and empty metadata values.
+        if version.is_empty()
+            || version.contains("${")
+            || !version.trim_start_matches('v').chars().next()
+                .map(|character| character.is_ascii_digit())
+                .unwrap_or(false)
+        {
+            return None;
+        }
+
+        return Some(version.to_string());
+    }
+
+    None
+}
+
+
 fn installed_alphaclient_version(
     root: &Path
 ) -> Result<String, String>
 {
-    let path =
-        alpha_client_version_file(root);
-
-    if !path.exists() {
-        return Ok(ALPHACLIENT_VERSION.to_string());
+    let mods_dir = root.join("mods");
+    if !mods_dir.is_dir() {
+        return Ok("Niet geïnstalleerd".to_string());
     }
 
-    let value =
-        read_json_file(&path)?;
+    let mut jars = Vec::<PathBuf>::new();
+    let official_jar = mods_dir.join(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME);
+    if official_jar.is_file() {
+        jars.push(official_jar);
+    }
 
-    Ok(
-        value
-            .get("version")
-            .and_then(Value::as_str)
-            .unwrap_or(ALPHACLIENT_VERSION)
-            .to_string()
-    )
+    if let Ok(entries) = fs::read_dir(&mods_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path == mods_dir.join(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME)
+                || path.extension().and_then(|extension| extension.to_str())
+                    .map(|extension| extension.eq_ignore_ascii_case("jar")) != Some(true)
+            {
+                continue;
+            }
+            jars.push(path);
+        }
+    }
+
+    let mut found_alphastaffmod = false;
+    for jar in jars {
+        if !jar_is_alphastaffmod(&jar) {
+            continue;
+        }
+        found_alphastaffmod = true;
+        if let Some(version) = alphastaffmod_version_from_jar(&jar) {
+            return Ok(version);
+        }
+    }
+
+    if found_alphastaffmod {
+        Ok("Onbekend".to_string())
+    } else {
+        Ok("Niet geïnstalleerd".to_string())
+    }
 }
 
 
@@ -3927,10 +4104,12 @@ fn check_alphaclient_update_internal()
         AlphaClientUpdateInfo {
             current_version: current_version.clone(),
             latest_version: manifest.version.clone(),
-            update_available: version_is_newer(
-                &manifest.version,
-                &current_version
-            ),
+            update_available: current_version == "Niet geïnstalleerd"
+                || current_version == "Onbekend"
+                || version_is_newer(
+                    &manifest.version,
+                    &current_version
+                ),
             update_configured: true,
             changelog: manifest.changelog,
         }
@@ -4605,7 +4784,7 @@ fn start_offline_test_internal(
     }
 
     let root =
-        alpha_client_directory()?;
+        prepare_alpha_client_dev_sandbox()?;
 
     let java =
         find_java_8()?;
