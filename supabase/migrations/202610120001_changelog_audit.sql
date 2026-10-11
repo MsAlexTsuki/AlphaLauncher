@@ -43,12 +43,16 @@ begin
         raise exception 'Developer admin access required';
     end if;
 
-    if p_action not in ('create', 'update', 'delete', 'publish', 'unpublish') then
+    if p_action is null or p_action not in ('create', 'update', 'delete', 'publish', 'unpublish') then
         raise exception 'Invalid changelog action';
     end if;
 
-    if p_product not in ('launcher', 'client') then
+    if p_product is null or p_product not in ('launcher', 'client') then
         raise exception 'Invalid product';
+    end if;
+
+    if p_action in ('update', 'delete', 'publish', 'unpublish') and p_id is null then
+        raise exception 'Changelog ID is required for this action';
     end if;
 
     if p_action in ('create', 'update') and (
