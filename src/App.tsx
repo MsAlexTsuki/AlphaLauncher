@@ -437,33 +437,23 @@ function LauncherApp() {
     setChangelogMessage("");
 
     try {
-      const values = {
-        version,
-        title,
-        body,
-        product: draft.product,
-      };
+      const { error } = await supabase.rpc("manage_changelog", {
+        p_action: draft.id !== undefined ? "update" : "create",
+        p_id: draft.id ?? null,
+        p_version: version,
+        p_title: title,
+        p_body: body,
+        p_product: draft.product,
+        p_published: false,
+      });
 
-      if (draft.id !== undefined) {
-        const { error } = await supabase
-          .from("changelogs")
-          .update(values)
-          .eq("id", draft.id);
+      if (error) throw error;
 
-        if (error) throw error;
-        setChangelogMessage("Changelog bijgewerkt in Supabase.");
-      } else {
-        const { error } = await supabase.from("changelogs").insert({
-          ...values,
-          published: false,
-        });
-
-        if (error) throw error;
-        setChangelogMessage(
-          "Concept opgeslagen in Supabase. Publiceer het wanneer je klaar bent.",
-        );
-      }
-
+      setChangelogMessage(
+        draft.id !== undefined
+          ? "Changelog bijgewerkt en geregistreerd in de auditlog."
+          : "Concept opgeslagen en geregistreerd in de auditlog.",
+      );
       await refreshChangelogs();
     } catch (error) {
       setChangelogMessage(`Opslaan mislukt: ${errorText(error)}`);
@@ -483,15 +473,20 @@ function LauncherApp() {
     setChangelogMessage("");
 
     try {
-      const { error } = await supabase
-        .from("changelogs")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.rpc("manage_changelog", {
+        p_action: "delete",
+        p_id: id,
+        p_version: null,
+        p_title: null,
+        p_body: null,
+        p_product: "client",
+        p_published: false,
+      });
 
       if (error) throw error;
 
       await refreshChangelogs();
-      setChangelogMessage("Changelog verwijderd.");
+      setChangelogMessage("Changelog verwijderd en geregistreerd in de auditlog.");
     } catch (error) {
       setChangelogMessage(`Verwijderen mislukt: ${errorText(error)}`);
     } finally {
@@ -509,18 +504,23 @@ function LauncherApp() {
     setChangelogMessage("");
 
     try {
-      const { error } = await supabase
-        .from("changelogs")
-        .update({ published: !entry.published })
-        .eq("id", entry.id);
+      const { error } = await supabase.rpc("manage_changelog", {
+        p_action: entry.published ? "unpublish" : "publish",
+        p_id: entry.id,
+        p_version: null,
+        p_title: null,
+        p_body: null,
+        p_product: entry.product ?? "client",
+        p_published: !entry.published,
+      });
 
       if (error) throw error;
 
       await refreshChangelogs();
       setChangelogMessage(
         entry.published
-          ? "Changelog is niet meer gepubliceerd."
-          : "Changelog gepubliceerd. Deze is nu zichtbaar voor gebruikers.",
+          ? "Changelog is niet meer gepubliceerd en de actie is gelogd."
+          : "Changelog gepubliceerd en de actie is gelogd. Deze is nu zichtbaar voor gebruikers.",
       );
     } catch (error) {
       setChangelogMessage(`Publiceren mislukt: ${errorText(error)}`);
