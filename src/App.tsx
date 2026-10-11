@@ -2259,7 +2259,13 @@ function AuditTimeline() {
               <span className={`audit-outcome audit-outcome-${row.outcome}`}>{row.outcome === "success" ? "GESLAAGD" : row.outcome === "failure" ? "MISLUKT" : "GEWEIGERD"}</span>
               <div className="audit-row-main">
                 <div className="audit-row-title">
-                  <strong>{row.action.replaceAll("_", " ")}</strong>
+                  <strong>{({
+                    "changelog.create": "Create",
+                    "changelog.update": "Edit",
+                    "changelog.publish": "Publish",
+                    "changelog.unpublish": "Unpublish",
+                    "changelog.delete": "Delete",
+                  } as Record<string, string>)[row.action] ?? row.action.replaceAll("_", " ")}</strong>
                   <span className="audit-product">{row.product}</span>
                 </div>
                 <p>{row.category}{row.target_label ? ` · Doel: ${row.target_label}` : ""}</p>
