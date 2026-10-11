@@ -125,7 +125,30 @@ function readLastPlayed(): LastPlayed[] {
 }
 
 function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    const message = typeof value.message === "string" ? value.message : "";
+    const code = typeof value.code === "string" ? value.code : "";
+    const details = typeof value.details === "string" ? value.details : "";
+    const hint = typeof value.hint === "string" ? value.hint : "";
+    const parts = [
+      message,
+      code ? `Code: ${code}` : "",
+      details ? `Details: ${details}` : "",
+      hint ? `Hint: ${hint}` : "",
+    ].filter(Boolean);
+    if (parts.length) return parts.join("\\n");
+    try {
+      return JSON.stringify(error, null, 2);
+    } catch {
+      return "An unknown error occurred.";
+    }
+  }
+
+  return String(error);
 }
 
 function mapChangelogRows(data: any[]): ChangelogEntry[] {
