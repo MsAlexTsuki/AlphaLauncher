@@ -2135,6 +2135,128 @@ function ModsPage({
   );
 }
 
+type AuditLogRow = {
+  id: number;
+  occurred_at: string;
+  actor_label: string | null;
+  product: "launcher" | "client" | "system";
+  category: string;
+  action: string;
+  target_label: string | null;
+  outcome: "success" | "failure" | "denied";
+  details: Record<string, unknown> | null;
+  request_id: string | null;
+};
+
+function AuditTimeline() {
+  const [rows, setRows] = useState<AuditLogRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [productFilter, setProductFilter] = useState("all");
+  const [outcomeFilter, setOutcomeFilter] = useState("all");
+  const [search, setSearch] = useState("");
+
+  const loadLogs = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const { data, error: queryError } = await supabase
+        .from("audit_logs")
+        .select("id, occurred_at, actor_label, product, category, action, target_label, outcome, details, request_id")
+        .order("occurred_at", { ascending: false })
+        .limit(200);
+      if (queryError) throw queryError;
+      setRows((data ?? []) as AuditLogRow[]);
+    } catch (loadError) {
+      setError(errorText(loadError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadLogs();
+  }, []);
+
+  const filteredRows = rows.filter((row) => {
+    if (productFilter !== "all" && row.product !== productFilter) return false;
+    if (outcomeFilter !== "all" && row.outcome !== outcomeFilter) return false;
+    const haystack = [row.actor_label, row.product, row.category, row.action, row.target_label, row.outcome, row.request_id]
+      .filter(Boolean).join(" ").toLowerCase();
+    return haystack.includes(search.trim().toLowerCase());
+  });
+
+  return (
+    <section className="section-card developer-card audit-timeline">
+      <div className="section-header audit-heading">
+        <div>
+          <span className="card-label">SECURITY &amp; ACTIVITY</span>
+          <h3>Audit Timeline</h3>
+          <p>Chronologische registratie van uitgevoerde developer-acties.</p>
+        </div>
+        <button type="button" className="small-button" onClick={() => void loadLogs()} disabled={loading}>
+          {loading ? "Laden…" : "Vernieuwen"}
+        </button>
+      </div>
+
+      <div className="audit-filters">
+        <label>Product
+          <select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
+            <option value="all">Alle producten</option>
+            <option value="launcher">Launcher</option>
+            <option value="client">Client</option>
+            <option value="system">Systeem</option>
+          </select>
+        </label>
+        <label>Resultaat
+          <select value={outcomeFilter} onChange={(event) => setOutcomeFilter(event.target.value)}>
+            <option value="all">Alle resultaten</option>
+            <option value="success">Geslaagd</option>
+            <option value="failure">Mislukt</option>
+            <option value="denied">Geweigerd</option>
+          </select>
+        </label>
+        <label className="audit-search-label">Zoeken
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Actie, gebruiker, doel…" />
+        </label>
+      </div>
+
+      {error && <div className="audit-state audit-error" role="alert">
+        <strong>Auditlog kon niet worden geladen</strong>
+        <p>{error}</p>
+        <small>Controleer je developerrechten, de audit_logs RLS-policy en de Supabase-verbinding.</small>
+      </div>}
+      {!error && loading && <div className="audit-state">Auditlogs ophalen…</div>}
+      {!error && !loading && filteredRows.length === 0 && <div className="audit-state">Geen auditregels gevonden voor deze filters.</div>}
+      {!error && !loading && filteredRows.length > 0 && (
+        <div className="audit-list">
+          {filteredRows.map((row) => (
+            <article className="audit-row" key={row.id}>
+              <span className={`audit-outcome audit-outcome-${row.outcome}`}>{row.outcome === "success" ? "GESLAAGD" : row.outcome === "failure" ? "MISLUKT" : "GEWEIGERD"}</span>
+              <div className="audit-row-main">
+                <div className="audit-row-title">
+                  <strong>{row.action.replaceAll("_", " ")}</strong>
+                  <span className="audit-product">{row.product}</span>
+                </div>
+                <p>{row.category}{row.target_label ? ` · Doel: ${row.target_label}` : ""}</p>
+                <small>{row.actor_label || "Onbekende actor"} · {new Date(row.occurred_at).toLocaleString()}</small>
+                {row.details && Object.keys(row.details).length > 0 && (
+                  <details className="audit-details">
+                    <summary>Details bekijken</summary>
+                    <pre>{JSON.stringify(row.details, null, 2)}</pre>
+                    {row.request_id && <small>Request ID: {row.request_id}</small>}
+                  </details>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+      <div className="audit-footer">Maximaal 200 meest recente regels · {filteredRows.length} weergegeven</div>
+    </section>
+  );
+}
+
 type DeveloperTool =
   | "Rank Management"
   | "Permission Explorer"
@@ -2566,11 +2688,7 @@ function DeveloperPage({
                 "Bekijk welke acties beschikbaar zijn, welke rank ze krijgt en waar een permission wordt gebruikt.",
               )}
 
-            {activeTool === "Audit Timeline" &&
-              renderPlaceholder(
-                "Audit Timeline",
-                "Een tijdlijn voor wijzigingen aan ranks, permissions, instellingen en releases. Er worden nog geen acties gelogd.",
-              )}
+            {activeTool === "Audit Timeline" && <AuditTimeline />}
 
             {activeTool === "Change Review" &&
               renderPlaceholder(
