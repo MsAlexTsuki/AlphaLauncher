@@ -5382,3 +5382,32 @@ button:not(:disabled):active {
 .audit-details small { display: block; margin-top: 6px; overflow-wrap: anywhere; }
 .audit-footer { padding-top: 14px; color: #747784; font-size: 10px; }
 @media (max-width: 680px) { .audit-filters { grid-template-columns: 1fr; } .audit-row { gap: 8px; } .audit-outcome { flex-basis: 66px; } .audit-heading { flex-wrap: wrap; } }
+
+
+/* Release Manager: keep the changelog list compact and independently scrollable. */
+.changelog-editor > .news-list {
+  max-height: 360px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #494b55 transparent;
+}
+
+.changelog-editor > .news-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.changelog-editor > .news-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.changelog-editor > .news-list::-webkit-scrollbar-thumb {
+  background: #494b55;
+  border-radius: 8px;
+}
+
+.changelog-editor > .news-list::-webkit-scrollbar-thumb:hover {
+  background: #666975;
+}
