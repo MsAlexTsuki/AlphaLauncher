@@ -18,17 +18,17 @@ create table if not exists public.community_ranks (
 insert into public.community_ranks (rank_key, rank_name, sort_order, badge_color, badge_icon)
 values
   ('founder', 'Founder', 1, '#FFD866', 'cherry-blossom-tree'),
-  ('owner', 'Owner', 2, '#D94B4B', ''),
-  ('management', 'Management', 3, '#B56CDB', ''),
-  ('senior_admin', 'Senior Admin', 4, '#E67E22', ''),
-  ('admin', 'Admin', 5, '#E74C3C', ''),
-  ('senior_moderator', 'Senior Moderator', 6, '#3498DB', ''),
-  ('moderator', 'Moderator', 7, '#2ECC71', ''),
-  ('trial_moderator', 'Trial Moderator', 8, '#1ABC9C', ''),
-  ('beta', 'Beta', 9, '#9B59B6', ''),
-  ('alpha_plus', 'Alpha+', 10, '#F1C40F', ''),
-  ('alpha', 'Alpha', 11, '#95A5A6', ''),
-  ('member', 'Member', 12, '#7F8C8D', '')
+  ('owner', 'Owner', 2, '#808080', ''),
+  ('management', 'Management', 3, '#808080', ''),
+  ('senior_admin', 'Senior Admin', 4, '#808080', ''),
+  ('admin', 'Admin', 5, '#808080', ''),
+  ('senior_moderator', 'Senior Moderator', 6, '#808080', ''),
+  ('moderator', 'Moderator', 7, '#808080', ''),
+  ('trial_moderator', 'Trial Moderator', 8, '#808080', ''),
+  ('beta', 'Beta', 9, '#808080', ''),
+  ('alpha_plus', 'Alpha+', 10, '#808080', ''),
+  ('alpha', 'Alpha', 11, '#808080', ''),
+  ('member', 'Member', 12, '#808080', '')
 on conflict (rank_key) do update
 set rank_name = excluded.rank_name,
     sort_order = excluded.sort_order,
