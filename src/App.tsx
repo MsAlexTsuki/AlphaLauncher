@@ -1433,7 +1433,7 @@ function ProfilePage() {
       <div className="profile-preview-glow" />
       <div className="eyebrow">YOUR PROFILE</div>
       <div className="profile-avatar-large">{profile.avatar_url ? <img src={profile.avatar_url} alt="Your profile avatar" /> : <span>{profile.username.slice(0, 1).toUpperCase()}</span>}</div>
-      <h2 className="profile-name-row">{profile.is_founder && <span className="profile-founder-badge">FOUNDER</span>}{profile.username}</h2>
+      <h2 className="profile-name-row">{profile.is_founder && <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span>}{profile.username}</h2>
       <div className="profile-username">@{profile.username}</div>
       <p className="profile-bio-preview">{profile.bio?.trim() || "You haven't added a bio yet."}</p>
       <div className="profile-preview-divider" />
