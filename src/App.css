@@ -5330,6 +5330,7 @@ button:not(:disabled):active {
 /* Founder identity on the Alpha Community profile preview */
 .profile-preview-card h2.profile-name-row { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px; }
 .profile-founder-badge { display:inline-flex; align-items:center; justify-content:center; padding:4px 7px; border:1px solid #ffd86670; border-radius:5px; background:linear-gradient(135deg,#ffd86624,#ffc83d0b); color:#ffd866; font-size:9px; font-weight:900; line-height:1; letter-spacing:1px; vertical-align:middle; }
+.profile-founder-icon { display:inline-flex; align-items:center; justify-content:center; margin-right:4px; font-size:12px; line-height:1; letter-spacing:0; filter:saturate(.9); }
 .profile-founder-status { display:flex; align-items:center; justify-content:center; gap:7px; margin-top:13px; color:#ffd866; font-size:11px; font-weight:600; }
 .profile-founder-crown { color:#ffd866; font-size:15px; line-height:1; }
 
