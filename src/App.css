@@ -5894,15 +5894,15 @@ button:not(:disabled):active {
 @media (max-width: 760px) { .community-main-layout { grid-template-columns: minmax(0, 1fr); } .community-friends-panel { order: 2; } .community-forum-list .community-forum-card { align-items: flex-start; flex-wrap: wrap; } .community-forum-list .community-forum-status { margin-left: 48px; } }
 
 
-/* Align the top of Friends with the first forum card, below the Community heading and intro. */
+/* Align the Friends card's top border exactly with the first forum card. */
 .community-main-layout {
   grid-template-columns: minmax(0, 560px) minmax(390px, 390px) !important;
   justify-content: start;
   gap: 18px;
 }
-.community-friends-panel {
+.community-main-layout > .community-friends-panel {
   align-self: start;
-  margin-top: 80px;
+  margin-top: 55px !important;
 }
 .community-sections-column { width: 100%; max-width: 560px; }
 .community-forum-list .community-forum-card {
