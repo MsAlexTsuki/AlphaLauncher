@@ -88,9 +88,9 @@ as $$
     auth.uid() is not null
     and exists (
       select 1
-      from public.community_profiles cp
-      join public.rank_permissions rp on rp.rank_key = cp.rank_key
-      where cp.id = auth.uid()
+      from public.profiles p
+      join public.rank_permissions rp on rp.rank_key = p.rank_key
+      where p.id = auth.uid()
         and rp.scope = p_scope
         and rp.permission_key = p_permission_key
         and rp.enabled = true
