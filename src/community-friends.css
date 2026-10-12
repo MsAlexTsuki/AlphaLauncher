@@ -1,7 +1,7 @@
 /* Alpha Community: align the friends panel with Help & support and refine the Friends page. */
 .community-page .community-main-layout {
   display: grid;
-  grid-template-columns: minmax(0, 560px) minmax(300px, 360px);
+  grid-template-columns: minmax(0, 560px) minmax(300px, 360px) !important;
   align-items: start;
   justify-content: start;
   column-gap: 18px;
@@ -63,7 +63,7 @@
   align-self: start;
   width: 100%;
   min-width: 0;
-  margin-top: 56px;
+  margin-top: 56px !important;
   padding: 18px;
   border: 1px solid rgba(255, 200, 61, .16);
   border-radius: 13px;
@@ -303,7 +303,7 @@
 
 @media (max-width: 1120px) {
   .community-page .community-main-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px) !important;
   }
 
   .community-page .community-sections-column {
@@ -322,7 +322,7 @@
 
 @media (max-width: 850px) {
   .community-page .community-main-layout {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 
   .community-page > .community-main-layout > .community-friends-panel {
