@@ -5894,18 +5894,13 @@ button:not(:disabled):active {
 @media (max-width: 760px) { .community-main-layout { grid-template-columns: minmax(0, 1fr); } .community-friends-panel { order: 2; } .community-forum-list .community-forum-card { align-items: flex-start; flex-wrap: wrap; } .community-forum-list .community-forum-status { margin-left: 48px; } }
 
 
-/* Align the Friends panel with the first forum card (Help & support). */
+/* Community now uses the full content width; the Friends list lives in the Friends menu. */
 .community-main-layout {
-  grid-template-columns: minmax(0, 560px) minmax(390px, 390px) !important;
-  justify-content: start;
+  grid-template-columns: minmax(0, 1fr) !important;
+  justify-content: stretch;
   gap: 18px;
 }
-.community-main-layout > aside.community-friends-panel {
-  align-self: start;
-  margin-top: 55px !important;
-  transform: none;
-}
-.community-sections-column { width: 100%; max-width: 560px; }
+.community-sections-column { width: 100%; max-width: 900px; }
 .community-forum-list .community-forum-card {
   width: 100%;
   min-height: 76px;
@@ -5922,12 +5917,10 @@ button:not(:disabled):active {
 .community-forum-list .community-forum-card p { font-size: 10px; line-height: 1.4; }
 .community-forum-list .community-forum-status { padding-top: 0; }
 @media (max-width: 1050px) {
-  .community-main-layout { grid-template-columns: minmax(0, 1fr) minmax(330px, 330px) !important; }
   .community-sections-column { max-width: none; }
 }
 @media (max-width: 760px) {
   .community-main-layout { grid-template-columns: minmax(0, 1fr); }
-  .community-main-layout > aside.community-friends-panel { margin-top: 0 !important; }
 }
 
 
