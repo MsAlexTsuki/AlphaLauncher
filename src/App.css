@@ -5445,3 +5445,57 @@ button:not(:disabled):active {
 
 /* Non-Founder community rank badges use the approved rank color without altering Founder styling. */
 .profile-rank-badge { display:inline-flex; align-items:center; justify-content:center; margin-right:6px; padding:4px 7px; border:1px solid color-mix(in srgb, var(--rank-color) 48%, transparent); border-radius:5px; background:linear-gradient(135deg, color-mix(in srgb, var(--rank-color) 18%, transparent), color-mix(in srgb, var(--rank-color) 5%, transparent)); color:var(--rank-color); font-size:9px; font-weight:900; line-height:1; letter-spacing:1px; vertical-align:middle; }
+
+
+/* Rank Management controls */
+.developer-input {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+
+.developer-input:focus {
+  border-color: var(--yellow);
+  outline: 2px solid rgba(255, 200, 61, 0.12);
+}
+
+.developer-input option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.developer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.developer-actions button {
+  min-height: 38px;
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.developer-actions .friends-secondary {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.developer-actions .friends-secondary:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  background: var(--surface-3);
+}
+
+.form-success {
+  margin-top: 12px;
+  color: var(--green);
+  font-size: 13px;
+}
