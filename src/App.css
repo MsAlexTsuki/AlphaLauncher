@@ -5924,12 +5924,12 @@ button:not(:disabled):active {
 }
 
 
-/* Account + community profile side-by-side layout */
+/* Account + community profile: compact two-column cards, without stretching the page. */
 .account-profile-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.45fr);
+  grid-template-columns: minmax(250px, 0.78fr) minmax(0, 1.22fr);
   align-items: start;
-  gap: 20px;
+  gap: 18px;
   width: 100%;
   min-width: 0;
 }
@@ -5939,15 +5939,16 @@ button:not(:disabled):active {
   padding: 0;
   margin: 0;
 }
-.account-profile-layout > .page .page-header,
-.account-profile-layout > .page .page-title {
-  margin-bottom: 18px;
+.account-profile-layout > .page .page-header {
+  margin-bottom: 14px;
+}
+.account-profile-layout > .profile-page .page-header {
+  display: none;
 }
 .account-profile-layout > .page .account-large-card {
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 16px;
-  flex-wrap: wrap;
+  padding: 15px;
 }
 .account-profile-layout > .page .large-avatar {
   flex: 0 0 42px;
@@ -5956,6 +5957,7 @@ button:not(:disabled):active {
   border-radius: 11px;
 }
 .account-profile-layout > .page .account-connected {
+  flex: 0 0 100%;
   margin-left: 54px;
 }
 .account-profile-layout > .page .account-actions {
@@ -5970,28 +5972,58 @@ button:not(:disabled):active {
 }
 .account-profile-layout > .profile-page .profile-view-card {
   width: 100%;
+  min-height: 0;
   box-sizing: border-box;
-  padding: 24px 20px !important;
+  margin: 0;
+  padding: 18px 20px !important;
+  text-align: left;
+}
+.account-profile-layout > .profile-page .profile-preview-glow {
+  width: 150px;
+  height: 150px;
+  top: -55px;
+  left: auto;
+  right: -35px;
+  transform: none;
+}
+.account-profile-layout > .profile-page .profile-view-card > .eyebrow {
+  margin-bottom: 12px;
 }
 .account-profile-layout > .profile-page .profile-avatar-large {
-  width: 88px;
-  height: 88px;
-  border-radius: 23px;
+  width: 58px;
+  height: 58px;
+  margin: 0 0 12px;
+  border-radius: 15px;
+  font-size: 25px;
+}
+.account-profile-layout > .profile-page .profile-view-card h2.profile-name-row {
+  justify-content: flex-start;
+  font-size: 17px;
+}
+.account-profile-layout > .profile-page .profile-username {
+  margin-top: 4px;
 }
 .account-profile-layout > .profile-page .profile-bio-preview {
   max-width: 100%;
+  margin: 12px 0 0;
+  font-size: 12px;
 }
-@media (max-width: 1050px) {
-  .account-profile-layout {
-    grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.2fr);
-    gap: 14px;
-  }
+.account-profile-layout > .profile-page .profile-preview-divider {
+  margin: 16px 0 12px;
+}
+.account-profile-layout > .profile-page .profile-preview-foot,
+.account-profile-layout > .profile-page .profile-founder-status {
+  justify-content: flex-start;
+}
+.account-profile-layout > .profile-page .profile-edit-main-button {
+  margin: 14px 0 0;
 }
 @media (max-width: 760px) {
   .account-profile-layout {
     grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
   }
-  .account-profile-layout > .page .account-connected {
-    margin-left: 0;
+  .account-profile-layout > .profile-page .page-header {
+    display: flex;
   }
 }
