@@ -1426,13 +1426,12 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
         </button>
       </section>
 
-      <div className="community-section-heading">
-        <div><p className="eyebrow">MEET. SHARE. PLAY.</p><h2>Community</h2></div>
-      </div>
-      <p className="community-intro">Choose a space to connect with the AlphaClient community.</p>
-
       <div className="community-main-layout">
         <section className="community-sections-column">
+          <div className="community-section-heading">
+            <div><p className="eyebrow">MEET. SHARE. PLAY.</p><h2>Community</h2></div>
+          </div>
+          <p className="community-intro">Choose a space to connect with the AlphaClient community.</p>
           <div className="community-forum-list">
             {forumSections.map((forumSection, index) => (
               <article className="community-forum-card" key={forumSection.title}>
