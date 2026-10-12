@@ -1010,14 +1010,16 @@ function LauncherApp() {
           )}
 
           {page === "Account" && (
-            <AccountPage
-              account={account}
-              isLoggingIn={isLoggingIn}
-              loginError={loginError}
-              onLogin={handleMicrosoftLogin}
-              onLogout={handleMicrosoftLogout}
-            />
-            <ProfilePage />
+            <>
+              <AccountPage
+                account={account}
+                isLoggingIn={isLoggingIn}
+                loginError={loginError}
+                onLogin={handleMicrosoftLogin}
+                onLogout={handleMicrosoftLogout}
+              />
+              <ProfilePage />
+            </>
           )}
         </main>
       </div>
