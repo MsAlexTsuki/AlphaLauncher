@@ -1312,6 +1312,9 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
   const [email, setEmail] = useState("");
   const [signedIn, setSignedIn] = useState(false);
   const [identityLoading, setIdentityLoading] = useState(true);
+  const [communityFriends, setCommunityFriends] = useState<CommunityProfile[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(true);
+  const [friendsError, setFriendsError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -1367,6 +1370,39 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
     { icon: "☷", title: "Chatroom", description: "Join community conversations and meet other players." },
   ];
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadCommunityFriends = async () => {
+      setFriendsLoading(true);
+      setFriendsError("");
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        const user = authData.user;
+        if (!user) { setCommunityFriends([]); return; }
+        const { data: friendshipRows, error: friendshipError } = await supabase
+          .from("friendships")
+          .select("user_a, user_b")
+          .or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
+        if (friendshipError) throw friendshipError;
+        const friendIds = (friendshipRows ?? []).map((row: { user_a: string; user_b: string }) => row.user_a === user.id ? row.user_b : row.user_a);
+        if (!friendIds.length) { setCommunityFriends([]); return; }
+        const { data: people, error: peopleError } = await supabase
+          .from("profiles")
+          .select("id, username, display_name, is_founder, rank_key, avatar_url, bio")
+          .in("id", friendIds);
+        if (peopleError) throw peopleError;
+        if (!cancelled) setCommunityFriends(((people ?? []) as CommunityProfile[]).sort((a, b) => a.username.localeCompare(b.username)));
+      } catch (e) {
+        if (!cancelled) setFriendsError(errorText(e));
+      } finally {
+        if (!cancelled) setFriendsLoading(false);
+      }
+    };
+    void loadCommunityFriends();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="page community-page">
       <header className="page-header">
@@ -1388,27 +1424,44 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
         </button>
       </section>
 
-      <div className="community-section-heading">
-        <div>
-          <p className="eyebrow">MEET. SHARE. PLAY.</p>
-          <h2>Community forums</h2>
-        </div>
-        <span className="community-coming-soon">COMING SOON</span>
-      </div>
-      <p className="community-intro">The forum space is being prepared. These are the planned sections for the AlphaClient community.</p>
-
-      <div className="community-forum-grid">
-        {forumSections.map((section, index) => (
-          <article className="community-forum-card" key={section.title}>
-            <div className="community-forum-icon" aria-hidden="true">{section.icon}</div>
-            <div className="community-forum-card-copy">
-              <span className="community-forum-number">0{index + 1} / FORUM</span>
-              <h3>{section.title}</h3>
-              <p>{section.description}</p>
-            </div>
-            <span className="community-forum-status">Not available yet</span>
-          </article>
-        ))}
+      <div className="community-main-layout">
+        <section className="community-sections-column">
+          <div className="community-section-heading">
+            <div><p className="eyebrow">MEET. SHARE. PLAY.</p><h2>Community</h2></div>
+          </div>
+          <p className="community-intro">Choose a space to connect with the AlphaClient community.</p>
+          <div className="community-forum-list">
+            {forumSections.map((forumSection, index) => (
+              <article className="community-forum-card" key={forumSection.title}>
+                <div className="community-forum-icon" aria-hidden="true">{forumSection.icon}</div>
+                <div className="community-forum-card-copy">
+                  <span className="community-forum-number">0{index + 1} / COMMUNITY</span>
+                  <h3>{forumSection.title}</h3><p>{forumSection.description}</p>
+                </div>
+                <span className="community-forum-status">Coming soon</span>
+              </article>
+            ))}
+          </div>
+        </section>
+        <aside className="community-friends-panel">
+          <div className="community-friends-heading">
+            <div><p className="eyebrow">YOUR PEOPLE</p><h2>Friends</h2></div>
+            <span className="friends-count">{communityFriends.length}</span>
+          </div>
+          <p className="community-friends-subtitle">Your friends, right beside the community spaces.</p>
+          {friendsError && <p className="community-friends-error">{friendsError}</p>}
+          {friendsLoading ? <div className="friends-empty">Loading friends…</div> :
+            !signedIn ? <div className="friends-empty">Sign in to see your friends.</div> :
+            communityFriends.length === 0 ? <div className="friends-empty">No friends yet. Add players from the Friends page.</div> :
+            <div className="community-friends-list">{communityFriends.map(friend => (
+              <div className="community-friend-item" key={friend.id}>
+                <div className="community-friend-avatar">{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : (friend.username || "?").slice(0, 1).toUpperCase()}</div>
+                <div className="community-friend-copy"><strong>{friend.username}</strong><span>Alpha Community</span></div>
+                <span className="community-friend-presence" title="Presence is not configured yet" aria-label="Online status unavailable" />
+              </div>
+            ))}</div>}
+          <p className="community-friends-footnote">Online indicators will activate once live presence is connected.</p>
+        </aside>
       </div>
     </div>
   );
