@@ -3051,7 +3051,7 @@ function DeveloperPage({
                   <label className="setting-line developer-setting-line">
                     <span>
                       <strong>Enable offline test mode</strong>
-                      <small>Alleen voor lokale development-tests.</small>
+                      <small>For local development testing only.</small>
                     </span>
                     <input
                       type="checkbox"
