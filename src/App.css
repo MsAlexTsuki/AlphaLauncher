@@ -5924,10 +5924,10 @@ button:not(:disabled):active {
 }
 
 
-/* Account + community profile: retain the normal profile scale, with a slightly wider card. */
+/* Account + community profile: keep both cards readable; only make the profile a little wider. */
 .account-profile-layout {
   display: grid;
-  grid-template-columns: minmax(250px, 0.78fr) minmax(0, 1.22fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: start;
   gap: 18px;
   width: 100%;
@@ -5943,22 +5943,32 @@ button:not(:disabled):active {
   margin-bottom: 14px;
 }
 .account-profile-layout > .profile-page .page-header {
-  display: flex;
+  display: none;
 }
 .account-profile-layout > .page .account-large-card {
   align-items: center;
-  gap: 12px;
-  padding: 15px;
+  gap: 16px;
+  padding: 22px;
+  flex-wrap: nowrap;
 }
 .account-profile-layout > .page .large-avatar {
-  flex: 0 0 42px;
-  width: 42px;
-  height: 42px;
-  border-radius: 11px;
+  flex: 0 0 54px;
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+}
+.account-profile-layout > .page .account-large-card > div:nth-child(2) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.account-profile-layout > .page .account-large-card h2,
+.account-profile-layout > .page .account-large-card p {
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .account-profile-layout > .page .account-connected {
-  flex: 0 0 100%;
-  margin-left: 54px;
+  flex: 0 0 auto;
+  margin-left: 0;
 }
 .account-profile-layout > .page .account-actions {
   margin-top: 12px;
@@ -5970,14 +5980,14 @@ button:not(:disabled):active {
   width: 100%;
   max-width: none;
 }
-/* Only adjust the community card's proportions; keep its original content and sizing. */
+/* Keep the original profile contents and scale; adjust only the card's proportions. */
 .account-profile-layout > .profile-page .profile-view-card {
   width: 100%;
-  max-width: 760px;
+  max-width: 680px;
   min-height: 0;
   box-sizing: border-box;
   margin: 0;
-  padding: 28px 26px !important;
+  padding: 24px 26px !important;
 }
 .account-profile-layout > .profile-page .profile-avatar-large {
   width: 96px;
@@ -5988,9 +5998,12 @@ button:not(:disabled):active {
 .account-profile-layout > .profile-page .profile-bio-preview {
   max-width: 440px;
 }
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .account-profile-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
+  }
+  .account-profile-layout > .profile-page .page-header {
+    display: flex;
   }
 }
