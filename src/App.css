@@ -5893,7 +5893,7 @@ button:not(:disabled):active {
 @media (max-width: 760px) { .community-main-layout { grid-template-columns: minmax(0, 1fr); } .community-friends-panel { order: 2; } .community-forum-list .community-forum-card { align-items: flex-start; flex-wrap: wrap; } .community-forum-list .community-forum-status { margin-left: 48px; } }
 
 
-/* Align the Friends panel with the first forum tab. */
+/* Align the Friends panel with the first forum tab, below the section heading. */
 .community-main-layout {
   grid-template-columns: minmax(0, 560px) minmax(390px, 390px) !important;
   justify-content: start;
@@ -5901,7 +5901,7 @@ button:not(:disabled):active {
 }
 .community-friends-panel {
   align-self: start;
-  margin-top: 0;
+  margin-top: 25px;
 }
 .community-sections-column { width: 100%; max-width: 560px; }
 .community-forum-list .community-forum-card {
