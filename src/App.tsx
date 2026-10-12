@@ -1313,20 +1313,41 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
 
   useEffect(() => {
     let cancelled = false;
-    void supabase.auth.getUser().then(({ data, error }) => {
-      if (cancelled || error || !data.user) return;
-      const user = data.user;
-      const metadata = user.user_metadata ?? {};
-      const name =
-        (typeof metadata.display_name === "string" && metadata.display_name) ||
-        (typeof metadata.username === "string" && metadata.username) ||
-        (typeof metadata.full_name === "string" && metadata.full_name) ||
-        user.email ||
-        "Community member";
-      setDisplayName(name);
+
+    const loadCommunityIdentity = async () => {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (cancelled || authError || !authData.user) return;
+
+      const user = authData.user;
       setEmail(user.email ?? "");
       setSignedIn(true);
-    }).catch((error) => console.warn("Could not load community identity:", error));
+
+      // The editable community profile is the source of truth for the displayed profile name.
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("username, display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (profileError) {
+        console.warn("Could not load community profile name:", profileError.message);
+      }
+
+      const metadata = user.user_metadata ?? {};
+      const name =
+        (typeof profile?.username === "string" && profile.username.trim()) ||
+        (typeof profile?.display_name === "string" && profile.display_name.trim()) ||
+        (typeof metadata.username === "string" && metadata.username.trim()) ||
+        (typeof metadata.display_name === "string" && metadata.display_name.trim()) ||
+        (typeof metadata.full_name === "string" && metadata.full_name.trim()) ||
+        "Community member";
+      setDisplayName(name);
+    };
+
+    void loadCommunityIdentity().catch((error) =>
+      console.warn("Could not load community identity:", error),
+    );
     return () => { cancelled = true; };
   }, []);
 
