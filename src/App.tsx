@@ -1308,6 +1308,7 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
 
 function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
   const [displayName, setDisplayName] = useState("Community member");
+  const [communityRank, setCommunityRank] = useState("member");
   const [email, setEmail] = useState("");
   const [signedIn, setSignedIn] = useState(false);
   const [identityLoading, setIdentityLoading] = useState(true);
@@ -1329,7 +1330,7 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
       // The editable community profile is the source of truth for the displayed profile name.
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("username, display_name")
+        .select("username, display_name, rank_key, is_founder")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -1347,6 +1348,7 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
           candidate.trim().toLowerCase() !== (user.email ?? "").trim().toLowerCase(),
       );
       setDisplayName(name?.trim() ?? "Community member");
+      setCommunityRank(profile?.rank_key || (profile?.is_founder ? "founder" : "member"));
       setSignedIn(true);
       setIdentityLoading(false);
     };
@@ -1376,7 +1378,7 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
         <div className="community-avatar" aria-hidden="true">{identityLoading ? "…" : displayName.trim().charAt(0).toUpperCase() || "A"}</div>
         <div className="community-welcome-copy">
           <span className="community-kicker">{signedIn ? "YOUR COMMUNITY IDENTITY" : "COMMUNITY PROFILE"}</span>
-          <h2>{identityLoading ? "Loading profile…" : signedIn ? displayName : "Welcome to the community"}</h2>
+          <div className="community-name-rank"><h2>{identityLoading ? "Loading profile…" : signedIn ? displayName : "Welcome to the community"}</h2>{signedIn && !identityLoading && <span className={`community-menu-rank ${communityRank === "founder" ? "is-founder" : ""}`} style={{ "--rank-color": COMMUNITY_RANKS[communityRank]?.color ?? COMMUNITY_RANKS.member.color } as React.CSSProperties}>{COMMUNITY_RANKS[communityRank]?.label ?? "MEMBER"}</span>}</div>
           <p>{identityLoading ? "Loading your community account…" : signedIn ? (email || "Your AlphaClient profile") : "Sign in to your community account to use your profile and display name."}</p>
         </div>
         <button type="button" className="friends-primary community-profile-button" onClick={onOpenProfile}>
