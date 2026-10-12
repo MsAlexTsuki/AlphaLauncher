@@ -7,3 +7,6 @@
 - Apply the Supabase migration before using the manager.
 
 - Fixed the authorization helper to use the existing `public.profiles` table and its `rank_key` column.
+
+- Refined the permissions interface with a clearer product-area/rank selector, enabled-count summary, aligned toggle rows and responsive spacing.
+- Limited the permission editor to staff ranks plus Beta; removed Alpha, Alpha+ and Member from the editor.
