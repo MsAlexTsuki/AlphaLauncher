@@ -1293,6 +1293,11 @@ type EditableCommunityProfile = {
   bio: string | null;
   avatar_url: string | null;
   is_founder: boolean;
+  rank_key?: string | null;
+};
+
+const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
+  founder: { label: "FOUNDER", color: "#FFD866" }, owner: { label: "OWNER", color: "#FF2D00" }, management: { label: "MANAGEMENT", color: "#5C0303" }, senior_admin: { label: "SENIOR ADMIN", color: "#D67020" }, admin: { label: "ADMIN", color: "#E08D16" }, senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" }, moderator: { label: "MODERATOR", color: "#29AFCC" }, trial_moderator: { label: "TRIAL MODERATOR", color: "#D1CF1D" }, beta: { label: "BETA", color: "#00FF52" }, alpha_plus: { label: "ALPHA+", color: "#FFF300" }, alpha: { label: "ALPHA", color: "#F300FF" }, member: { label: "MEMBER", color: "#C3BFE0" },
 };
 
 function ProfilePage() {
@@ -1324,7 +1329,7 @@ function ProfilePage() {
       setUserId(user.id);
       const { data, error: profileError } = await supabase
         .from("profiles")
-        .select("id, username, display_name, bio, avatar_url, is_founder")
+        .select("id, username, display_name, bio, avatar_url, is_founder, rank_key")
         .eq("id", user.id)
         .maybeSingle();
       if (profileError) throw profileError;
@@ -1387,7 +1392,7 @@ function ProfilePage() {
         .from("profiles")
         .update({ bio: cleanBio, avatar_url: nextAvatarUrl })
         .eq("id", userId)
-        .select("id, username, display_name, bio, avatar_url, is_founder")
+        .select("id, username, display_name, bio, avatar_url, is_founder, rank_key")
         .single();
       if (updateError) throw updateError;
       setProfile(data as EditableCommunityProfile);
@@ -1433,7 +1438,7 @@ function ProfilePage() {
       <div className="profile-preview-glow" />
       <div className="eyebrow">YOUR PROFILE</div>
       <div className="profile-avatar-large">{profile.avatar_url ? <img src={profile.avatar_url} alt="Your profile avatar" /> : <span>{profile.username.slice(0, 1).toUpperCase()}</span>}</div>
-      <h2 className="profile-name-row">{profile.is_founder && <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span>}{profile.username}</h2>
+      <h2 className="profile-name-row">{(() => { const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; return rankKey === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}>{rank.label}</span>; })()}{profile.username}</h2>
       <div className="profile-username">@{profile.username}</div>
       <p className="profile-bio-preview">{profile.bio?.trim() || "You haven't added a bio yet."}</p>
       <div className="profile-preview-divider" />
