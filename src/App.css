@@ -5924,7 +5924,7 @@ button:not(:disabled):active {
 }
 
 
-/* Account + community profile: keep the community profile card compact. */
+/* Account + community profile: retain the normal profile scale, with a slightly wider card. */
 .account-profile-layout {
   display: grid;
   grid-template-columns: minmax(250px, 0.78fr) minmax(0, 1.22fr);
@@ -5943,7 +5943,7 @@ button:not(:disabled):active {
   margin-bottom: 14px;
 }
 .account-profile-layout > .profile-page .page-header {
-  display: none;
+  display: flex;
 }
 .account-profile-layout > .page .account-large-card {
   align-items: center;
@@ -5970,60 +5970,27 @@ button:not(:disabled):active {
   width: 100%;
   max-width: none;
 }
+/* Only adjust the community card's proportions; keep its original content and sizing. */
 .account-profile-layout > .profile-page .profile-view-card {
-  width: min(100%, 560px);
+  width: 100%;
+  max-width: 760px;
   min-height: 0;
   box-sizing: border-box;
   margin: 0;
-  padding: 20px 22px !important;
-  text-align: center;
-}
-.account-profile-layout > .profile-page .profile-preview-glow {
-  width: 150px;
-  height: 150px;
-  top: -55px;
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
-}
-.account-profile-layout > .profile-page .profile-view-card > .eyebrow {
-  margin-bottom: 12px;
+  padding: 28px 26px !important;
 }
 .account-profile-layout > .profile-page .profile-avatar-large {
-  width: 68px;
-  height: 68px;
-  margin: 0 auto 12px;
-  border-radius: 17px;
-  font-size: 28px;
-}
-.account-profile-layout > .profile-page .profile-view-card h2.profile-name-row {
-  justify-content: center;
-  font-size: 17px;
-}
-.account-profile-layout > .profile-page .profile-username {
-  margin-top: 4px;
+  width: 96px;
+  height: 96px;
+  margin: 18px auto 16px;
+  border-radius: 25px;
 }
 .account-profile-layout > .profile-page .profile-bio-preview {
-  max-width: 320px;
-  margin: 12px auto 0;
-  font-size: 12px;
-}
-.account-profile-layout > .profile-page .profile-preview-divider {
-  margin: 16px 0 12px;
-}
-.account-profile-layout > .profile-page .profile-preview-foot,
-.account-profile-layout > .profile-page .profile-founder-status {
-  justify-content: center;
-}
-.account-profile-layout > .profile-page .profile-edit-main-button {
-  margin: 14px auto 0;
+  max-width: 440px;
 }
 @media (max-width: 760px) {
   .account-profile-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
-  }
-  .account-profile-layout > .profile-page .page-header {
-    display: flex;
   }
 }
