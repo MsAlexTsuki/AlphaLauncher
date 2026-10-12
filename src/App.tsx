@@ -1586,9 +1586,9 @@ function ProfilePage() {
   return <div className="page profile-page">
     <div className="page-header">
       <div>
-        <div className="eyebrow">ALPHA COMMUNITY</div>
-        <h1>{isEditing ? "Edit Profile" : "My Profile"}</h1>
-        <p>{isEditing ? "Update the profile details other AlphaClient players can see." : "Your Alpha Community profile."}</p>
+        <div className="eyebrow">ALPHA ACCOUNT</div>
+        <h1>{isEditing ? "Edit Alpha Account" : "My Alpha Account"}</h1>
+        <p>{isEditing ? "Update the profile details other AlphaClient players can see." : "Your Alpha Account and community profile in one place."}</p>
       </div>
       <div className="profile-header-actions">
         {profile && !isEditing && <button className="profile-edit-icon-button" type="button" onClick={() => { setIsEditing(true); setError(""); setMessage(""); }} aria-label="Edit profile" title="Edit profile">✎</button>}
@@ -1598,24 +1598,24 @@ function ProfilePage() {
     </div>
     {error && <div className="friends-notice error">{error}</div>}
     {message && <div className="friends-notice success">{message}</div>}
-    {!loading && !userId && <section className="section-card profile-signin"><div className="profile-avatar-large">◎</div><h2>Sign in to Alpha Community</h2><p>Your profile is connected to your Alpha Community Supabase account. Sign in to view and edit your profile.</p></section>}
-    {!loading && userId && !profile && <section className="section-card"><h2>Community profile not found</h2><p>Your account does not have an Alpha Community profile yet. Open Friends and complete the username setup, or check the profile creation trigger in Supabase.</p></section>}
+    {!loading && !userId && <section className="section-card profile-signin"><div className="profile-avatar-large">◎</div><h2>Sign in to your Alpha Account</h2><p>Your Alpha Account is also your community profile. Sign in to manage your profile and access Alpha community features.</p></section>}
+    {!loading && userId && !profile && <section className="section-card"><h2>Alpha Account profile not found</h2><p>Your Alpha Account does not have a community profile yet. Open Friends and complete the username setup, or check the profile creation trigger in Supabase.</p></section>}
     {loading && <div className="friends-loading">Loading profile…</div>}
     {profile && !isEditing && <section className="section-card profile-preview-card profile-view-card">
       <div className="profile-preview-glow" />
-      <div className="eyebrow">YOUR PROFILE</div>
+      <div className="eyebrow profile-account-label">ALPHA ACCOUNT</div>
       <div className="profile-avatar-large">{profile.avatar_url ? <img src={profile.avatar_url} alt="Your profile avatar" /> : <span>{profile.username.slice(0, 1).toUpperCase()}</span>}</div>
       <h2 className="profile-name-row">{(() => { const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; return rankKey === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}>{rank.label}</span>; })()}{profile.username}</h2>
       <div className="profile-username">@{profile.username}</div>
       <p className="profile-bio-preview">{profile.bio?.trim() || "You haven't added a bio yet."}</p>
       <div className="profile-preview-divider" />
-      <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Community member</div>
+      <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>
       {profile.is_founder && <div className="profile-founder-status"><span className="profile-founder-crown">♛</span> Founder of Alpha Client</div>}
       <button className="friends-primary profile-edit-main-button" type="button" onClick={() => { setIsEditing(true); setError(""); setMessage(""); }}>Edit Profile</button>
     </section>}
     {profile && isEditing && <form className="profile-edit-page" onSubmit={saveProfile}>
       <section className="section-card profile-edit-card">
-        <div className="profile-section-heading"><div><h2>Edit your profile</h2><p>These details are saved to your Alpha Community account.</p></div></div>
+        <div className="profile-section-heading"><div><h2>Edit your profile</h2><p>These details are saved to your Alpha Account and community profile.</p></div></div>
         <div className="profile-avatar-editor">
           <div className="profile-avatar-small">{avatarUrl ? <img src={avatarUrl} alt="Selected profile avatar" /> : <span>{profile.username.slice(0, 1).toUpperCase()}</span>}</div>
           <div className="profile-avatar-controls"><strong>Profile picture</strong><span>PNG, JPG, WEBP or GIF · Max 5 MB</span><label className="friends-secondary profile-upload-button" htmlFor="profile-avatar-upload">{selectedAvatar ? "Change image" : "Upload image"}</label><input id="profile-avatar-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={event => handleAvatarSelection(event.target.files?.[0] ?? null)} /></div>
