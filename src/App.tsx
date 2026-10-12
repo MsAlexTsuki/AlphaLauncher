@@ -1310,17 +1310,21 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
   const [displayName, setDisplayName] = useState("Community member");
   const [email, setEmail] = useState("");
   const [signedIn, setSignedIn] = useState(false);
+  const [identityLoading, setIdentityLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadCommunityIdentity = async () => {
       const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (cancelled || authError || !authData.user) return;
+      if (cancelled) return;
+      if (authError || !authData.user) {
+        setIdentityLoading(false);
+        return;
+      }
 
       const user = authData.user;
       setEmail(user.email ?? "");
-      setSignedIn(true);
 
       // The editable community profile is the source of truth for the displayed profile name.
       const { data: profile, error: profileError } = await supabase
@@ -1335,19 +1339,22 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
       }
 
       const metadata = user.user_metadata ?? {};
-      const name =
-        (typeof profile?.username === "string" && profile.username.trim()) ||
-        (typeof profile?.display_name === "string" && profile.display_name.trim()) ||
-        (typeof metadata.username === "string" && metadata.username.trim()) ||
-        (typeof metadata.display_name === "string" && metadata.display_name.trim()) ||
-        (typeof metadata.full_name === "string" && metadata.full_name.trim()) ||
-        "Community member";
-      setDisplayName(name);
+      const candidates = [profile?.username, profile?.display_name, metadata.username, metadata.display_name, metadata.full_name];
+      const name = candidates.find(
+        (candidate): candidate is string =>
+          typeof candidate === "string" &&
+          candidate.trim().length > 0 &&
+          candidate.trim().toLowerCase() !== (user.email ?? "").trim().toLowerCase(),
+      );
+      setDisplayName(name?.trim() ?? "Community member");
+      setSignedIn(true);
+      setIdentityLoading(false);
     };
 
-    void loadCommunityIdentity().catch((error) =>
-      console.warn("Could not load community identity:", error),
-    );
+    void loadCommunityIdentity().catch((error) => {
+      console.warn("Could not load community identity:", error);
+      if (!cancelled) setIdentityLoading(false);
+    });
     return () => { cancelled = true; };
   }, []);
 
@@ -1366,11 +1373,11 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
       </header>
 
       <section className="community-welcome-card">
-        <div className="community-avatar" aria-hidden="true">{displayName.trim().charAt(0).toUpperCase() || "A"}</div>
+        <div className="community-avatar" aria-hidden="true">{identityLoading ? "…" : displayName.trim().charAt(0).toUpperCase() || "A"}</div>
         <div className="community-welcome-copy">
           <span className="community-kicker">{signedIn ? "YOUR COMMUNITY IDENTITY" : "COMMUNITY PROFILE"}</span>
-          <h2>{signedIn ? displayName : "Welcome to the community"}</h2>
-          <p>{signedIn ? (email || "Your AlphaClient profile") : "Sign in to your community account to use your profile and display name."}</p>
+          <h2>{identityLoading ? "Loading profile…" : signedIn ? displayName : "Welcome to the community"}</h2>
+          <p>{identityLoading ? "Loading your community account…" : signedIn ? (email || "Your AlphaClient profile") : "Sign in to your community account to use your profile and display name."}</p>
         </div>
         <button type="button" className="friends-primary community-profile-button" onClick={onOpenProfile}>
           {signedIn ? "Edit profile" : "Open profile"}
