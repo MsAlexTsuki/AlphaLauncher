@@ -5101,7 +5101,8 @@ button:not(:disabled):active {
 .friends-refresh:hover,.friends-secondary:hover { background:#ffffff10; border-color:#ffffff30; }
 .friends-primary { color:#17130a; background:linear-gradient(110deg,#ffe477,#ffc329); border:1px solid #ffe18a; }
 .friends-primary:hover { filter:brightness(1.04); }
-.friends-primary:disabled,.friends-secondary:disabled,.friends-refresh:disabled { opacity:.55; cursor:wait; }
+.friends-primary:disabled,.friends-secondary:disabled,.friends-refresh:disabled { opacity:.55; cursor:not-allowed; }
+.rank-save-button:disabled { cursor:not-allowed; }
 .friends-page .section-card { padding:22px; }
 .friends-search-card { margin-bottom:0; }
 .friends-section-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
