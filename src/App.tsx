@@ -894,6 +894,7 @@ function LauncherApp() {
               launchError={launchError}
               launchMessage={launchMessage}
               onAccount={() => navigate("Account")}
+              onCommunity={() => navigate("Community")}
               onChangelog={() => {
                 setActiveChangelogTab("client");
                 setModal({
@@ -1728,6 +1729,7 @@ function HomePage(props: {
   launchError: string | null;
   launchMessage: string | null;
   onAccount: () => void;
+  onCommunity: () => void;
   onChangelog: () => void;
   onNews: () => void;
 }) {
@@ -1743,6 +1745,7 @@ function HomePage(props: {
     launchError,
     launchMessage,
     onAccount,
+    onCommunity,
     onChangelog,
     onNews,
   } = props;
@@ -2002,6 +2005,18 @@ function HomePage(props: {
           </div>
         </div>
       </section>
+
+      <div className="home-community-account-wrap">
+        <button
+          type="button"
+          className="home-community-account-button"
+          onClick={onCommunity}
+        >
+          <span aria-hidden="true">✦</span>
+          Make your Alpha Client account
+          <span className="home-community-account-arrow" aria-hidden="true">›</span>
+        </button>
+      </div>
     </div>
   );
 }
