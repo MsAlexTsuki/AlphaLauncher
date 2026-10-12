@@ -1611,7 +1611,6 @@ function ProfilePage() {
       <div className="profile-preview-divider" />
       <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>
       {profile.is_founder && <div className="profile-founder-status"><span className="profile-founder-crown">♛</span> Founder of Alpha Client</div>}
-      <button className="friends-primary profile-edit-main-button" type="button" onClick={() => { setIsEditing(true); setError(""); setMessage(""); }}>Edit Profile</button>
     </section>}
     {profile && isEditing && <form className="profile-edit-page" onSubmit={saveProfile}>
       <section className="section-card profile-edit-card">
