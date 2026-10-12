@@ -47,8 +47,8 @@ begin
   end if;
 
   -- Founder identity is immutable through this management menu.
-  if target_rank = 'founder' and actor_rank <> 'founder' then
-    raise exception 'Only the Founder can manage the Founder account.'
+  if target_rank = 'founder' then
+    raise exception 'The Founder account is protected and cannot be changed through Rank Management.'
       using errcode = '42501';
   end if;
 
