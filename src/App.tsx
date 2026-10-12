@@ -2164,6 +2164,168 @@ function ModsPage({
   );
 }
 
+type ManagedCommunityProfile = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  rank_key: string;
+};
+
+function RankManagement() {
+  const [actorRank, setActorRank] = useState<string | null>(null);
+  const [members, setMembers] = useState<ManagedCommunityProfile[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [selectedRank, setSelectedRank] = useState("member");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const loadMembers = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Log in to manage community ranks.");
+
+      const { data: actor, error: actorError } = await supabase
+        .from("profiles")
+        .select("rank_key, is_founder")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+      if (actorError) throw actorError;
+      const resolvedRank = actor?.rank_key || (actor?.is_founder ? "founder" : "member");
+      setActorRank(resolvedRank);
+      if (resolvedRank !== "founder" && resolvedRank !== "owner") {
+        setMembers([]);
+        return;
+      }
+
+      const { data, error: membersError } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, rank_key")
+        .order("username", { ascending: true })
+        .limit(500);
+      if (membersError) throw membersError;
+      setMembers((data ?? []) as ManagedCommunityProfile[]);
+    } catch (loadError) {
+      setError(errorText(loadError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void loadMembers(); }, []);
+
+  const selectedMember = members.find((member) => member.id === selectedId) ?? null;
+  const filteredMembers = members.filter((member) => {
+    const term = search.trim().toLowerCase();
+    return !term || member.username.toLowerCase().includes(term) ||
+      (member.display_name ?? "").toLowerCase().includes(term);
+  });
+  const rankEntries = Object.entries(COMMUNITY_RANKS);
+
+  const assignRank = async () => {
+    if (!selectedMember) return;
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      const { error: assignError } = await supabase.rpc("assign_community_rank", {
+        target_profile_id: selectedMember.id,
+        requested_rank_key: selectedRank,
+      });
+      if (assignError) throw assignError;
+      setMessage(`Updated @${selectedMember.username} to ${COMMUNITY_RANKS[selectedRank]?.label ?? selectedRank}.`);
+      await loadMembers();
+    } catch (saveError) {
+      setError(errorText(saveError));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const canManageTarget = Boolean(selectedMember) &&
+    (actorRank === "founder" ||
+      (selectedMember?.rank_key !== "founder" && selectedMember?.rank_key !== "owner" && selectedRank !== "founder"));
+
+  return (
+    <section className="section-card developer-card">
+      <div className="section-header">
+        <div>
+          <span className="card-label">COMMUNITY ADMINISTRATION</span>
+          <h3>Rank Management</h3>
+        </div>
+        <span className={`developer-status ${actorRank === "founder" || actorRank === "owner" ? "active" : ""}`}>
+          {actorRank === "founder" ? "Founder access" : actorRank === "owner" ? "Owner access" : "Restricted"}
+        </span>
+      </div>
+      <p className="subtitle">Search for a community member, review their current rank, and assign a new rank or reset them to Member.</p>
+      {loading ? <p className="subtitle">Loading community members…</p> :
+        actorRank !== "founder" && actorRank !== "owner" ? (
+          <div className="developer-warning">
+            <span className="developer-warning-icon">!</span>
+            <div><strong>Access denied</strong><p>Only Founder and Owner accounts can manage ranks.</p></div>
+          </div>
+        ) : (
+          <>
+            <label className="setting-line developer-setting-line">
+              <span>Search member</span>
+              <input className="developer-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Username or display name" />
+            </label>
+            <label className="setting-line developer-setting-line">
+              <span>Community member</span>
+              <select className="developer-input" value={selectedId} onChange={(event) => {
+                setSelectedId(event.target.value);
+                const member = members.find((item) => item.id === event.target.value);
+                if (member) setSelectedRank(member.rank_key || "member");
+              }}>
+                <option value="">Select a member…</option>
+                {filteredMembers.map((member) => (
+                  <option key={member.id} value={member.id}>@{member.username} · {COMMUNITY_RANKS[member.rank_key]?.label ?? member.rank_key}</option>
+                ))}
+              </select>
+            </label>
+            {selectedMember && (
+              <>
+                <div className="developer-info-grid">
+                  <div><span>Username</span><strong>@{selectedMember.username}</strong></div>
+                  <div><span>Current rank</span><strong style={{ color: COMMUNITY_RANKS[selectedMember.rank_key]?.color ?? "#C3BFE0" }}>{COMMUNITY_RANKS[selectedMember.rank_key]?.label ?? selectedMember.rank_key}</strong></div>
+                </div>
+                <label className="setting-line developer-setting-line">
+                  <span>Assign rank</span>
+                  <select className="developer-input" value={selectedRank} onChange={(event) => setSelectedRank(event.target.value)}>
+                    {rankEntries.map(([key, rank]) => <option key={key} value={key}>{rank.label}</option>)}
+                  </select>
+                </label>
+                <div className="developer-actions">
+                  <button className="friends-primary" type="button" disabled={saving || !canManageTarget || selectedRank === selectedMember.rank_key} onClick={() => void assignRank()}>
+                    {saving ? "Saving…" : "Save rank"}
+                  </button>
+                  <button className="friends-secondary" type="button" disabled={saving || !canManageTarget || selectedMember.rank_key === "member"} onClick={() => { setSelectedRank("member"); void (async () => {
+                    setSaving(true); setError(""); setMessage("");
+                    try {
+                      const { error: assignError } = await supabase.rpc("assign_community_rank", { target_profile_id: selectedMember.id, requested_rank_key: "member" });
+                      if (assignError) throw assignError;
+                      setMessage(`Reset @${selectedMember.username} to Member.`);
+                      await loadMembers();
+                    } catch (saveError) { setError(errorText(saveError)); }
+                    finally { setSaving(false); }
+                  })(); }}>Reset to Member</button>
+                </div>
+                {!canManageTarget && <p className="subtitle">Owner accounts cannot change Founder/Owner accounts or assign the Founder rank.</p>}
+              </>
+            )}
+          </>
+        )}
+      {error && <p className="form-error" role="alert">{error}</p>}
+      {message && <p className="form-success" role="status">{message}</p>}
+    </section>
+  );
+}
+
 type AuditLogRow = {
   id: number;
   occurred_at: string;
@@ -2711,11 +2873,7 @@ function DeveloperPage({
           </nav>
 
           <div className="developer-tool-content">
-            {activeTool === "Rank Management" &&
-              renderPlaceholder(
-                "Rank Management",
-                "Beheer ranks zoals Owner, Developer, Staff, Tester en User, en koppel later gecontroleerde rechten aan elke rank.",
-              )}
+            {activeTool === "Rank Management" && <RankManagement />}
 
             {activeTool === "Permission Explorer" &&
               renderPlaceholder(
