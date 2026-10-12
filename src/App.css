@@ -5922,3 +5922,76 @@ button:not(:disabled):active {
 @media (max-width: 760px) {
   .community-main-layout { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+/* Account + community profile side-by-side layout */
+.account-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.45fr);
+  align-items: start;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+.account-profile-layout > .page {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+}
+.account-profile-layout > .page .page-header,
+.account-profile-layout > .page .page-title {
+  margin-bottom: 18px;
+}
+.account-profile-layout > .page .account-large-card {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  flex-wrap: wrap;
+}
+.account-profile-layout > .page .large-avatar {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+}
+.account-profile-layout > .page .account-connected {
+  margin-left: 54px;
+}
+.account-profile-layout > .page .account-actions {
+  margin-top: 12px;
+  gap: 8px;
+}
+.account-profile-layout > .page .account-actions .secondary-button,
+.account-profile-layout > .page .account-actions .large-play-button {
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+}
+.account-profile-layout > .profile-page .profile-view-card {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 24px 20px !important;
+}
+.account-profile-layout > .profile-page .profile-avatar-large {
+  width: 88px;
+  height: 88px;
+  border-radius: 23px;
+}
+.account-profile-layout > .profile-page .profile-bio-preview {
+  max-width: 100%;
+}
+@media (max-width: 1050px) {
+  .account-profile-layout {
+    grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.2fr);
+    gap: 14px;
+  }
+}
+@media (max-width: 760px) {
+  .account-profile-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .account-profile-layout > .page .account-connected {
+    margin-left: 0;
+  }
+}
