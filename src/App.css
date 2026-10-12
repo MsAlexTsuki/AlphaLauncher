@@ -5893,9 +5893,9 @@ button:not(:disabled):active {
 @media (max-width: 760px) { .community-main-layout { grid-template-columns: minmax(0, 1fr); } .community-friends-panel { order: 2; } .community-forum-list .community-forum-card { align-items: flex-start; flex-wrap: wrap; } .community-forum-list .community-forum-status { margin-left: 48px; } }
 
 
-/* Compact community cards to match the profile card's visual footprint. */
+/* Give the friends sidebar the larger footprint shown in the reference. */
 .community-main-layout {
-  grid-template-columns: minmax(0, 560px) 280px;
+  grid-template-columns: minmax(0, 560px) 390px;
   justify-content: start;
   gap: 18px;
 }
@@ -5916,7 +5916,7 @@ button:not(:disabled):active {
 .community-forum-list .community-forum-card p { font-size: 10px; line-height: 1.4; }
 .community-forum-list .community-forum-status { padding-top: 0; }
 @media (max-width: 1050px) {
-  .community-main-layout { grid-template-columns: minmax(0, 1fr) 240px; }
+  .community-main-layout { grid-template-columns: minmax(0, 1fr) 330px; }
   .community-sections-column { max-width: none; }
 }
 @media (max-width: 760px) {
