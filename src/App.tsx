@@ -1445,25 +1445,6 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
             ))}
           </div>
         </section>
-        <aside className="community-friends-panel">
-          <div className="community-friends-heading">
-            <div><p className="eyebrow">YOUR PEOPLE</p><h2>Friends</h2></div>
-            <span className="friends-count">{communityFriends.length}</span>
-          </div>
-          <p className="community-friends-subtitle">Your friends, right beside the community spaces.</p>
-          {friendsError && <p className="community-friends-error">{friendsError}</p>}
-          {friendsLoading ? <div className="friends-empty">Loading friends…</div> :
-            !signedIn ? <div className="friends-empty">Sign in to see your friends.</div> :
-            communityFriends.length === 0 ? <div className="friends-empty">No friends yet. Add players from the Friends page.</div> :
-            <div className="community-friends-list">{communityFriends.map(friend => (
-              <div className="community-friend-item" key={friend.id}>
-                <div className="community-friend-avatar">{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : (friend.username || "?").slice(0, 1).toUpperCase()}</div>
-                <div className="community-friend-copy"><strong>{friend.username}</strong><span>Alpha Community</span></div>
-                <span className="community-friend-presence" title="Presence is not configured yet" aria-label="Online status unavailable" />
-              </div>
-            ))}</div>}
-          <p className="community-friends-footnote">Online indicators will activate once live presence is connected.</p>
-        </aside>
       </div>
     </div>
   );
