@@ -1579,7 +1579,7 @@ function ProfilePage() {
   </div>;
 }
 
-type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; avatar_url?: string | null; bio?: string | null };
+type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; avatar_url?: string | null; bio?: string | null };
 type CommunityFriendRequest = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string };
 
 function FriendsPage() {
@@ -1610,7 +1610,7 @@ function FriendsPage() {
         return;
       }
       setUserId(user.id);
-      const { data: profile, error: profileError } = await supabase.from("profiles").select("id, username, display_name, is_founder").eq("id", user.id).maybeSingle();
+      const { data: profile, error: profileError } = await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key").eq("id", user.id).maybeSingle();
       if (profileError) throw profileError;
       const loadedProfile = profile as CommunityProfile | null;
       setMyProfile(loadedProfile);
@@ -1628,7 +1628,7 @@ function FriendsPage() {
       const friendIds = (friendshipRows ?? []).map((row: { user_a: string; user_b: string }) => row.user_a === user.id ? row.user_b : row.user_a);
       const requests = (requestRows ?? []) as CommunityFriendRequest[];
       const otherIds = [...new Set([...friendIds, ...requests.map(r => r.sender_id === user.id ? r.recipient_id : r.sender_id)])];
-      const { data: people, error: peopleError } = otherIds.length ? await supabase.from("profiles").select("id, username, display_name, is_founder").in("id", otherIds) : { data: [], error: null };
+      const { data: people, error: peopleError } = otherIds.length ? await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key").in("id", otherIds) : { data: [], error: null };
       if (peopleError) throw peopleError;
       const profileMap = new Map(((people ?? []) as CommunityProfile[]).map(person => [person.id, person]));
       setFriends(friendIds.map(id => profileMap.get(id)).filter((person): person is CommunityProfile => Boolean(person)).sort((a,b) => a.username.localeCompare(b.username)));
@@ -1663,7 +1663,7 @@ function FriendsPage() {
     const term = search.trim().toLowerCase().replace(/^@/, "");
     if (term.length < 3) { setError("Enter at least 3 characters to search."); setResults([]); return; }
     if (!userId) { setError("Sign in to an Alpha community account before searching."); return; }
-    const { data, error: searchError } = await supabase.from("profiles").select("id, username, display_name, is_founder").ilike("username", `%${term}%`).neq("id", userId).limit(20);
+    const { data, error: searchError } = await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key").ilike("username", `%${term}%`).neq("id", userId).limit(20);
     if (searchError) { setError(errorText(searchError)); return; }
     const known = new Set([...friends.map(f => f.id), ...incoming.map(r => r.sender_id), ...outgoing.map(r => r.recipient_id)]);
     setResults(((data ?? []) as CommunityProfile[]).filter(person => !known.has(person.id)));
@@ -1704,13 +1704,13 @@ function FriendsPage() {
     {userId && myProfile && profileSetupRequired && <div className="friends-modal-backdrop"><section className="section-card friends-profile-setup" role="dialog" aria-modal="true" aria-labelledby="friends-profile-title"><div className="friends-empty-icon">✦</div><div className="eyebrow">WELCOME TO ALPHA COMMUNITY</div><h2 id="friends-profile-title">Choose your username</h2><p>Choose a unique username. Other players will use this name to find you and send friend requests.</p><form onSubmit={saveCommunityProfile} className="friends-profile-form"><label htmlFor="friends-username">Username</label><div className="friends-username-field"><span>@</span><input id="friends-username" value={setupUsername} onChange={event => setSetupUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0,20))} minLength={3} maxLength={20} pattern="[a-z0-9_]{3,20}" placeholder="yourname" required autoFocus /></div><small>3–20 characters: lowercase letters, numbers, and underscores.</small>{error && <div className="friends-notice error">{error}</div>}<button className="friends-primary friends-save-profile" type="submit" disabled={savingProfile}>{savingProfile ? "Saving profile…" : "Save and continue"}</button></form></section></div>}
     {userId && myProfile && !profileSetupRequired && <>
       <section className="section-card friends-search-card"><div className="friends-section-heading"><div><h2>Find players</h2><p>Search by Alpha username.</p></div><span className="friends-handle">@{myProfile.username}</span></div><form className="friends-search" onSubmit={event => { event.preventDefault(); void searchUsers(); }}><span className="friends-search-icon">⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Enter a username…" maxLength={20}/><button className="friends-primary" type="submit">Search</button></form>
-        {results.length > 0 && <div className="friends-user-list">{results.map(person => <div className="friends-user-row" key={person.id}><div className="friends-avatar">{person.username.slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{person.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{person.username}</strong><span>@{person.username}</span></div><button className="friends-secondary" disabled={busyId === person.id} onClick={() => void sendRequest(person)}>{busyId === person.id ? "Sending…" : "+ Add friend"}</button></div>)}</div>}
+        {results.length > 0 && <div className="friends-user-list">{results.map(person => <div className="friends-user-row" key={person.id}><div className="friends-avatar">{person.username.slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{person.username}</strong><span>@{person.username}</span></div><span className={`community-rank-badge ${(person.rank_key || (person.is_founder ? "founder" : "member")) === "founder" ? "community-rank-founder" : ""}`}>{(person.rank_key || (person.is_founder ? "founder" : "member")) === "founder" ? "FOUNDER" : (COMMUNITY_RANKS[person.rank_key || "member"]?.label || "Member")}</span><button className="friends-secondary" disabled={busyId === person.id} onClick={() => void sendRequest(person)}>{busyId === person.id ? "Sending…" : "+ Add friend"}</button></div>)}</div>}
       </section>
       <div className="friends-main-layout">
         <div className="friends-columns friends-request-columns">
         <section className="section-card friends-list-card">
           <div className="friends-section-heading"><div><h2>Incoming requests</h2><p>Players who want to add you.</p></div><span className="friends-count">{incoming.length}</span></div>
-          {incoming.length === 0 ? <div className="friends-empty">No incoming requests right now.</div> : incoming.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{(request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div><button className="friends-primary compact" disabled={busyId === request.id} onClick={() => void respond(request, true)}>{busyId === request.id ? "…" : "Accept"}</button><button className="friends-secondary compact" disabled={busyId === request.id} onClick={() => void respond(request, false)}>Decline</button></div>)}
+          {incoming.length === 0 ? <div className="friends-empty">No incoming requests right now.</div> : incoming.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{(request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div>{request.profile && <span className={`community-rank-badge ${(request.profile.rank_key || (request.profile.is_founder ? "founder" : "member")) === "founder" ? "community-rank-founder" : ""}`}>{(request.profile.rank_key || (request.profile.is_founder ? "founder" : "member")) === "founder" ? "FOUNDER" : (COMMUNITY_RANKS[request.profile.rank_key || "member"]?.label || "Member")}</span>}<button className="friends-primary compact" disabled={busyId === request.id} onClick={() => void respond(request, true)}>{busyId === request.id ? "…" : "Accept"}</button><button className="friends-secondary compact" disabled={busyId === request.id} onClick={() => void respond(request, false)}>Decline</button></div>)}
         </section>
         <section className="section-card friends-list-card">
           <div className="friends-section-heading"><div><h2>Outgoing requests</h2><p>Players you have sent a request to.</p></div><span className="friends-count">{outgoing.length}</span></div>
@@ -1719,7 +1719,7 @@ function FriendsPage() {
         </div>
         <section className="section-card friends-list-card friends-roster-card">
           <div className="friends-section-heading"><div><h2>Your friends</h2><p>Players connected to your account.</p></div><span className="friends-count">{friends.length}</span></div>
-          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className="friends-user-row" role="listitem" key={friend.id}><div className="friends-avatar">{friend.username.slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{friend.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{friend.username}</strong><span>@{friend.username}</span></div><span className="friends-connected"><i/> Friend</span></div>)}</div>}
+          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className="friends-user-row" role="listitem" key={friend.id}><div className="friends-avatar">{friend.username.slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{friend.username}</strong><span>@{friend.username}</span></div><span className={`community-rank-badge ${(friend.rank_key || (friend.is_founder ? "founder" : "member")) === "founder" ? "community-rank-founder" : ""}`}>{(friend.rank_key || (friend.is_founder ? "founder" : "member")) === "founder" ? "FOUNDER" : (COMMUNITY_RANKS[friend.rank_key || "member"]?.label || "Member")}</span><span className="friends-connected"><i/> Friend</span></div>)}</div>}
         </section>
       </div>
     </>}
