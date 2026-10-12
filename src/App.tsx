@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { supabase } from "./lib/supabase";
+import PrivateChatPanel from "./PrivateChatPanel";
 import RankPermissionsManager from "./RankPermissionsManager";
 import "./App.css";
 
@@ -1643,6 +1644,7 @@ function FriendsPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [myProfile, setMyProfile] = useState<CommunityProfile | null>(null);
   const [friends, setFriends] = useState<CommunityProfile[]>([]);
+  const [selectedChatFriendId, setSelectedChatFriendId] = useState<string | null>(null);
   const [incoming, setIncoming] = useState<Array<CommunityFriendRequest & { profile?: CommunityProfile }>>([]);
   const [outgoing, setOutgoing] = useState<Array<CommunityFriendRequest & { profile?: CommunityProfile }>>([]);
   const [search, setSearch] = useState("");
@@ -1773,10 +1775,11 @@ function FriendsPage() {
           <div className="friends-section-heading"><div><h2>Outgoing requests</h2><p>Players you have sent a request to.</p></div><span className="friends-count">{outgoing.length}</span></div>
           {outgoing.length === 0 ? <div className="friends-empty">You haven't sent any pending requests.</div> : outgoing.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{(request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div><span className="friends-pending"><i /> Pending</span><button className="friends-secondary compact" type="button" disabled={busyId === request.id} onClick={() => void cancelRequest(request)}>{busyId === request.id ? "Cancelling…" : "Cancel request"}</button></div>)}
         </section>
+        <PrivateChatPanel userId={userId} friends={friends} selectedFriendId={selectedChatFriendId} onSelectFriend={setSelectedChatFriendId} />
         </div>
         <section className="section-card friends-list-card friends-roster-card">
           <div className="friends-section-heading"><div><h2>Your friends</h2><p>Players connected to your account.</p></div><span className="friends-count">{friends.length}</span></div>
-          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className="friends-user-row" role="listitem" key={friend.id}><div className="friends-avatar">{friend.username.slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{friend.username}</strong><span>@{friend.username}</span></div><span className={`community-rank-badge ${(friend.rank_key || (friend.is_founder ? "founder" : "member")) === "founder" ? "community-rank-founder" : ""}`}>{(friend.rank_key || (friend.is_founder ? "founder" : "member")) === "founder" ? "FOUNDER" : (COMMUNITY_RANKS[friend.rank_key || "member"]?.label || "Member")}</span><span className="friends-connected"><i/> Friend</span></div>)}</div>}
+          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className={`friends-user-row friends-roster-clickable${selectedChatFriendId === friend.id ? " is-chat-selected" : ""}`} role="listitem" tabIndex={0} aria-label={`Open private chat with ${friend.username}`} key={friend.id} onClick={() => setSelectedChatFriendId(friend.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedChatFriendId(friend.id); } }}><div className="friends-avatar">{friend.username.slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{friend.username}</strong><span>@{friend.username}</span></div><span className={`community-rank-badge ${(friend.rank_key || (friend.is_founder ? "founder" : "member")) === "founder" ? "community-rank-founder" : ""}`}>{(friend.rank_key || (friend.is_founder ? "founder" : "member")) === "founder" ? "FOUNDER" : (COMMUNITY_RANKS[friend.rank_key || "member"]?.label || "Member")}</span><span className="friends-connected"><i/> Friend</span></div>)}</div>}
         </section>
       </div>
     </>}
