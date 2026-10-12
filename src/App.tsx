@@ -1575,6 +1575,15 @@ function FriendsPage() {
     setBusyId(null);
   };
 
+  const cancelRequest = async (request: CommunityFriendRequest) => {
+    if (!userId || request.sender_id !== userId || request.status !== "pending") return;
+    setBusyId(request.id); setError(""); setMessage("");
+    const { error: cancelError } = await supabase.rpc("cancel_friend_request", { p_request_id: request.id });
+    if (cancelError) setError(errorText(cancelError));
+    else { setMessage("Friend request cancelled."); await loadCommunity(); }
+    setBusyId(null);
+  };
+
   return <div className="page friends-page">
     <div className="page-header"><div><div className="eyebrow">ALPHA COMMUNITY</div><h1>Friends</h1><p>Find people to play AlphaClient with.</p></div><button className="friends-refresh" onClick={() => void loadCommunity()} disabled={loading} title="Refresh">↻ Refresh</button></div>
     {error && <div className="friends-notice error">{error}</div>}
@@ -1594,7 +1603,7 @@ function FriendsPage() {
         </section>
         <section className="section-card friends-list-card">
           <div className="friends-section-heading"><div><h2>Outgoing requests</h2><p>Players you have sent a request to.</p></div><span className="friends-count">{outgoing.length}</span></div>
-          {outgoing.length === 0 ? <div className="friends-empty">You haven't sent any pending requests.</div> : outgoing.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{(request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div><span className="friends-pending"><i /> Pending</span></div>)}
+          {outgoing.length === 0 ? <div className="friends-empty">You haven't sent any pending requests.</div> : outgoing.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{(request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div><span className="friends-pending"><i /> Pending</span><button className="friends-secondary compact" type="button" disabled={busyId === request.id} onClick={() => void cancelRequest(request)}>{busyId === request.id ? "Cancelling…" : "Cancel request"}</button></div>)}
         </section>
         </div>
         <section className="section-card friends-list-card friends-roster-card">
