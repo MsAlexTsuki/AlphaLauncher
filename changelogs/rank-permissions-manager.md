@@ -15,3 +15,4 @@
 - Added a Home-page “Make your Alpha Client account” call-to-action that opens the Community page.
 - Positioned the “Make your Alpha Client account” button centered below the News and Last played cards on Home.
 - Updated the Community identity card to show the saved profile username/name from `public.profiles` above the account email.
+- Prevented the Community identity card from briefly displaying an email as the profile name by waiting for the saved profile and filtering email-shaped name candidates.
