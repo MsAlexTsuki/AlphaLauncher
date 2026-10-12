@@ -5795,3 +5795,44 @@ button:not(:disabled):active {
 @media (max-width: 600px) {
   .home-community-account-button { max-width: 100%; font-size: 11px; }
 }
+
+
+/* Center the community-account call-to-action below News and Last played. */
+.home-community-account-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 20px auto 4px;
+}
+.home-community-account-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 43px;
+  max-width: 100%;
+  padding: 0 17px;
+  border: 1px solid rgba(255, 216, 102, .34);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255, 216, 102, .12), rgba(255, 200, 61, .045));
+  color: var(--yellow-light, #ffd866);
+  font: 700 12px Inter, sans-serif;
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+.home-community-account-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 216, 102, .72);
+  background: linear-gradient(135deg, rgba(255, 216, 102, .19), rgba(255, 200, 61, .075));
+  box-shadow: 0 8px 24px rgba(255, 200, 61, .08);
+}
+.home-community-account-button:focus-visible {
+  outline: 2px solid var(--yellow-light, #ffd866);
+  outline-offset: 3px;
+}
+.home-community-account-button > span:first-child { font-size: 15px; }
+.home-community-account-arrow { margin-left: 5px; font-size: 18px; line-height: 1; }
+@media (max-width: 600px) {
+  .home-community-account-wrap { margin-top: 15px; }
+  .home-community-account-button { font-size: 11px; }
+}
