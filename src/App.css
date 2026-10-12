@@ -5441,3 +5441,7 @@ button:not(:disabled):active {
 .audit-timeline .audit-list::-webkit-scrollbar-thumb:hover {
   background: #666975;
 }
+
+
+/* Non-Founder community rank badges use the approved rank color without altering Founder styling. */
+.profile-rank-badge { display:inline-flex; align-items:center; justify-content:center; margin-right:6px; padding:4px 7px; border:1px solid color-mix(in srgb, var(--rank-color) 48%, transparent); border-radius:5px; background:linear-gradient(135deg, color-mix(in srgb, var(--rank-color) 18%, transparent), color-mix(in srgb, var(--rank-color) 5%, transparent)); color:var(--rank-color); font-size:9px; font-weight:900; line-height:1; letter-spacing:1px; vertical-align:middle; }
