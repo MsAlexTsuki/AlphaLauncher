@@ -2544,7 +2544,7 @@ function AuditTimeline() {
           <p>Chronologische registratie van uitgevoerde developer-acties.</p>
         </div>
         <button type="button" className="small-button" onClick={() => void loadLogs()} disabled={loading}>
-          {loading ? "Laden…" : "Vernieuwen"}
+          {loading ? "Loading…" : "Refresh"}
         </button>
       </div>
 
@@ -2560,28 +2560,28 @@ function AuditTimeline() {
         <label>Resultaat
           <select value={outcomeFilter} onChange={(event) => setOutcomeFilter(event.target.value)}>
             <option value="all">Alle resultaten</option>
-            <option value="success">Geslaagd</option>
-            <option value="failure">Mislukt</option>
-            <option value="denied">Geweigerd</option>
+            <option value="success">Success</option>
+            <option value="failure">Failed</option>
+            <option value="denied">Denied</option>
           </select>
         </label>
-        <label className="audit-search-label">Zoeken
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Actie, gebruiker, doel…" />
+        <label className="audit-search-label">Search
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Action, user, target…" />
         </label>
       </div>
 
       {error && <div className="audit-state audit-error" role="alert">
-        <strong>Auditlog kon niet worden geladen</strong>
+        <strong>Could not load audit log</strong>
         <p>{error}</p>
-        <small>Controleer je developerrechten, de audit_logs RLS-policy en de Supabase-verbinding.</small>
+        <small>Check your developer permissions, the audit_logs RLS policy, and the Supabase connection.</small>
       </div>}
-      {!error && loading && <div className="audit-state">Auditlogs ophalen…</div>}
-      {!error && !loading && filteredRows.length === 0 && <div className="audit-state">Geen auditregels gevonden voor deze filters.</div>}
+      {!error && loading && <div className="audit-state">Loading audit logs…</div>}
+      {!error && !loading && filteredRows.length === 0 && <div className="audit-state">No audit entries match these filters.</div>}
       {!error && !loading && filteredRows.length > 0 && (
         <div className="audit-list">
           {filteredRows.map((row) => (
             <article className="audit-row" key={row.id}>
-              <span className={`audit-outcome audit-outcome-${row.outcome}`}>{row.outcome === "success" ? "GESLAAGD" : row.outcome === "failure" ? "MISLUKT" : "GEWEIGERD"}</span>
+              <span className={`audit-outcome audit-outcome-${row.outcome}`}>{row.outcome === "success" ? "SUCCESS" : row.outcome === "failure" ? "FAILED" : "DENIED"}</span>
               <div className="audit-row-main">
                 <div className="audit-row-title">
                   <strong>{({
@@ -2597,7 +2597,7 @@ function AuditTimeline() {
                 <small>{row.actor_label || "Onbekende actor"} · {new Date(row.occurred_at).toLocaleString()}</small>
                 {row.details && Object.keys(row.details).length > 0 && (
                   <details className="audit-details">
-                    <summary>Details bekijken</summary>
+                    <summary>View details</summary>
                     <pre>{JSON.stringify(row.details, null, 2)}</pre>
                     {row.request_id && <small>Request ID: {row.request_id}</small>}
                   </details>
@@ -2607,7 +2607,7 @@ function AuditTimeline() {
           ))}
         </div>
       )}
-      <div className="audit-footer">Maximaal 200 meest recente regels · {filteredRows.length} weergegeven</div>
+      <div className="audit-footer">Showing up to 200 most recent entries · {filteredRows.length} weergegeven</div>
     </section>
   );
 }
@@ -2736,7 +2736,7 @@ function DeveloperPage({
     const body = draftBody.trim();
 
     if (!version || !title || !body) {
-      setChangelogError("Vul versie, titel en wijzigingen in.");
+      setChangelogError("Enter a version, title, and change description.");
       return;
     }
 
@@ -2830,7 +2830,7 @@ function DeveloperPage({
         <PageTitle
           eyebrow="DEVELOPMENT"
           title="Developer Login"
-          description="Log in met je developeraccount om de developer tools te openen."
+          description="Sign in with your developer account to access developer tools."
         />
 
         <section className="section-card developer-card">
@@ -2882,7 +2882,7 @@ function DeveloperPage({
               autoComplete="current-password"
               value={developerPassword}
               onChange={(event) => setDeveloperPassword(event.target.value)}
-              placeholder="Je Supabase-accountwachtwoord"
+              placeholder="Your Supabase account password"
               required
             />
 
@@ -2929,8 +2929,8 @@ function DeveloperPage({
           <strong>Developer access verified</strong>
           <p>
             Ingelogd als {developerUserEmail}. Developerrechten zijn
-            gecontroleerd via Supabase. Changelogwijzigingen worden in de
-            database opgeslagen.
+            verified through Supabase. Changelog changes are stored in the
+            database.
           </p>
         </div>
         <button
@@ -2946,9 +2946,9 @@ function DeveloperPage({
         <section className="developer-dashboard" aria-label="Developer modules">
           <div className="developer-dashboard-heading">
             <span className="card-label">DEVELOPER WORKSPACE</span>
-            <h2>Waar wil je aan werken?</h2>
+            <h2>What would you like to work on?</h2>
             <p>
-              Kies een module om te openen. Je komt niet automatisch in een tool
+              Select a module to open. You will not be taken directly into a tool
               terecht.
             </p>
           </div>
@@ -2988,7 +2988,7 @@ function DeveloperPage({
               </span>
               <span className="developer-tool-nav-copy">
                 <strong>Developer Dashboard</strong>
-                <small>Terug naar alle modules</small>
+                <small>Back to all modules</small>
               </span>
             </button>
 
@@ -3022,7 +3022,7 @@ function DeveloperPage({
             {activeTool === "Permission Explorer" &&
               renderPlaceholder(
                 "Permission Explorer",
-                "Bekijk welke acties beschikbaar zijn, welke rank ze krijgt en waar een permission wordt gebruikt.",
+                "Explore available actions, which ranks receive them, and where each permission is used.",
               )}
 
             {activeTool === "Audit Timeline" && <AuditTimeline />}
@@ -3030,7 +3030,7 @@ function DeveloperPage({
             {activeTool === "Change Review" &&
               renderPlaceholder(
                 "Change Review",
-                "Een review-stap voor wijzigingen, zodat voorstellen kunnen worden bekeken en goedgekeurd voordat ze worden toegepast.",
+                "Review proposed changes and approve them before they are applied.",
               )}
 
             {activeTool === "Development Sandbox" && (
@@ -3146,9 +3146,7 @@ function DeveloperPage({
                 </div>
 
                 <p className="subtitle">
-                  Concepten worden opgeslagen in Supabase als niet-gepubliceerd.
-                  Gepubliceerde changelogs verschijnen in de launcher voor alle
-                  gebruikers.
+                  Drafts are saved in Supabase as unpublished entries. Published changelogs appear in the launcher for all users.
                 </p>
 
                 <label
@@ -3201,7 +3199,7 @@ function DeveloperPage({
                   className="developer-input-label"
                   htmlFor="changelog-body"
                 >
-                  Wijzigingen
+                  Changes
                 </label>
                 <textarea
                   id="changelog-body"
@@ -3261,7 +3259,7 @@ function DeveloperPage({
                 <div className="news-list">
                   {changelogs.length === 0 ? (
                     <p className="subtitle">
-                      Nog geen changelogs. Voeg hierboven je eerste toe.
+                      No changelogs yet. Create your first one above.
                     </p>
                   ) : (
                     changelogs.map((entry) => (
@@ -3282,7 +3280,7 @@ function DeveloperPage({
                             · {entry.date}
                           </time>
                           <span>
-                            Status: {entry.published ? "Gepubliceerd" : "Concept"}
+                            Status: {entry.published ? "Published" : "Draft"}
                           </span>
                         </div>
 
@@ -3319,7 +3317,7 @@ function DeveloperPage({
                             onClick={() => {
                               if (
                                 window.confirm(
-                                  `Weet je zeker dat je "${entry.title}" wilt verwijderen?`,
+                                  `Are you sure you want to delete "${entry.title}"?`,
                                 )
                               ) {
                                 onDeleteChangelog(entry.id);
