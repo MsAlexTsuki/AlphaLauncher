@@ -2,6 +2,7 @@
 
 ## Rank badges
 - Applied the approved colors to the eleven non-Founder ranks.
+- Darkened Trial Moderator from `#D1CF1D` to `#A6A515` to distinguish it from Alpha+.
 - Added rank-aware badge rendering to the signed-in profile using the profile's `rank_key`.
 - Preserved the existing Founder badge, cherry blossom icon, gold styling, and Founder status line.
 - Kept existing profile editing and other launcher functionality unchanged.
@@ -20,7 +21,7 @@ from (values
   ('admin', '#E08D16'),
   ('senior_moderator', '#8C17D1'),
   ('moderator', '#29AFCC'),
-  ('trial_moderator', '#D1CF1D'),
+  ('trial_moderator', '#A6A515'),
   ('beta', '#00FF52'),
   ('alpha_plus', '#FFF300'),
   ('alpha', '#F300FF'),
