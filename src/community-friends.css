@@ -1,0 +1,382 @@
+/* Alpha Community: align the friends panel with Help & support and refine the Friends page. */
+.community-page .community-main-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 560px) minmax(300px, 360px);
+  align-items: start;
+  justify-content: start;
+  column-gap: 18px;
+  row-gap: 18px;
+  margin-top: 24px;
+}
+
+.community-page .community-sections-column {
+  width: 100%;
+  max-width: 560px;
+  min-width: 0;
+}
+
+.community-page .community-sections-column .community-section-heading {
+  margin-top: 0;
+}
+
+.community-page .community-forum-list {
+  gap: 10px;
+}
+
+.community-page .community-forum-list .community-forum-card {
+  width: 100%;
+  min-height: 76px;
+  padding: 12px 14px;
+  gap: 12px;
+  border-radius: 12px;
+}
+
+.community-page .community-forum-list .community-forum-icon {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+}
+
+.community-page .community-forum-list .community-forum-card-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.community-page .community-forum-list .community-forum-card h3 {
+  margin: 3px 0 4px;
+  font-size: 13px;
+}
+
+.community-page .community-forum-list .community-forum-card p {
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.community-page .community-forum-list .community-forum-status {
+  flex: 0 0 auto;
+  padding-top: 0;
+  white-space: nowrap;
+}
+
+.community-page > .community-main-layout > .community-friends-panel {
+  align-self: start;
+  width: 100%;
+  min-width: 0;
+  margin-top: 56px;
+  padding: 18px;
+  border: 1px solid rgba(255, 200, 61, .16);
+  border-radius: 13px;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(255, 200, 61, .045), transparent 48%),
+    linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+}
+
+.community-friends-heading h2 {
+  font-size: 18px;
+}
+
+.community-friends-subtitle {
+  margin: 8px 0 13px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.community-friends-list {
+  gap: 0;
+}
+
+.community-friend-item {
+  min-height: 53px;
+  padding: 9px 0;
+  gap: 10px;
+}
+
+.community-friend-avatar {
+  flex-basis: 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.community-friend-copy {
+  gap: 4px;
+}
+
+.community-friend-copy strong {
+  font-size: 11px;
+}
+
+.community-friend-copy span {
+  font-size: 9px;
+}
+
+.community-friends-footnote {
+  padding-top: 10px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255,255,255,.06);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.community-friends-error {
+  overflow-wrap: anywhere;
+}
+
+/* Friends page: balanced request columns and a clean, independently scrollable roster. */
+.friends-page {
+  gap: 20px;
+}
+
+.friends-page > .page-header {
+  align-items: flex-start;
+  padding-bottom: 2px;
+}
+
+.friends-page > .page-header > div:first-child {
+  min-width: 0;
+}
+
+.friends-page > .page-header h1 {
+  margin: 4px 0 0;
+  letter-spacing: -.035em;
+}
+
+.friends-page > .page-header p {
+  line-height: 1.55;
+}
+
+.friends-page .section-card {
+  border-color: rgba(255,255,255,.075);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(255,200,61,.025), transparent 45%),
+    linear-gradient(145deg, rgba(29,30,37,.88), rgba(19,20,26,.94));
+}
+
+.friends-page .friends-search-card {
+  padding: 21px;
+}
+
+.friends-page .friends-section-heading {
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.friends-page .friends-section-heading h2 {
+  font-size: 15px;
+  letter-spacing: -.015em;
+}
+
+.friends-page .friends-section-heading p {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.friends-page .friends-handle,
+.friends-page .friends-count {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+.friends-page .friends-search {
+  min-height: 48px;
+  padding: 5px 6px 5px 9px;
+  gap: 9px;
+  border-color: rgba(255,255,255,.1);
+  background: rgba(8,9,13,.62);
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.friends-page .friends-search:focus-within {
+  border-color: rgba(255,200,61,.42);
+  box-shadow: 0 0 0 3px rgba(255,200,61,.055);
+}
+
+.friends-page .friends-search-icon {
+  padding-left: 3px;
+  font-size: 21px;
+}
+
+.friends-page .friends-search input {
+  font-size: 12px;
+}
+
+.friends-page .friends-search .friends-primary {
+  min-height: 36px;
+  padding: 0 15px;
+}
+
+.friends-page .friends-user-list {
+  margin-top: 15px;
+}
+
+.friends-page .friends-main-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, .88fr);
+  column-gap: 18px;
+  row-gap: 18px;
+  align-items: stretch;
+}
+
+.friends-page .friends-main-layout .friends-request-columns {
+  gap: 16px;
+}
+
+.friends-page .friends-main-layout .friends-list-card {
+  padding: 20px;
+}
+
+.friends-page .friends-main-layout .friends-roster-card {
+  min-height: 360px;
+  max-height: 510px;
+}
+
+.friends-page .friends-user-row {
+  gap: 10px;
+  min-height: 58px;
+  padding: 11px 0;
+}
+
+.friends-page .friends-avatar {
+  width: 35px;
+  height: 35px;
+  flex-basis: 35px;
+  border-radius: 10px;
+}
+
+.friends-page .friends-user-copy {
+  gap: 4px;
+}
+
+.friends-page .friends-user-copy strong {
+  font-size: 11px;
+}
+
+.friends-page .friends-user-copy span {
+  font-size: 10px;
+}
+
+.friends-page .community-rank-badge {
+  padding: 5px 7px;
+  font-size: 8px;
+  letter-spacing: .045em;
+}
+
+.friends-page .friends-connected,
+.friends-page .friends-pending {
+  font-size: 9px;
+}
+
+.friends-page .friends-primary.compact,
+.friends-page .friends-secondary.compact {
+  min-height: 29px;
+  padding: 6px 9px;
+  border-radius: 7px;
+  font-size: 9px;
+}
+
+.friends-page .friends-empty {
+  padding: 24px 14px;
+  border-color: rgba(255,255,255,.12);
+  background: rgba(0,0,0,.1);
+  font-size: 11px;
+}
+
+.friends-page .friends-scroll-list {
+  padding-right: 7px;
+  scrollbar-color: rgba(255,200,61,.3) transparent;
+}
+
+.friends-page .friends-scroll-list::-webkit-scrollbar-thumb {
+  background: rgba(255,200,61,.25);
+}
+
+.friends-page .friends-scroll-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,200,61,.45);
+}
+
+.friends-page .friends-notice {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1120px) {
+  .community-page .community-main-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+  }
+
+  .community-page .community-sections-column {
+    max-width: none;
+  }
+
+  .friends-page .friends-main-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, .85fr);
+    column-gap: 14px;
+  }
+
+  .friends-page .friends-main-layout .friends-list-card {
+    padding: 17px;
+  }
+}
+
+@media (max-width: 850px) {
+  .community-page .community-main-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .community-page > .community-main-layout > .community-friends-panel {
+    margin-top: 0;
+  }
+
+  .friends-page .friends-main-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .friends-page .friends-main-layout .friends-roster-card {
+    min-height: 260px;
+    max-height: 390px;
+  }
+}
+
+@media (max-width: 600px) {
+  .community-page .community-forum-list .community-forum-card {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .community-page .community-forum-list .community-forum-status {
+    margin-left: 46px;
+  }
+
+  .community-page > .community-main-layout > .community-friends-panel {
+    padding: 15px;
+  }
+
+  .friends-page .friends-search-card,
+  .friends-page .friends-main-layout .friends-list-card {
+    padding: 16px;
+  }
+
+  .friends-page .friends-user-row {
+    flex-wrap: wrap;
+  }
+
+  .friends-page .friends-user-copy {
+    flex: 1 1 90px;
+  }
+
+  .friends-page .friends-section-heading {
+    align-items: flex-start;
+  }
+
+  .friends-page .friends-handle {
+    max-width: 46%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .friends-page .friends-search .friends-primary {
+    padding-inline: 11px;
+  }
+}
