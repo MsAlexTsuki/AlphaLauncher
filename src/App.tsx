@@ -1010,7 +1010,7 @@ function LauncherApp() {
           )}
 
           {page === "Account" && (
-            <>
+            <div className="account-profile-layout">
               <AccountPage
                 account={account}
                 isLoggingIn={isLoggingIn}
@@ -1019,7 +1019,7 @@ function LauncherApp() {
                 onLogout={handleMicrosoftLogout}
               />
               <ProfilePage />
-            </>
+            </div>
           )}
         </main>
       </div>
