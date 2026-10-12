@@ -2920,7 +2920,7 @@ function DeveloperPage({
       <PageTitle
         eyebrow="DEVELOPMENT"
         title="Developer Center"
-        description="Een centrale plek voor Alpha Client development, beheer en releases."
+        description="A central hub for Alpha Client development, management, and releases."
       />
 
       <div className="developer-warning">
