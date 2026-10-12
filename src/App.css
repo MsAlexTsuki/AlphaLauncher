@@ -5836,3 +5836,10 @@ button:not(:disabled):active {
   .home-community-account-wrap { margin-top: 15px; }
   .home-community-account-button { font-size: 11px; }
 }
+
+
+/* Community ranks stay aligned on the right of each player row. */
+.community-rank-badge { flex: 0 0 auto; margin-left: auto; align-self: center; padding: 5px 8px; border: 1px solid rgba(255,200,61,.22); border-radius: 6px; background: rgba(255,200,61,.07); color: #ffd866; font-size: 9px; font-weight: 800; letter-spacing: .06em; white-space: nowrap; }
+.community-rank-badge.community-rank-founder { border-color: rgba(255,155,190,.28); background: rgba(255,155,190,.08); color: #ffb4d0; }
+.friends-user-row { display: flex; align-items: center; gap: 12px; }
+.friends-user-copy { min-width: 0; flex: 1 1 auto; }
