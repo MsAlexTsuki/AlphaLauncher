@@ -2541,7 +2541,7 @@ function AuditTimeline() {
         <div>
           <span className="card-label">SECURITY &amp; ACTIVITY</span>
           <h3>Audit Timeline</h3>
-          <p>Chronologische registratie van uitgevoerde developer-acties.</p>
+          <p>Chronological record of developer actions performed.</p>
         </div>
         <button type="button" className="small-button" onClick={() => void loadLogs()} disabled={loading}>
           {loading ? "Loading…" : "Refresh"}
