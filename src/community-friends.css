@@ -125,7 +125,9 @@
 
 /* Friends page: balanced request columns and a clean, independently scrollable roster. */
 .friends-page {
-  gap: 20px;
+  width: min(100%, 1120px);
+  margin-inline: auto;
+  gap: 14px;
 }
 
 .friends-page > .page-header {
@@ -155,12 +157,12 @@
 }
 
 .friends-page .friends-search-card {
-  padding: 21px;
+  padding: 16px;
 }
 
 .friends-page .friends-section-heading {
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 11px;
 }
 
 .friends-page .friends-section-heading h2 {
@@ -215,28 +217,28 @@
 
 .friends-page .friends-main-layout {
   grid-template-columns: minmax(0, 1fr) minmax(280px, .88fr);
-  column-gap: 18px;
-  row-gap: 18px;
+  column-gap: 14px;
+  row-gap: 14px;
   align-items: stretch;
 }
 
 .friends-page .friends-main-layout .friends-request-columns {
-  gap: 16px;
+  gap: 12px;
 }
 
 .friends-page .friends-main-layout .friends-list-card {
-  padding: 20px;
+  padding: 16px;
 }
 
 .friends-page .friends-main-layout .friends-roster-card {
-  min-height: 360px;
-  max-height: 510px;
+  min-height: 0;
+  max-height: 420px;
 }
 
 .friends-page .friends-user-row {
-  gap: 10px;
-  min-height: 58px;
-  padding: 11px 0;
+  gap: 9px;
+  min-height: 48px;
+  padding: 8px 0;
 }
 
 .friends-page .friends-avatar {
@@ -278,7 +280,7 @@
 }
 
 .friends-page .friends-empty {
-  padding: 24px 14px;
+  padding: 16px 12px;
   border-color: rgba(255,255,255,.12);
   background: rgba(0,0,0,.1);
   font-size: 11px;
@@ -334,8 +336,8 @@
   }
 
   .friends-page .friends-main-layout .friends-roster-card {
-    min-height: 260px;
-    max-height: 390px;
+    min-height: 0;
+    max-height: 340px;
   }
 }
 
