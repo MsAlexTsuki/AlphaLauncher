@@ -2248,8 +2248,9 @@ function RankManagement() {
   };
 
   const canManageTarget = Boolean(selectedMember) &&
+    selectedMember?.rank_key !== "founder" &&
     (actorRank === "founder" ||
-      (selectedMember?.rank_key !== "founder" && selectedMember?.rank_key !== "owner" && selectedRank !== "founder"));
+      (selectedMember?.rank_key !== "owner" && selectedRank !== "founder"));
 
   return (
     <section className="section-card developer-card">
