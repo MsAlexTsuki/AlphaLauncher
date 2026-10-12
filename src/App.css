@@ -5944,7 +5944,10 @@ button:not(:disabled):active {
   margin-bottom: 14px;
 }
 .account-profile-layout > .profile-page .page-header {
-  display: none;
+  display: flex;
+}
+.account-profile-layout > .page {
+  padding-top: 18px;
 }
 .account-profile-layout > .page .account-large-card {
   align-items: center;
