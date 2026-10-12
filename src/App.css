@@ -5924,13 +5924,14 @@ button:not(:disabled):active {
 }
 
 
-/* Account + community profile: keep both cards readable; only make the profile a little wider. */
+/* Account + community profile: center the content area for a cleaner balance. */
 .account-profile-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: start;
-  gap: 18px;
-  width: 100%;
+  gap: 20px;
+  width: min(100%, 1120px);
+  margin-inline: auto;
   min-width: 0;
 }
 .account-profile-layout > .page {
@@ -5980,7 +5981,6 @@ button:not(:disabled):active {
   width: 100%;
   max-width: none;
 }
-/* Keep the original profile contents and scale; adjust only the card's proportions. */
 .account-profile-layout > .profile-page .profile-view-card {
   width: 100%;
   max-width: 680px;
@@ -6000,6 +6000,7 @@ button:not(:disabled):active {
 }
 @media (max-width: 900px) {
   .account-profile-layout {
+    width: 100%;
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
