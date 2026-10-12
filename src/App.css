@@ -5514,3 +5514,204 @@ button:not(:disabled):active {
 .rank-permission-row small { color: #a49db8; font-size: 11px; line-height: 1.45; }
 .rank-permission-row input { flex: 0 0 auto; width: 17px; height: 17px; accent-color: #ffd866; cursor: pointer; }
 @media (max-width: 640px) { .rank-permission-toolbar { grid-template-columns: 1fr; } .rank-permission-row { padding: 12px; } }
+
+
+/* Rank Permissions Manager — compact, aligned access-control layout */
+.rank-permissions-manager {
+  margin-top: 18px;
+  padding: clamp(20px, 3vw, 30px) !important;
+  border-color: rgba(255, 200, 61, .13);
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(255, 200, 61, .045), transparent 36%),
+    linear-gradient(145deg, rgba(29, 30, 37, .98), rgba(19, 20, 26, .98));
+}
+.rank-permissions-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+.rank-permissions-heading h3 {
+  margin: 7px 0 0;
+  font: 600 23px/1.2 "Space Grotesk", sans-serif;
+  letter-spacing: -.035em;
+}
+.rank-permissions-heading p {
+  max-width: 540px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.rank-permissions-secure {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid rgba(113, 217, 155, .2);
+  border-radius: 8px;
+  background: rgba(113, 217, 155, .06);
+  color: #91e4b4;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.rank-permissions-secure span { font-size: 8px; }
+.rank-permission-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  margin: 22px 0 17px;
+}
+.rank-permission-toolbar label { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rank-permission-toolbar label > span {
+  color: #bfc0c9;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.rank-permission-toolbar select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 10px;
+  background: #121319;
+  color: #f4f4f6;
+  font: 500 12px Inter, sans-serif;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.rank-permission-toolbar select:focus {
+  border-color: rgba(255,200,61,.6);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255,200,61,.08);
+}
+.rank-permission-toolbar select option { background: #17191f; color: #f4f4f6; }
+.rank-permission-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 15px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(255,200,61,.17);
+  border-radius: 10px;
+  background: linear-gradient(100deg, rgba(255,200,61,.075), rgba(255,200,61,.018));
+}
+.rank-permission-summary > div { display: flex; flex-direction: column; gap: 5px; }
+.rank-permission-summary-label {
+  color: #a9aab4;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+.rank-permission-summary strong { color: #fff; font: 600 14px "Space Grotesk", sans-serif; }
+.rank-permission-count {
+  padding: 5px 8px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 7px;
+  color: #c9cad2;
+  background: rgba(0,0,0,.18);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.rank-permission-list { display: flex; flex-direction: column; gap: 7px; }
+.rank-permission-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 10px;
+  background: rgba(255,255,255,.018);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.rank-permission-row:hover {
+  border-color: rgba(255,200,61,.22);
+  background: rgba(255,255,255,.035);
+}
+.rank-permission-row.is-enabled {
+  border-color: rgba(255,200,61,.2);
+  background: linear-gradient(100deg, rgba(255,200,61,.055), rgba(255,200,61,.012));
+}
+.rank-permission-index {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 7px;
+  color: #777a86;
+  background: rgba(0,0,0,.16);
+  font: 600 10px "Space Grotesk", sans-serif;
+}
+.rank-permission-row.is-enabled .rank-permission-index {
+  border-color: rgba(255,200,61,.25);
+  color: var(--yellow-light);
+  background: rgba(255,200,61,.07);
+}
+.rank-permission-copy { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.rank-permission-copy strong { color: #f1f1f5; font-size: 12px; font-weight: 700; line-height: 1.35; }
+.rank-permission-copy small { color: #9699a5; font-size: 10px; line-height: 1.5; }
+.rank-permission-toggle {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 20px;
+  border: 1px solid #4b4d57;
+  border-radius: 20px;
+  background: #292b33;
+  transition: background .15s ease, border-color .15s ease;
+}
+.rank-permission-toggle > span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #a1a3ad;
+  transition: transform .15s ease, background .15s ease;
+}
+.rank-permission-toggle.is-on { border-color: #e7b832; background: #ffc83d; }
+.rank-permission-toggle.is-on > span { transform: translateX(14px); background: #201a0b; }
+.rank-permission-row input {
+  position: absolute;
+  right: 14px;
+  width: 34px;
+  height: 22px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.rank-permission-row:focus-within { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.rank-permissions-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.rank-permissions-footer > span { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.rank-permissions-footer > span strong { color: #d8d9e0; font-weight: 600; }
+.rank-permissions-footer button { min-height: 40px; padding: 0 17px; white-space: nowrap; }
+@media (max-width: 640px) {
+  .rank-permissions-heading { flex-direction: column; }
+  .rank-permissions-secure { align-self: flex-start; }
+  .rank-permission-toolbar { grid-template-columns: 1fr; margin-top: 18px; }
+  .rank-permission-row { grid-template-columns: 25px minmax(0,1fr) 34px; gap: 9px; padding: 11px; }
+  .rank-permission-copy small { font-size: 10px; }
+  .rank-permissions-footer { align-items: stretch; flex-direction: column; }
+  .rank-permissions-footer button { width: 100%; }
+}
