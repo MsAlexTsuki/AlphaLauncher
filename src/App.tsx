@@ -13,7 +13,6 @@ type Page =
   | "Mods"
   | "Community"
   | "Friends"
-  | "Profile"
   | "Developer"
   | "Settings"
   | "Account";
@@ -750,7 +749,6 @@ function LauncherApp() {
   ];
 
   const bottomNavigation: { name: Page; icon: string }[] = [
-    { name: "Profile", icon: "◎" },
     { name: "Settings", icon: "⚙" },
   ];
 
@@ -961,11 +959,10 @@ function LauncherApp() {
             />
           )}
 
-          {page === "Community" && <CommunityPage onOpenProfile={() => navigate("Profile")} />}
+          {page === "Community" && <CommunityPage onOpenProfile={() => navigate("Account")} />}
 
           {page === "Friends" && <FriendsPage />}
 
-          {page === "Profile" && <ProfilePage />}
 
           {page === "Developer" && (
             <DeveloperPage
@@ -1020,6 +1017,7 @@ function LauncherApp() {
               onLogin={handleMicrosoftLogin}
               onLogout={handleMicrosoftLogout}
             />
+            <ProfilePage />
           )}
         </main>
       </div>
