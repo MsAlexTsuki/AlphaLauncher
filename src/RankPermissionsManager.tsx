@@ -16,9 +16,6 @@ const RANKS: Rank[] = [
   { key: "moderator", label: "Moderator" },
   { key: "trial_moderator", label: "Trial Moderator" },
   { key: "beta", label: "Beta" },
-  { key: "alpha_plus", label: "Alpha+" },
-  { key: "alpha", label: "Alpha" },
-  { key: "member", label: "Member" },
 ];
 
 const PERMISSIONS: Permission[] = [
@@ -37,7 +34,7 @@ const SCOPES = [
 
 export default function RankPermissionsManager() {
   const [scope, setScope] = useState("community");
-  const [selectedRank, setSelectedRank] = useState("member");
+  const [selectedRank, setSelectedRank] = useState("founder");
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,7 +42,9 @@ export default function RankPermissionsManager() {
   const [message, setMessage] = useState("");
 
   const load = async (nextScope = scope) => {
-    setLoading(true); setError(""); setMessage("");
+    setLoading(true);
+    setError("");
+    setMessage("");
     const { data, error: loadError } = await supabase.rpc("get_rank_permissions", { p_scope: nextScope });
     if (loadError) {
       setError(loadError.message);
@@ -63,7 +62,9 @@ export default function RankPermissionsManager() {
   useEffect(() => { void load(scope); }, [scope, selectedRank]);
 
   const save = async () => {
-    setSaving(true); setError(""); setMessage("");
+    setSaving(true);
+    setError("");
+    setMessage("");
     const rows = PERMISSIONS.map(permission => ({
       rank_key: selectedRank,
       permission_key: permission.key,
@@ -74,25 +75,78 @@ export default function RankPermissionsManager() {
       p_permissions: rows,
     });
     if (saveError) setError(saveError.message);
-    else { setMessage("Rank permissions saved."); await load(scope); }
+    else {
+      setMessage("Permissions saved successfully.");
+      await load(scope);
+    }
     setSaving(false);
   };
 
+  const enabledCount = PERMISSIONS.filter(permission => Boolean(permissions[permission.key])).length;
+
   return <section className="section-card developer-card rank-permissions-manager">
-    <div className="section-header"><div><span className="card-label">ACCESS CONTROL</span><h3>Rank Permissions Manager</h3></div><span className="developer-status">Server enforced</span></div>
-    <p className="subtitle">Configure access separately for the community website and launcher dashboard. Changes are stored in Supabase and protected by server-side permission checks.</p>
-    <div className="rank-permission-toolbar">
-      <label>Scope<select value={scope} onChange={event => setScope(event.target.value)}>{SCOPES.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
-      <label>Rank<select value={selectedRank} onChange={event => setSelectedRank(event.target.value)}>{RANKS.map(rank => <option key={rank.key} value={rank.key}>{rank.label}</option>)}</select></label>
+    <div className="rank-permissions-heading">
+      <div>
+        <span className="card-label">ACCESS CONTROL</span>
+        <h3>Rank Permissions</h3>
+        <p>Choose a product area, select a staff rank, and configure its access.</p>
+      </div>
+      <span className="rank-permissions-secure"><span aria-hidden="true">●</span> Server protected</span>
     </div>
+
+    <div className="rank-permission-toolbar">
+      <label>
+        <span>Product area</span>
+        <select value={scope} onChange={event => setScope(event.target.value)}>
+          {SCOPES.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}
+        </select>
+      </label>
+      <label>
+        <span>Staff rank</span>
+        <select value={selectedRank} onChange={event => setSelectedRank(event.target.value)}>
+          {RANKS.map(rank => <option key={rank.key} value={rank.key}>{rank.label}</option>)}
+        </select>
+      </label>
+    </div>
+
+    <div className="rank-permission-summary">
+      <div>
+        <span className="rank-permission-summary-label">PERMISSIONS</span>
+        <strong>{selectedRank === "beta" ? "Beta access" : RANKS.find(rank => rank.key === selectedRank)?.label}</strong>
+      </div>
+      <span className="rank-permission-count">{enabledCount} of {PERMISSIONS.length} enabled</span>
+    </div>
+
     {error && <div className="friends-notice error" role="alert">{error}</div>}
     {message && <div className="friends-notice success" role="status">{message}</div>}
+
     {loading ? <div className="friends-loading">Loading permissions…</div> : <div className="rank-permission-list">
-      {PERMISSIONS.map(permission => <label className="rank-permission-row" key={permission.key}>
-        <span><strong>{permission.label}</strong><small>{permission.description}</small></span>
-        <input type="checkbox" checked={Boolean(permissions[permission.key])} onChange={event => setPermissions(old => ({ ...old, [permission.key]: event.target.checked }))} />
-      </label>)}
+      {PERMISSIONS.map((permission, index) => {
+        const enabled = Boolean(permissions[permission.key]);
+        return <label className={`rank-permission-row${enabled ? " is-enabled" : ""}`} key={permission.key}>
+          <span className="rank-permission-index">{String(index + 1).padStart(2, "0")}</span>
+          <span className="rank-permission-copy">
+            <strong>{permission.label}</strong>
+            <small>{permission.description}</small>
+          </span>
+          <span className={`rank-permission-toggle${enabled ? " is-on" : ""}`} aria-hidden="true">
+            <span />
+          </span>
+          <input
+            type="checkbox"
+            aria-label={permission.label}
+            checked={enabled}
+            onChange={event => setPermissions(old => ({ ...old, [permission.key]: event.target.checked }))}
+          />
+        </label>;
+      })}
     </div>}
-    <div className="profile-form-actions"><button className="friends-primary" type="button" disabled={loading || saving} onClick={() => void save()}>{saving ? "Saving…" : "Save permissions"}</button></div>
+
+    <div className="rank-permissions-footer">
+      <span>Changes apply to <strong>{SCOPES.find(item => item.key === scope)?.label}</strong> only.</span>
+      <button className="friends-primary" type="button" disabled={loading || saving} onClick={() => void save()}>
+        {saving ? "Saving…" : "Save permissions"}
+      </button>
+    </div>
   </section>;
 }
