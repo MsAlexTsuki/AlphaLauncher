@@ -5894,16 +5894,17 @@ button:not(:disabled):active {
 @media (max-width: 760px) { .community-main-layout { grid-template-columns: minmax(0, 1fr); } .community-friends-panel { order: 2; } .community-forum-list .community-forum-card { align-items: flex-start; flex-wrap: wrap; } .community-forum-list .community-forum-status { margin-left: 48px; } }
 
 
-/* Align the Friends card's top border exactly with the first forum card. */
+/* The Community heading and intro sit above this grid, so both cards share the same top edge. */
 .community-main-layout {
   grid-template-columns: minmax(0, 560px) minmax(390px, 390px) !important;
   justify-content: start;
+  align-items: start;
   gap: 18px;
 }
 .community-main-layout > aside.community-friends-panel {
   align-self: start;
   margin-top: 0 !important;
-  transform: translateY(55px);
+  transform: none !important;
 }
 .community-sections-column { width: 100%; max-width: 560px; }
 .community-forum-list .community-forum-card {
@@ -5927,7 +5928,7 @@ button:not(:disabled):active {
 }
 @media (max-width: 760px) {
   .community-main-layout { grid-template-columns: minmax(0, 1fr); }
-  .community-main-layout > aside.community-friends-panel { transform: none; }
+  .community-main-layout > aside.community-friends-panel { transform: none !important; }
 }
 
 
