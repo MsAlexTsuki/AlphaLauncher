@@ -2314,7 +2314,7 @@ function RankManagement() {
                 <label className="setting-line developer-setting-line">
                   <span>Assign rank</span>
                   <select className="developer-input" value={selectedRank} onChange={(event) => setSelectedRank(event.target.value)}>
-                    {rankEntries.filter(([key]) => key !== "founder").map(([key, rank]) => <option key={key} value={key}>{rank.label}</option>)}
+                    {rankEntries.map(([key, rank]) => <option key={key} value={key} disabled={key === "founder" && selectedMember.rank_key !== "founder"}>{rank.label}</option>)}
                   </select>
                 </label>
                 <div className="developer-actions">
