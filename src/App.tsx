@@ -1297,7 +1297,7 @@ type EditableCommunityProfile = {
 };
 
 const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
-  founder: { label: "FOUNDER", color: "#FFD866" }, owner: { label: "OWNER", color: "#FF2D00" }, management: { label: "MANAGEMENT", color: "#5C0303" }, senior_admin: { label: "SENIOR ADMIN", color: "#D67020" }, admin: { label: "ADMIN", color: "#E08D16" }, senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" }, moderator: { label: "MODERATOR", color: "#29AFCC" }, trial_moderator: { label: "TRIAL MODERATOR", color: "#D1CF1D" }, beta: { label: "BETA", color: "#00FF52" }, alpha_plus: { label: "ALPHA+", color: "#FFF300" }, alpha: { label: "ALPHA", color: "#F300FF" }, member: { label: "MEMBER", color: "#C3BFE0" },
+  founder: { label: "FOUNDER", color: "#FFD866" }, owner: { label: "OWNER", color: "#FF2D00" }, management: { label: "MANAGEMENT", color: "#5C0303" }, senior_admin: { label: "SENIOR ADMIN", color: "#D67020" }, admin: { label: "ADMIN", color: "#E08D16" }, senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" }, moderator: { label: "MODERATOR", color: "#29AFCC" }, trial_moderator: { label: "TRIAL MODERATOR", color: "#A6A515" }, beta: { label: "BETA", color: "#00FF52" }, alpha_plus: { label: "ALPHA+", color: "#FFF300" }, alpha: { label: "ALPHA", color: "#F300FF" }, member: { label: "MEMBER", color: "#C3BFE0" },
 };
 
 function ProfilePage() {
