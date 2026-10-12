@@ -745,10 +745,10 @@ function LauncherApp() {
     { name: "Community", icon: "◉" },
     { name: "Friends", icon: "♧" },
     { name: "Developer", icon: "⌘" },
-    { name: "Account", icon: "●" },
   ];
 
   const bottomNavigation: { name: Page; icon: string }[] = [
+    { name: "Account", icon: "●" },
     { name: "Settings", icon: "⚙" },
   ];
 
