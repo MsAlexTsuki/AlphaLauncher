@@ -2928,7 +2928,7 @@ function DeveloperPage({
         <div>
           <strong>Developer access verified</strong>
           <p>
-            Ingelogd als {developerUserEmail}. Developerrechten zijn
+            Signed in as {developerUserEmail}. Developer permissions have been
             verified through Supabase. Changelog changes are stored in the
             database.
           </p>
