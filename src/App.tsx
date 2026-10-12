@@ -1361,9 +1361,10 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
   }, []);
 
   const forumSections = [
-    { icon: "✦", title: "Announcements", description: "Official AlphaClient news and community updates." },
     { icon: "⌘", title: "Help & support", description: "Ask questions and help other AlphaClient players." },
+    { icon: "✦", title: "Announcements", description: "Official AlphaClient news and community updates." },
     { icon: "✎", title: "Ideas & feedback", description: "Share suggestions and discuss future improvements." },
+    { icon: "☷", title: "Chatroom", description: "Join community conversations and meet other players." },
   ];
 
   return (
