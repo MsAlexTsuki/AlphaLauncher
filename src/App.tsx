@@ -168,6 +168,7 @@ function mapChangelogRows(data: any[]): ChangelogEntry[] {
 
 function LauncherApp() {
   const [page, setPage] = useState<Page>("Home");
+  const [openProfileEditor, setOpenProfileEditor] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
   const [isStartingOfflineTest, setIsStartingOfflineTest] = useState(false);
@@ -724,6 +725,7 @@ function LauncherApp() {
   };
 
   const navigate = (next: Page) => {
+    setOpenProfileEditor(false);
     setPage(next);
     setLaunchError(null);
     setLaunchMessage(null);
@@ -959,7 +961,7 @@ function LauncherApp() {
             />
           )}
 
-          {page === "Community" && <CommunityPage onOpenProfile={() => navigate("Account")} />}
+          {page === "Community" && <CommunityPage onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} />}
 
           {page === "Friends" && <FriendsPage />}
 
@@ -1018,7 +1020,7 @@ function LauncherApp() {
                 onLogin={handleMicrosoftLogin}
                 onLogout={handleMicrosoftLogout}
               />
-              <ProfilePage />
+              <ProfilePage startEditing={openProfileEditor} />
             </div>
           )}
         </main>
@@ -1414,7 +1416,7 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
       <section className="community-welcome-card">
         <div className="community-avatar" aria-hidden="true">{identityLoading ? "…" : displayName.trim().charAt(0).toUpperCase() || "A"}</div>
         <div className="community-welcome-copy">
-          <span className="community-kicker">{signedIn ? "YOUR COMMUNITY IDENTITY" : "COMMUNITY PROFILE"}</span>
+          <span className="community-kicker">{signedIn ? "YOUR ALPHA ACCOUNT" : "ALPHA ACCOUNT"}</span>
           <div className="community-name-rank"><h2>{identityLoading ? "Loading profile…" : signedIn ? displayName : "Welcome to the community"}</h2>{signedIn && !identityLoading && <span className={`community-menu-rank ${communityRank === "founder" ? "is-founder" : ""}`} style={{ "--rank-color": COMMUNITY_RANKS[communityRank]?.color ?? COMMUNITY_RANKS.member.color } as React.CSSProperties}>{COMMUNITY_RANKS[communityRank]?.label ?? "MEMBER"}</span>}</div>
           <p>{identityLoading ? "Loading your community account…" : signedIn ? (email || "Your AlphaClient profile") : "Sign in to your community account to use your profile and display name."}</p>
         </div>
@@ -1467,7 +1469,7 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
   );
 }
 
-function ProfilePage() {
+function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
   const [profile, setProfile] = useState<EditableCommunityProfile | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -1479,7 +1481,7 @@ function ProfilePage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(startEditing);
 
   const loadProfile = async () => {
     setLoading(true);
