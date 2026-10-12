@@ -5899,6 +5899,10 @@ button:not(:disabled):active {
   justify-content: start;
   gap: 18px;
 }
+.community-friends-panel {
+  align-self: start;
+  margin-top: 64px;
+}
 .community-sections-column { width: 100%; max-width: 560px; }
 .community-forum-list .community-forum-card {
   width: 100%;
@@ -5921,6 +5925,7 @@ button:not(:disabled):active {
 }
 @media (max-width: 760px) {
   .community-main-layout { grid-template-columns: minmax(0, 1fr); }
+  .community-friends-panel { margin-top: 0; }
 }
 
 
