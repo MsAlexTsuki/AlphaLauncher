@@ -24,7 +24,7 @@ begin
   from public.profiles p
   where p.id = auth.uid();
 
-  if actor_rank not in ('founder', 'owner') then
+  if actor_rank is null or actor_rank not in ('founder', 'owner') then
     raise exception 'Only Founder and Owner can manage community ranks.'
       using errcode = '42501';
   end if;
