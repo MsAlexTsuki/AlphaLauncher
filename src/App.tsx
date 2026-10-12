@@ -11,6 +11,7 @@ type Page =
   | "Play"
   | "Versions"
   | "Mods"
+  | "Community"
   | "Friends"
   | "Profile"
   | "Developer"
@@ -742,6 +743,7 @@ function LauncherApp() {
     { name: "Play", icon: "▶" },
     { name: "Versions", icon: "▣" },
     { name: "Mods", icon: "◆" },
+    { name: "Community", icon: "◉" },
     { name: "Friends", icon: "♧" },
     { name: "Developer", icon: "⌘" },
     { name: "Account", icon: "●" },
@@ -957,6 +959,8 @@ function LauncherApp() {
               }
             />
           )}
+
+          {page === "Community" && <CommunityPage onOpenProfile={() => navigate("Profile")} />}
 
           {page === "Friends" && <FriendsPage />}
 
@@ -1300,6 +1304,83 @@ type EditableCommunityProfile = {
 const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   founder: { label: "FOUNDER", color: "#FFD866" }, owner: { label: "OWNER", color: "#FF2D00" }, management: { label: "MANAGEMENT", color: "#5C0303" }, senior_admin: { label: "SENIOR ADMIN", color: "#D67020" }, admin: { label: "ADMIN", color: "#E08D16" }, senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" }, moderator: { label: "MODERATOR", color: "#29AFCC" }, trial_moderator: { label: "TRIAL MODERATOR", color: "#166534" }, beta: { label: "BETA", color: "#00FF52" }, alpha_plus: { label: "ALPHA+", color: "#FFF300" }, alpha: { label: "ALPHA", color: "#F300FF" }, member: { label: "MEMBER", color: "#C3BFE0" },
 };
+
+function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
+  const [displayName, setDisplayName] = useState("Community member");
+  const [email, setEmail] = useState("");
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (cancelled || error || !data.user) return;
+      const user = data.user;
+      const metadata = user.user_metadata ?? {};
+      const name =
+        (typeof metadata.display_name === "string" && metadata.display_name) ||
+        (typeof metadata.username === "string" && metadata.username) ||
+        (typeof metadata.full_name === "string" && metadata.full_name) ||
+        user.email ||
+        "Community member";
+      setDisplayName(name);
+      setEmail(user.email ?? "");
+      setSignedIn(true);
+    }).catch((error) => console.warn("Could not load community identity:", error));
+    return () => { cancelled = true; };
+  }, []);
+
+  const forumSections = [
+    { icon: "✦", title: "Announcements", description: "Official AlphaClient news and community updates." },
+    { icon: "⌘", title: "Help & support", description: "Ask questions and help other AlphaClient players." },
+    { icon: "✎", title: "Ideas & feedback", description: "Share suggestions and discuss future improvements." },
+  ];
+
+  return (
+    <div className="page community-page">
+      <header className="page-header">
+        <p className="eyebrow">ALPHACLIENT COMMUNITY</p>
+        <h1>Community</h1>
+        <p className="subtitle">Your place for profiles, conversations and everything around AlphaClient.</p>
+      </header>
+
+      <section className="community-welcome-card">
+        <div className="community-avatar" aria-hidden="true">{displayName.trim().charAt(0).toUpperCase() || "A"}</div>
+        <div className="community-welcome-copy">
+          <span className="community-kicker">{signedIn ? "YOUR COMMUNITY IDENTITY" : "COMMUNITY PROFILE"}</span>
+          <h2>{signedIn ? displayName : "Welcome to the community"}</h2>
+          <p>{signedIn ? (email || "Your AlphaClient profile") : "Sign in to your community account to use your profile and display name."}</p>
+        </div>
+        <button type="button" className="friends-primary community-profile-button" onClick={onOpenProfile}>
+          {signedIn ? "Edit profile" : "Open profile"}
+          <span aria-hidden="true">↗</span>
+        </button>
+      </section>
+
+      <div className="community-section-heading">
+        <div>
+          <p className="eyebrow">MEET. SHARE. PLAY.</p>
+          <h2>Community forums</h2>
+        </div>
+        <span className="community-coming-soon">COMING SOON</span>
+      </div>
+      <p className="community-intro">The forum space is being prepared. These are the planned sections for the AlphaClient community.</p>
+
+      <div className="community-forum-grid">
+        {forumSections.map((section, index) => (
+          <article className="community-forum-card" key={section.title}>
+            <div className="community-forum-icon" aria-hidden="true">{section.icon}</div>
+            <div className="community-forum-card-copy">
+              <span className="community-forum-number">0{index + 1} / FORUM</span>
+              <h3>{section.title}</h3>
+              <p>{section.description}</p>
+            </div>
+            <span className="community-forum-status">Not available yet</span>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ProfilePage() {
   const [profile, setProfile] = useState<EditableCommunityProfile | null>(null);
