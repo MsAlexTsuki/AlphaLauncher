@@ -2203,11 +2203,10 @@ function RankManagement() {
         return;
       }
 
-      const { data, error: membersError } = await supabase
-        .from("profiles")
-        .select("id, username, display_name, rank_key")
-        .order("username", { ascending: true })
-        .limit(500);
+      const { data, error: membersError } = await supabase.rpc(
+        "search_rank_management_profiles",
+        { search_term: search.trim() },
+      );
       if (membersError) throw membersError;
       setMembers((data ?? []) as ManagedCommunityProfile[]);
     } catch (loadError) {
@@ -2219,12 +2218,25 @@ function RankManagement() {
 
   useEffect(() => { void loadMembers(); }, []);
 
+  useEffect(() => {
+    if (actorRank !== "founder" && actorRank !== "owner") return;
+    const refresh = async () => {
+      try {
+        const { data, error: queryError } = await supabase.rpc(
+          "search_rank_management_profiles",
+          { search_term: search.trim() },
+        );
+        if (queryError) throw queryError;
+        setMembers((data ?? []) as ManagedCommunityProfile[]);
+      } catch (searchError) {
+        setError(errorText(searchError));
+      }
+    };
+    void refresh();
+  }, [search, actorRank]);
+
   const selectedMember = members.find((member) => member.id === selectedId) ?? null;
-  const filteredMembers = members.filter((member) => {
-    const term = search.trim().toLowerCase();
-    return !term || member.username.toLowerCase().includes(term) ||
-      (member.display_name ?? "").toLowerCase().includes(term);
-  });
+  const filteredMembers = members;
   const rankEntries = Object.entries(COMMUNITY_RANKS);
 
   const assignRank = async () => {
