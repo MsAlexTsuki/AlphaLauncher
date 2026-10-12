@@ -24,7 +24,7 @@ values
   ('admin', 'Admin', 5, '#808080', ''),
   ('senior_moderator', 'Senior Moderator', 6, '#808080', ''),
   ('moderator', 'Moderator', 7, '#808080', ''),
-  ('trial_moderator', 'Trial Moderator', 8, '#A6A515', ''),
+  ('trial_moderator', 'Trial Moderator', 8, '#166534', ''),
   ('beta', 'Beta', 9, '#808080', ''),
   ('alpha_plus', 'Alpha+', 10, '#808080', ''),
   ('alpha', 'Alpha', 11, '#808080', ''),
