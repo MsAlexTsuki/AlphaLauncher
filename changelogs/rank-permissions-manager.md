@@ -5,3 +5,5 @@
 - Added Supabase storage and server-side RPC checks; only developer administrators can read or edit the permission matrix.
 - Added the has_rank_permission authorization helper for protected server-side RPCs and row-level security policies.
 - Apply the Supabase migration before using the manager.
+
+- Fixed the authorization helper to use the existing `public.profiles` table and its `rank_key` column.
