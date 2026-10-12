@@ -2172,6 +2172,7 @@ type ManagedCommunityProfile = {
 };
 
 function RankManagement() {
+  const [actorId, setActorId] = useState<string | null>(null);
   const [actorRank, setActorRank] = useState<string | null>(null);
   const [members, setMembers] = useState<ManagedCommunityProfile[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -2189,6 +2190,7 @@ function RankManagement() {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError) throw authError;
       if (!authData.user) throw new Error("Log in to manage community ranks.");
+      setActorId(authData.user.id);
 
       const { data: actor, error: actorError } = await supabase
         .from("profiles")
@@ -2260,9 +2262,11 @@ function RankManagement() {
   };
 
   const canManageTarget = Boolean(selectedMember) &&
-    selectedMember?.rank_key !== "founder" &&
+    selectedMember?.id !== actorId &&
     (actorRank === "founder" ||
-      (selectedMember?.rank_key !== "owner" && selectedRank !== "founder"));
+      (selectedMember?.rank_key !== "owner" &&
+        selectedMember?.rank_key !== "founder" &&
+        selectedRank !== "founder"));
 
   return (
     <section className="section-card developer-card">
@@ -2310,11 +2314,11 @@ function RankManagement() {
                 <label className="setting-line developer-setting-line">
                   <span>Assign rank</span>
                   <select className="developer-input" value={selectedRank} onChange={(event) => setSelectedRank(event.target.value)}>
-                    {rankEntries.map(([key, rank]) => <option key={key} value={key}>{rank.label}</option>)}
+                    {rankEntries.filter(([key]) => key !== "founder").map(([key, rank]) => <option key={key} value={key}>{rank.label}</option>)}
                   </select>
                 </label>
                 <div className="developer-actions">
-                  <button className="friends-primary" type="button" disabled={saving || !canManageTarget || selectedRank === selectedMember.rank_key} onClick={() => void assignRank()}>
+                  <button className="friends-primary rank-save-button" type="button" disabled={saving || !canManageTarget || selectedRank === selectedMember.rank_key} onClick={() => void assignRank()}>
                     {saving ? "Saving…" : "Save rank"}
                   </button>
                   <button className="friends-secondary" type="button" disabled={saving || !canManageTarget || selectedMember.rank_key === "member"} onClick={() => { setSelectedRank("member"); void (async () => {
@@ -2328,7 +2332,14 @@ function RankManagement() {
                     finally { setSaving(false); }
                   })(); }}>Reset to Member</button>
                 </div>
-                {!canManageTarget && <p className="subtitle">Owner accounts cannot change Founder/Owner accounts or assign the Founder rank.</p>}
+                {!canManageTarget && <p className="subtitle" role="status">
+                  {saving ? "Saving rank…" :
+                    selectedMember.id === actorId ? "You cannot change your own rank." :
+                    actorRank === "owner" && (selectedMember.rank_key === "owner" || selectedMember.rank_key === "founder") ? "Owners cannot change Founder or Owner accounts." :
+                    actorRank === "owner" && selectedRank === "founder" ? "Only the protected Founder account can grant Founder access; Founder cannot be assigned here." :
+                    "This rank change is not permitted."}
+                </p>}
+                {canManageTarget && selectedRank === selectedMember.rank_key && <p className="subtitle">Choose a different rank to enable Save rank.</p>}
               </>
             )}
           </>
