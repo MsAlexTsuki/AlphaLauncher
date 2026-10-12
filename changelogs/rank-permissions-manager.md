@@ -12,3 +12,4 @@
 - Limited the permission editor to staff ranks plus Beta; removed Alpha, Alpha+ and Member from the editor.
 
 - Added a Community destination between Mods and Friends, with a community identity card linked to the existing profile editor and a styled preview of planned AlphaClient forum sections.
+- Added a Home-page “Make your Alpha Client account” call-to-action that opens the Community page.
