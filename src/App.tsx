@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { supabase } from "./lib/supabase";
+import RankPermissionsManager from "./RankPermissionsManager";
 import "./App.css";
 
 type Page =
@@ -2663,21 +2664,7 @@ function DeveloperPage({
         </div>
       )}
 
-      {tool === "Permission Explorer" && (
-        <div className="developer-info-grid">
-          {[
-            "Mod Management",
-            "Blacklist Management",
-            "Rank Management",
-            "Release Management",
-          ].map((permission) => (
-            <div key={permission}>
-              <span>Example permission</span>
-              <strong>{permission}</strong>
-            </div>
-          ))}
-        </div>
-      )}
+      {tool === "Permission Explorer" && <RankPermissionsManager />}
 
       {tool === "Feature Rollout Manager" && (
         <div className="developer-info-grid">
