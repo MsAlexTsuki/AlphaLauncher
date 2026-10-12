@@ -5201,7 +5201,7 @@ button:not(:disabled):active {
 .friends-main-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
-  gap: 16px;
+  gap: 24px;
   align-items: stretch;
 }
 .friends-main-layout .friends-request-columns {
