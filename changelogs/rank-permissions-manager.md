@@ -1,0 +1,7 @@
+# Rank Permissions Manager
+
+- Added the Rank Permissions Manager to configure six access categories for each community rank.
+- Added separate permission scopes for the community website and launcher dashboard.
+- Added Supabase storage and server-side RPC checks; only developer administrators can read or edit the permission matrix.
+- Added the has_rank_permission authorization helper for protected server-side RPCs and row-level security policies.
+- Apply the Supabase migration before using the manager.
