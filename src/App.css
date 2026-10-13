@@ -6360,3 +6360,254 @@ button:not(:disabled):active {
 
 /* Keep the public-profile close control anchored to the modal, not in the content flow. */
 .public-profile-modal > .public-profile-close { position:absolute; top:12px; right:14px; z-index:5; flex:0 0 auto; }
+
+
+/* New Alpha Account access menu */
+.alpha-access-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(5, 7, 11, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: alpha-access-fade-in 180ms ease-out;
+}
+.alpha-access-window {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(380px, 1fr);
+  width: min(900px, 100%);
+  min-height: 570px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 216, 102, 0.22);
+  border-radius: 22px;
+  background: #101116;
+  color: #f6f6f8;
+  box-shadow: 0 32px 100px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.025) inset;
+  animation: alpha-access-rise-in 220ms ease-out;
+}
+.alpha-access-showcase {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 42px 38px 30px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 12% 5%, rgba(255,216,102,0.2), transparent 38%),
+    radial-gradient(ellipse at 100% 85%, rgba(255,216,102,0.08), transparent 42%),
+    linear-gradient(150deg, #24231e 0%, #17181e 48%, #111218 100%);
+  border-right: 1px solid rgba(255,255,255,0.07);
+}
+.alpha-access-showcase::before {
+  content: "";
+  position: absolute;
+  width: 290px;
+  height: 290px;
+  right: -120px;
+  top: 130px;
+  border: 1px solid rgba(255,216,102,0.15);
+  border-radius: 50%;
+  box-shadow: 0 0 0 32px rgba(255,216,102,0.025), 0 0 0 64px rgba(255,216,102,0.018);
+  pointer-events: none;
+}
+.alpha-access-showcase::after {
+  content: "";
+  position: absolute;
+  left: 38px;
+  right: 38px;
+  bottom: 76px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,216,102,0.42), rgba(255,216,102,0));
+}
+.alpha-access-logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 46px;
+  border: 1px solid rgba(255,216,102,0.32);
+  border-radius: 16px;
+  background: rgba(255,216,102,0.08);
+}
+.alpha-access-logo svg { width: 34px; height: 34px; }
+.alpha-access-overline, .alpha-access-kicker {
+  color: #ffd866;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+.alpha-access-showcase h2 {
+  position: relative;
+  margin: 17px 0 18px;
+  font-size: clamp(32px, 3.4vw, 43px);
+  line-height: 1.06;
+  font-weight: 760;
+  letter-spacing: -0.045em;
+}
+.alpha-access-showcase h2 span { color: #ffd866; }
+.alpha-access-showcase > p {
+  position: relative;
+  max-width: 290px;
+  margin: 0;
+  color: #a7a8b1;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.alpha-access-showcase-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  color: #858791;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+}
+.alpha-access-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffd866;
+  box-shadow: 0 0 12px rgba(255,216,102,0.65);
+}
+.alpha-access-form-side {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 52px 42px 30px;
+  min-width: 0;
+}
+.alpha-access-close {
+  position: absolute;
+  top: 17px;
+  right: 18px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.035);
+  color: #a6a7b0;
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+.alpha-access-close:hover { color: #fff; border-color: rgba(255,216,102,0.4); background: rgba(255,216,102,0.08); }
+.alpha-access-close:disabled { opacity: 0.5; cursor: default; }
+.alpha-access-close-showcase { display: none; }
+.alpha-access-form-heading { margin-bottom: 26px; }
+.alpha-access-form-heading h3 {
+  margin: 10px 0 8px;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+.alpha-access-form-heading p { margin: 0; color: #92939e; font-size: 12px; line-height: 1.6; }
+.alpha-access-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding: 5px;
+  margin-bottom: 23px;
+  border: 1px solid rgba(255,255,255,0.055);
+  border-radius: 12px;
+  background: #0b0c10;
+}
+.alpha-access-tabs button {
+  min-height: 37px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #8f909a;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.alpha-access-tabs button.is-active {
+  border-color: rgba(255,216,102,0.16);
+  background: #24231e;
+  color: #ffd866;
+}
+.alpha-access-form { display: flex; flex-direction: column; gap: 16px; }
+.alpha-access-field { display: flex; flex-direction: column; gap: 8px; }
+.alpha-access-field label { color: #b5b6bf; font-size: 9px; font-weight: 800; letter-spacing: 0.13em; }
+.alpha-access-field input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  outline: none;
+  border: 1px solid #30313a;
+  border-radius: 10px;
+  background: #0c0d11;
+  color: #f6f6f8;
+  font: inherit;
+  font-size: 12px;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+.alpha-access-field input::placeholder { color: #666873; }
+.alpha-access-field input:focus { border-color: rgba(255,216,102,0.72); background: #101116; box-shadow: 0 0 0 3px rgba(255,216,102,0.09); }
+.alpha-access-feedback { margin: -2px 0 0; font-size: 11px; line-height: 1.55; }
+.alpha-access-feedback.is-error { color: #ff8c8c; }
+.alpha-access-feedback.is-success { color: #8fe0ad; }
+.alpha-access-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 47px;
+  margin-top: 4px;
+  padding: 0 18px;
+  border: 1px solid #ffe18a;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffe18a, #ffd04c);
+  color: #17150f;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.075em;
+  cursor: pointer;
+  box-shadow: 0 7px 22px rgba(255,207,71,0.12);
+  transition: transform 150ms ease, filter 150ms ease, box-shadow 150ms ease;
+}
+.alpha-access-submit:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.04); box-shadow: 0 10px 27px rgba(255,207,71,0.19); }
+.alpha-access-submit:disabled { opacity: 0.65; cursor: wait; }
+.alpha-access-submit span { font-size: 15px; }
+.alpha-access-switch-copy { margin: 22px 0 0; color: #92939e; text-align: center; font-size: 11px; }
+.alpha-access-switch-copy button { padding: 0; border: 0; background: transparent; color: #ffd866; font: inherit; font-weight: 750; cursor: pointer; }
+.alpha-access-switch-copy button:hover { color: #ffe8a8; text-decoration: underline; }
+.alpha-access-legal { margin: 18px 0 0; color: #62636d; text-align: center; font-size: 9px; line-height: 1.5; }
+@keyframes alpha-access-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes alpha-access-rise-in { from { opacity: 0; transform: translateY(10px) scale(0.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 720px) {
+  .alpha-access-backdrop { padding: 14px; }
+  .alpha-access-window { grid-template-columns: 1fr; width: min(470px, 100%); min-height: 0; max-height: calc(100vh - 28px); overflow-y: auto; }
+  .alpha-access-showcase { min-height: 160px; padding: 24px 26px; }
+  .alpha-access-showcase::before, .alpha-access-showcase::after, .alpha-access-showcase-footer { display: none; }
+  .alpha-access-logo { width: 42px; height: 42px; margin-bottom: 17px; border-radius: 12px; }
+  .alpha-access-logo svg { width: 27px; height: 27px; }
+  .alpha-access-showcase h2 { margin: 10px 0 0; font-size: 27px; }
+  .alpha-access-showcase > p { display: none; }
+  .alpha-access-form-side { padding: 28px 26px 24px; }
+  .alpha-access-close-form { display: none; }
+  .alpha-access-close-showcase { display: grid; }
+  .alpha-access-form-heading { margin-bottom: 18px; }
+  .alpha-access-form-heading h3 { font-size: 26px; }
+  .alpha-access-tabs { margin-bottom: 18px; }
+  .alpha-access-form { gap: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alpha-access-backdrop, .alpha-access-window { animation: none; }
+  .alpha-access-close, .alpha-access-tabs button, .alpha-access-field input, .alpha-access-submit { transition: none; }
+}
