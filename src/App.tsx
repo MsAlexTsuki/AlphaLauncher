@@ -1121,7 +1121,7 @@ console.error("Developer permission check failed:", errorMessage);
             />
           )}
 
-          {page === "Community" && <CommunityPage onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
+          {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
           {page === "Friends" && <FriendsPage />}
 
@@ -1512,7 +1512,7 @@ function CommunityRankBadge({ rankKey }: { rankKey: string | null | undefined })
 }
 
 
-function CommunityPage({ onOpenProfile, openLoginRequested, onLoginRequestHandled }: { onOpenProfile: () => void; openLoginRequested: boolean; onLoginRequestHandled: () => void }) {
+function CommunityPage({ isMinecraftRunning, onOpenProfile, openLoginRequested, onLoginRequestHandled }: { isMinecraftRunning: boolean; onOpenProfile: () => void; openLoginRequested: boolean; onLoginRequestHandled: () => void }) {
   useEffect(() => {
     const updatePresence = (event: Event) => {
       const ids = (event as CustomEvent<string[]>).detail;
@@ -1605,6 +1605,10 @@ function CommunityPage({ onOpenProfile, openLoginRequested, onLoginRequestHandle
 
   const handleCommunityLogout = async () => {
     if (communityLogoutLoading) return;
+    if (isMinecraftRunning) {
+      setCommunityLogoutError("Close Minecraft before logging out of your Alpha Community account.");
+      return;
+    }
     setCommunityLogoutLoading(true);
     setCommunityLogoutError("");
     try {
@@ -1728,7 +1732,7 @@ function CommunityPage({ onOpenProfile, openLoginRequested, onLoginRequestHandle
           {signedIn ? (
             <>
               <button type="button" className="friends-primary community-profile-button" onClick={onOpenProfile}>Edit profile <span aria-hidden="true">↗</span></button>
-              <button type="button" className="secondary-button community-logout-button" onClick={() => void handleCommunityLogout()} disabled={communityLogoutLoading}>{communityLogoutLoading ? "SIGNING OUT..." : "LOG OUT"}</button>
+              <button type="button" className="secondary-button community-logout-button" onClick={() => void handleCommunityLogout()} disabled={communityLogoutLoading || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before logging out." : undefined}>{isMinecraftRunning ? "MINECRAFT IS RUNNING" : communityLogoutLoading ? "SIGNING OUT..." : "LOG OUT"}</button>
             </>
           ) : (
             <button type="button" className="friends-primary community-profile-button" onClick={() => { setAuthPanelOpen((open) => !open); setAuthError(""); setAuthMessage(""); }}>
