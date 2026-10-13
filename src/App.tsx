@@ -1446,12 +1446,33 @@ function CommunityRankBadge({ rankKey }: { rankKey: string | null | undefined })
 
 
 function CommunityPage({ onOpenProfile, openLoginRequested, onLoginRequestHandled }: { onOpenProfile: () => void; openLoginRequested: boolean; onLoginRequestHandled: () => void }) {
+  useEffect(() => {
+    let active = true;
+    const channel = supabase.channel("alphaclient-presence", {
+      config: { presence: { key: "community-friends-view" } },
+    });
+    const updatePresence = () => {
+      const state = channel.presenceState() as Record<string, Array<{ user_id?: string }>>;
+      const ids = new Set<string>();
+      for (const [key, entries] of Object.entries(state)) {
+        if (entries.length > 0) ids.add(entries[0]?.user_id || key);
+      }
+      if (active) setCommunityOnlineIds(ids);
+    };
+    channel
+      .on("presence", { event: "sync" }, updatePresence)
+      .on("presence", { event: "join" }, updatePresence)
+      .on("presence", { event: "leave" }, updatePresence)
+      .subscribe(status => { if (status === "SUBSCRIBED") updatePresence(); });
+    return () => { active = false; void supabase.removeChannel(channel); };
+  }, []);
   const [displayName, setDisplayName] = useState("Community member");
   const [communityRank, setCommunityRank] = useState("member");
   const [email, setEmail] = useState("");
   const [signedIn, setSignedIn] = useState(false);
   const [identityLoading, setIdentityLoading] = useState(true);
   const [communityFriends, setCommunityFriends] = useState<CommunityProfile[]>([]);
+  const [communityOnlineIds, setCommunityOnlineIds] = useState<Set<string>>(new Set());
   const [friendsLoading, setFriendsLoading] = useState(true);
   const [friendsError, setFriendsError] = useState("");
   const [communityLogoutLoading, setCommunityLogoutLoading] = useState(false);
@@ -1718,10 +1739,10 @@ function CommunityPage({ onOpenProfile, openLoginRequested, onLoginRequestHandle
               <div className="community-friend-item" key={friend.id}>
                 <div className="community-friend-avatar">{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : (friend.username || "?").slice(0, 1).toUpperCase()}</div>
                 <div className="community-friend-copy"><strong>{friend.username}</strong><span>Alpha Community</span></div>
-                <span className="community-friend-presence" title="Presence is not configured yet" aria-label="Online status unavailable" />
+                <span className={`community-friend-presence ${communityOnlineIds.has(friend.id) ? "is-online" : "is-offline"}`} title={communityOnlineIds.has(friend.id) ? "Online" : "Offline"} aria-label={communityOnlineIds.has(friend.id) ? "Online" : "Offline"} />
               </div>
             ))}</div>}
-          <p className="community-friends-footnote">Online indicators will activate once live presence is connected.</p>
+          <p className="community-friends-footnote">Green indicates online; gray indicates offline.</p>
         </aside>
       </div>
     </div>
@@ -1870,7 +1891,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
       <div className="profile-username">@{profile.username}</div>
       <p className="profile-bio-preview">{profile.bio?.trim() || "You haven't added a bio yet."}</p>
       <div className="profile-preview-divider" />
-      <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>
+      <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div><div className={`public-profile-presence ${onlineFriendIds.has(publicProfile.id) ? "is-online" : "is-offline"}`}><i />{onlineFriendIds.has(publicProfile.id) ? "Online" : "Offline"}</div>
       {(() => {
         const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member");
         const rankLabels: Record<string, string> = {
