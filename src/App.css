@@ -6330,3 +6330,17 @@ button:not(:disabled):active {
 .sidebar-bottom-group .sidebar-logout-item:hover .nav-icon {
   color: #ffaaaa;
 }
+
+
+/* Public Alpha Account profile opened from Friends */
+.public-profile-backdrop { position:fixed; inset:0; z-index:1200; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(4,5,9,.78); backdrop-filter:blur(7px); }
+.public-profile-modal { width:min(100%,430px); max-height:min(88vh,760px); overflow-y:auto; box-sizing:border-box; padding:28px; background:#17181f; border:1px solid #ffffff1c; box-shadow:0 24px 90px #0009; }
+.public-profile-close { position:absolute; z-index:2; top:12px; right:14px; width:32px; height:32px; border:1px solid #ffffff20; border-radius:9px; color:#e7e7ed; background:#ffffff08; font-size:24px; cursor:pointer; }
+.public-profile-meta { margin-top:13px; color:#999dab; font-size:12px; }
+.public-profile-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:9px; margin-top:22px; }
+.public-profile-actions .friends-primary,.public-profile-actions .friends-secondary { min-height:36px; }
+.friends-profile-open { padding:0; cursor:pointer; }
+.friends-profile-open img { width:100%; height:100%; object-fit:cover; border-radius:inherit; }
+.friends-profile-name-button { padding:0; border:0; color:inherit; background:transparent; font:inherit; font-weight:700; text-align:left; cursor:pointer; }
+.friends-profile-name-button:hover { color:var(--yellow-light); }
+@media (max-width:600px) { .public-profile-backdrop { padding:12px; } .public-profile-modal { padding:22px 16px; } }
