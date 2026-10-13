@@ -6344,3 +6344,6 @@ button:not(:disabled):active {
 .friends-profile-name-button { padding:0; border:0; color:inherit; background:transparent; font:inherit; font-weight:700; text-align:left; cursor:pointer; }
 .friends-profile-name-button:hover { color:var(--yellow-light); }
 @media (max-width:600px) { .public-profile-backdrop { padding:12px; } .public-profile-modal { padding:22px 16px; } }
+
+/* Keep the public-profile close control anchored to the modal, not in the content flow. */
+.public-profile-modal > .public-profile-close { position:absolute; top:12px; right:14px; z-index:5; flex:0 0 auto; }
