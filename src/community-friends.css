@@ -416,3 +416,26 @@
 .private-chat-footnote{padding:7px 10px 9px;color:#737c8e;font-size:9px;text-align:center}
 .friends-page .friends-roster-clickable{cursor:pointer;border-radius:8px;transition:background .15s,box-shadow .15s}.friends-page .friends-roster-clickable:hover{background:rgba(255,255,255,.025)}.friends-page .friends-roster-clickable.is-chat-selected{box-shadow:inset 2px 0 #ffd866;background:rgba(255,216,102,.045)}
 @media(max-width:600px){.friends-page .private-chat-card{padding:12px}.private-chat-layout{grid-template-columns:minmax(92px,.7fr) minmax(0,1.5fr);min-height:310px;max-height:390px}.private-chat-contacts{padding:8px 5px}.private-chat-contact{gap:5px;padding:8px 4px}.private-chat-avatar{flex-basis:27px;width:27px;height:27px}.private-chat-contact-copy strong{font-size:10px}.private-chat-contact-copy small,.private-chat-contact-arrow,.private-chat-secure-label{display:none}.private-chat-conversation-header{gap:7px;padding-inline:8px}.private-chat-messages{padding-inline:8px}}
+
+
+/* Community authentication panel */
+.community-account-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.community-auth-panel{grid-column:1/-1;width:min(100%,560px);margin-top:14px;padding:18px;border:1px solid rgba(255,216,102,.18);border-radius:12px;background:linear-gradient(145deg,rgba(10,11,15,.76),rgba(24,24,30,.68));box-shadow:0 12px 35px rgba(0,0,0,.12)}
+.community-auth-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+.community-auth-heading h3{margin:6px 0 5px;font-size:18px;letter-spacing:-.025em;color:#f4f4f7}
+.community-auth-heading p{margin:0;color:#a4a7b2;font-size:11px;line-height:1.5}
+.community-auth-mode{display:flex;flex:0 0 auto;gap:3px;padding:3px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(0,0,0,.22)}
+.community-auth-mode button{padding:7px 9px;border:0;border-radius:6px;background:transparent;color:#9da1ae;font-size:10px;font-weight:800;cursor:pointer}
+.community-auth-mode button.is-active{background:rgba(255,216,102,.13);color:#ffd866}
+.community-auth-field{display:flex;flex-direction:column;gap:7px;margin-top:12px;color:#c9cbd3;font-size:10px;font-weight:800;letter-spacing:.045em}
+.community-auth-field input{width:100%;min-height:40px;padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:8px;outline:none;background:rgba(4,5,8,.42);color:#f5f5f7;font:inherit;font-size:12px;letter-spacing:normal;box-sizing:border-box}
+.community-auth-field input:focus{border-color:rgba(255,216,102,.5);box-shadow:0 0 0 3px rgba(255,216,102,.07)}
+.community-auth-field input::placeholder{color:#686d7a}
+.community-auth-submit{width:100%;justify-content:center;margin-top:16px;min-height:40px}
+.community-auth-submit:disabled{opacity:.6;cursor:wait}
+.community-auth-feedback{margin:12px 0 0;padding:10px 11px;border-radius:7px;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.community-auth-feedback.is-error{border:1px solid rgba(255,91,91,.22);background:rgba(255,60,60,.07);color:#ffaaaa}
+.community-auth-feedback.is-success{border:1px solid rgba(83,204,140,.2);background:rgba(83,204,140,.07);color:#9ee8bd}
+.community-auth-note{margin:12px 0 0;color:#777d8c;font-size:9px;line-height:1.55}
+.community-logout-error{overflow-wrap:anywhere}
+@media(max-width:600px){.community-auth-panel{padding:14px}.community-auth-heading{flex-direction:column}.community-auth-mode{align-self:flex-start}.community-account-actions{align-items:stretch}.community-account-actions button{flex:1}}
