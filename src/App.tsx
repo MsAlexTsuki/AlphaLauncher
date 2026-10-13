@@ -1318,6 +1318,27 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
   const [communityFriends, setCommunityFriends] = useState<CommunityProfile[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(true);
   const [friendsError, setFriendsError] = useState("");
+  const [communityLogoutLoading, setCommunityLogoutLoading] = useState(false);
+  const [communityLogoutError, setCommunityLogoutError] = useState("");
+
+  const handleCommunityLogout = async () => {
+    if (communityLogoutLoading) return;
+    setCommunityLogoutLoading(true);
+    setCommunityLogoutError("");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setSignedIn(false);
+      setEmail("");
+      setDisplayName("Community member");
+      setCommunityRank("member");
+      setCommunityFriends([]);
+    } catch (error) {
+      setCommunityLogoutError(errorText(error));
+    } finally {
+      setCommunityLogoutLoading(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -1421,10 +1442,14 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
           <div className="community-name-rank"><h2>{identityLoading ? "Loading profile…" : signedIn ? displayName : "Welcome to the community"}</h2>{signedIn && !identityLoading && <span className={`community-menu-rank ${communityRank === "founder" ? "is-founder" : ""}`} style={{ "--rank-color": COMMUNITY_RANKS[communityRank]?.color ?? COMMUNITY_RANKS.member.color } as React.CSSProperties}>{COMMUNITY_RANKS[communityRank]?.label ?? "MEMBER"}</span>}</div>
           <p>{identityLoading ? "Loading your community account…" : signedIn ? (email || "Your AlphaClient profile") : "Sign in to your community account to use your profile and display name."}</p>
         </div>
-        <button type="button" className="friends-primary community-profile-button" onClick={onOpenProfile}>
-          {signedIn ? "Edit profile" : "Open profile"}
-          <span aria-hidden="true">↗</span>
-        </button>
+        <div className="community-account-actions">
+          <button type="button" className="friends-primary community-profile-button" onClick={onOpenProfile}>
+            {signedIn ? "Edit profile" : "Open profile"}
+            <span aria-hidden="true">↗</span>
+          </button>
+          {signedIn && <button type="button" className="secondary-button community-logout-button" onClick={() => void handleCommunityLogout()} disabled={communityLogoutLoading}>{communityLogoutLoading ? "SIGNING OUT..." : "LOG OUT"}</button>}
+        </div>
+        {communityLogoutError && <p className="community-logout-error" role="alert">{communityLogoutError}</p>}
       </section>
 
       <div className="community-main-layout">
