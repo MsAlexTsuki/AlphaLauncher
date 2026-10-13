@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { supabase } from "./lib/supabase";
 import PrivateChatPanel from "./PrivateChatPanel";
+import InboxButton from "./InboxButton";
 import RankPermissionsManager from "./RankPermissionsManager";
 import "./App.css";
 
@@ -775,6 +776,10 @@ function LauncherApp() {
             <strong>AlphaClient</strong>
             <span>Launcher</span>
           </div>
+        </div>
+
+        <div className="titlebar-actions" data-tauri-drag-region="false">
+          <InboxButton onOpenFriends={() => setPage("Friends")} />
         </div>
 
         <div className="window-controls">
