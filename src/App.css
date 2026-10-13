@@ -6683,3 +6683,30 @@ button:not(:disabled):active {
 .friends-roster-name-line {
   min-width: 0;
 }
+
+
+.private-chat-contact-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+.private-chat-contact-copy strong {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.private-chat-contact-copy .private-chat-rank {
+  color: #8f929e;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.045em;
+  text-transform: none;
+}
+.private-chat-contact-copy .private-chat-rank.is-founder {
+  color: #ffd866;
+}
