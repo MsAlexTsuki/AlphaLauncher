@@ -6611,3 +6611,33 @@ button:not(:disabled):active {
   .alpha-access-backdrop, .alpha-access-window { animation: none; }
   .alpha-access-close, .alpha-access-tabs button, .alpha-access-field input, .alpha-access-submit { transition: none; }
 }
+
+/* Compact Friends search and keep each result's rank beside its username. */
+.friends-search-card .friends-search {
+  width: min(100%, 520px);
+  padding: 4px 6px;
+  gap: 7px;
+}
+.friends-search-card .friends-search-icon {
+  font-size: 21px;
+}
+.friends-search-card .friends-search input {
+  padding: 5px 2px;
+}
+.friends-search-card .friends-search .friends-primary {
+  padding: 7px 11px;
+}
+.friends-search-result-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.friends-search-result-name .community-rank-badge {
+  margin-left: 0;
+  padding: 3px 6px;
+}
+.friends-search-result-row > .friends-secondary {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
