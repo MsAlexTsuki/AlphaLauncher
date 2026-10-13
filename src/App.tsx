@@ -1320,6 +1320,67 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
   const [friendsError, setFriendsError] = useState("");
   const [communityLogoutLoading, setCommunityLogoutLoading] = useState(false);
   const [communityLogoutError, setCommunityLogoutError] = useState("");
+  const [authPanelOpen, setAuthPanelOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authUsername, setAuthUsername] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+
+  const handleCommunityAuth = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (authBusy) return;
+    const cleanEmail = authEmail.trim();
+    const cleanUsername = authUsername.trim();
+    if (!cleanEmail || !authPassword) {
+      setAuthError("Enter your email address and password.");
+      return;
+    }
+    if (authMode === "signup" && !cleanUsername) {
+      setAuthError("Choose a community username.");
+      return;
+    }
+    if (authMode === "signup" && authPassword.length < 6) {
+      setAuthError("Your password must contain at least 6 characters.");
+      return;
+    }
+
+    setAuthBusy(true);
+    setAuthError("");
+    setAuthMessage("");
+    try {
+      if (authMode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+        window.location.reload();
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: authPassword,
+          options: {
+            data: { username: cleanUsername, display_name: cleanUsername },
+          },
+        });
+        if (error) throw error;
+        if (data.session) {
+          window.location.reload();
+        } else {
+          setAuthMessage("Account created. Check your email to confirm the account, then sign in here.");
+          setAuthMode("login");
+          setAuthPassword("");
+        }
+      }
+    } catch (error) {
+      setAuthError(errorText(error));
+    } finally {
+      setAuthBusy(false);
+    }
+  };
 
   const handleCommunityLogout = async () => {
     if (communityLogoutLoading) return;
@@ -1443,13 +1504,40 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
           <p>{identityLoading ? "Loading your community account…" : signedIn ? (email || "Your AlphaClient profile") : "Sign in to your community account to use your profile and display name."}</p>
         </div>
         <div className="community-account-actions">
-          <button type="button" className="friends-primary community-profile-button" onClick={onOpenProfile}>
-            {signedIn ? "Edit profile" : "Open profile"}
-            <span aria-hidden="true">↗</span>
-          </button>
-          {signedIn && <button type="button" className="secondary-button community-logout-button" onClick={() => void handleCommunityLogout()} disabled={communityLogoutLoading}>{communityLogoutLoading ? "SIGNING OUT..." : "LOG OUT"}</button>}
+          {signedIn ? (
+            <>
+              <button type="button" className="friends-primary community-profile-button" onClick={onOpenProfile}>Edit profile <span aria-hidden="true">↗</span></button>
+              <button type="button" className="secondary-button community-logout-button" onClick={() => void handleCommunityLogout()} disabled={communityLogoutLoading}>{communityLogoutLoading ? "SIGNING OUT..." : "LOG OUT"}</button>
+            </>
+          ) : (
+            <button type="button" className="friends-primary community-profile-button" onClick={() => { setAuthPanelOpen((open) => !open); setAuthError(""); setAuthMessage(""); }}>
+              {authPanelOpen ? "Close sign in" : "Log in / Sign up"} <span aria-hidden="true">↗</span>
+            </button>
+          )}
         </div>
         {communityLogoutError && <p className="community-logout-error" role="alert">{communityLogoutError}</p>}
+        {authPanelOpen && !signedIn && (
+          <form className="community-auth-panel" onSubmit={(event) => void handleCommunityAuth(event)}>
+            <div className="community-auth-heading">
+              <div>
+                <span className="community-kicker">ALPHA COMMUNITY ACCOUNT</span>
+                <h3>{authMode === "login" ? "Welcome back" : "Create your account"}</h3>
+                <p>{authMode === "login" ? "Sign in with your email and password." : "Create a test account with a unique email address."}</p>
+              </div>
+              <div className="community-auth-mode">
+                <button type="button" className={authMode === "login" ? "is-active" : ""} onClick={() => { setAuthMode("login"); setAuthError(""); setAuthMessage(""); }}>Log in</button>
+                <button type="button" className={authMode === "signup" ? "is-active" : ""} onClick={() => { setAuthMode("signup"); setAuthError(""); setAuthMessage(""); }}>Sign up</button>
+              </div>
+            </div>
+            {authMode === "signup" && <label className="community-auth-field"><span>Username</span><input value={authUsername} onChange={(event) => setAuthUsername(event.target.value)} autoComplete="username" maxLength={24} placeholder="Choose a username" required /></label>}
+            <label className="community-auth-field"><span>Email address</span><input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} autoComplete="email" placeholder="you@example.com" required /></label>
+            <label className="community-auth-field"><span>Password</span><input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} autoComplete={authMode === "login" ? "current-password" : "new-password"} minLength={6} placeholder="At least 6 characters" required /></label>
+            {authError && <p className="community-auth-feedback is-error" role="alert">{authError}</p>}
+            {authMessage && <p className="community-auth-feedback is-success" role="status">{authMessage}</p>}
+            <button type="submit" className="friends-primary community-auth-submit" disabled={authBusy}>{authBusy ? "PLEASE WAIT..." : authMode === "login" ? "LOG IN TO COMMUNITY" : "CREATE COMMUNITY ACCOUNT"}</button>
+            <p className="community-auth-note">Registration depends on the email sign-up settings in Supabase. If confirmation is enabled, confirm your email before signing in.</p>
+          </form>
+        )}
       </section>
 
       <div className="community-main-layout">
