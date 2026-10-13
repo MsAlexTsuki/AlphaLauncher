@@ -1879,7 +1879,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
   </div>;
 }
 
-type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; avatar_url?: string | null; bio?: string | null };
+type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; avatar_url?: string | null; bio?: string | null; created_at?: string | null };
 type CommunityFriendRequest = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string };
 
 function FriendsPage() {
@@ -1887,6 +1887,8 @@ function FriendsPage() {
   const [myProfile, setMyProfile] = useState<CommunityProfile | null>(null);
   const [friends, setFriends] = useState<CommunityProfile[]>([]);
   const [selectedChatFriendId, setSelectedChatFriendId] = useState<string | null>(null);
+  const [publicProfile, setPublicProfile] = useState<CommunityProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [incoming, setIncoming] = useState<Array<CommunityFriendRequest & { profile?: CommunityProfile }>>([]);
   const [outgoing, setOutgoing] = useState<Array<CommunityFriendRequest & { profile?: CommunityProfile }>>([]);
   const [search, setSearch] = useState("");
@@ -1911,7 +1913,7 @@ function FriendsPage() {
         return;
       }
       setUserId(user.id);
-      const { data: profile, error: profileError } = await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key").eq("id", user.id).maybeSingle();
+      const { data: profile, error: profileError } = await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url, bio, created_at").eq("id", user.id).maybeSingle();
       if (profileError) throw profileError;
       const loadedProfile = profile as CommunityProfile | null;
       setMyProfile(loadedProfile);
@@ -1971,6 +1973,15 @@ function FriendsPage() {
     if (!data?.length) setMessage("No Alpha accounts matched that username.");
   };
 
+  const openPublicProfile = async (person: CommunityProfile) => {
+    setPublicProfile(person);
+    setProfileLoading(true);
+    const { data, error: profileError } = await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url, bio, created_at").eq("id", person.id).maybeSingle();
+    if (!profileError && data) setPublicProfile(data as CommunityProfile);
+    else if (profileError) setError(errorText(profileError));
+    setProfileLoading(false);
+  };
+
   const sendRequest = async (profile: CommunityProfile) => {
     setBusyId(profile.id); setError(""); setMessage("");
     const { error: requestError } = await supabase.rpc("send_friend_request", { p_recipient_id: profile.id });
@@ -2021,10 +2032,11 @@ function FriendsPage() {
         </div>
         <section className="section-card friends-list-card friends-roster-card">
           <div className="friends-section-heading"><div><h2>Your friends</h2><p>Players connected to your account.</p></div><span className="friends-count">{friends.length}</span></div>
-          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className={`friends-user-row friends-roster-clickable${selectedChatFriendId === friend.id ? " is-chat-selected" : ""}`} role="listitem" tabIndex={0} aria-label={`Open private chat with ${friend.username}`} key={friend.id} onClick={() => setSelectedChatFriendId(friend.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedChatFriendId(friend.id); } }}><div className="friends-avatar">{friend.username.slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{friend.username}</strong><span>@{friend.username}</span></div><CommunityRankBadge rankKey={friend.rank_key || (friend.is_founder ? "founder" : "member")} /><span className="friends-connected"><i/> Friend</span></div>)}</div>}
+          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className={`friends-user-row friends-roster-clickable${selectedChatFriendId === friend.id ? " is-chat-selected" : ""}`} role="listitem" tabIndex={0} aria-label={`Open private chat with ${friend.username}`} key={friend.id} onClick={() => setSelectedChatFriendId(friend.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedChatFriendId(friend.id); } }}><button type="button" className="friends-avatar friends-profile-open" aria-label={`View ${friend.username} profile`} onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : friend.username.slice(0,1).toUpperCase()}</button><div className="friends-user-copy"><button type="button" className="friends-profile-name-button" onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.username}</button><span>@{friend.username}</span></div><CommunityRankBadge rankKey={friend.rank_key || (friend.is_founder ? "founder" : "member")} /><span className="friends-connected"><i/> Friend</span></div>)}</div>}
         </section>
       </div>
     </>}
+    {publicProfile && <div className="public-profile-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setPublicProfile(null); }}><section className="section-card profile-preview-card profile-view-card public-profile-modal" role="dialog" aria-modal="true" aria-labelledby="public-profile-name"><button type="button" className="public-profile-close" aria-label="Close profile" onClick={() => setPublicProfile(null)}>×</button><div className="profile-preview-glow" /><div className="eyebrow profile-account-label">ALPHA ACCOUNT</div><div className="profile-avatar-large">{publicProfile.avatar_url ? <img src={publicProfile.avatar_url} alt={publicProfile.username + " avatar"} /> : <span>{publicProfile.username.slice(0, 1).toUpperCase()}</span>}</div><h2 className="profile-name-row" id="public-profile-name">{(() => { const key = publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[key] || COMMUNITY_RANKS.member; return key === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-rank-icon" aria-hidden="true">{COMMUNITY_RANK_ICONS[key] || COMMUNITY_RANK_ICONS.member}</span>{rank.label}</span>; })()}{publicProfile.username}</h2><div className="profile-username">@{publicProfile.username}</div><p className="profile-bio-preview">{publicProfile.bio?.trim() || "This player hasn't added a bio yet."}</p><div className="profile-preview-divider" /><div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>{publicProfile.created_at && <div className="public-profile-meta">Member since {new Date(publicProfile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</div>}{profileLoading && <div className="public-profile-meta">Refreshing profile…</div>}<div className="public-profile-actions">{friends.some(friend => friend.id === publicProfile.id) ? <><span className="friends-connected"><i /> Friend</span><button className="friends-secondary" type="button" onClick={() => { setSelectedChatFriendId(publicProfile.id); setPublicProfile(null); }}>Message</button></> : incoming.find(request => request.profile?.id === publicProfile.id) ? <><button className="friends-primary" type="button" disabled={busyId === incoming.find(request => request.profile?.id === publicProfile.id)?.id} onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, true); }}>Accept request</button><button className="friends-secondary" type="button" onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, false); }}>Decline</button></> : outgoing.find(request => request.profile?.id === publicProfile.id) ? <button className="friends-secondary" type="button" onClick={() => { const request = outgoing.find(item => item.profile?.id === publicProfile.id); if (request) void cancelRequest(request); }}>Request sent · Cancel</button> : <button className="friends-primary" type="button" disabled={busyId === publicProfile.id} onClick={() => void sendRequest(publicProfile)}>{busyId === publicProfile.id ? "Sending…" : "Add friend"}</button>}</div></section></div>}
     {loading && <div className="friends-loading">Loading community…</div>}
   </div>;
 }
