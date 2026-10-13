@@ -227,6 +227,7 @@ function LauncherApp() {
     };
   }, []);
   const [page, setPage] = useState<Page>("Home");
+  const [chatTargetFriendId, setChatTargetFriendId] = useState<string | null>(null);
   const [communityLoginRequested, setCommunityLoginRequested] = useState(false);
   const [alphaAuthModalOpen, setAlphaAuthModalOpen] = useState(false);
   const [openProfileEditor, setOpenProfileEditor] = useState(false);
@@ -1141,9 +1142,9 @@ console.error("Developer permission check failed:", errorMessage);
 
           {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
-          {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} />}
+          {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} onOpenChat={(friendId) => { setChatTargetFriendId(friendId); navigate("Chats"); }} />}
 
-          {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} />}
+          {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} initialFriendId={chatTargetFriendId} onInitialFriendHandled={() => setChatTargetFriendId(null)} />}
 
 
           {page === "Developer" && (
@@ -2027,7 +2028,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
 
 type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; avatar_url?: string | null; bio?: string | null; created_at?: string | null; last_played_at?: string | null; last_played_version?: string | null };
 
-function ChatsPage({ onOpenAlphaAuth }: { onOpenAlphaAuth: () => void }) {
+function ChatsPage({ onOpenAlphaAuth, initialFriendId, onInitialFriendHandled }: { onOpenAlphaAuth: () => void; initialFriendId: string | null; onInitialFriendHandled: () => void }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [friends, setFriends] = useState<CommunityProfile[]>([]);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
@@ -2073,6 +2074,12 @@ function ChatsPage({ onOpenAlphaAuth }: { onOpenAlphaAuth: () => void }) {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    if (!initialFriendId || loading) return;
+    if (friends.some(friend => friend.id === initialFriendId)) setSelectedFriendId(initialFriendId);
+    onInitialFriendHandled();
+  }, [initialFriendId, loading, friends, onInitialFriendHandled]);
+
   return <div className="page">
     <div className="page-header"><div><div className="eyebrow">ALPHA COMMUNITY</div><h1>Chats</h1><p>Your private conversations with Alpha friends.</p></div></div>
     {!loading && !userId && <section className="section-card friends-signin"><div className="friends-empty-icon">✉</div><h2>Sign in to Alpha Community</h2><p>Sign in to your Alpha Account to open private chats with your friends.</p><button className="friends-primary" onClick={onOpenAlphaAuth}>Sign in to Alpha Account</button></section>}
@@ -2084,7 +2091,7 @@ function ChatsPage({ onOpenAlphaAuth }: { onOpenAlphaAuth: () => void }) {
 
 type CommunityFriendRequest = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string };
 
-function FriendsPage({ onOpenAlphaAuth }: { onOpenAlphaAuth: () => void }) {
+function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => void; onOpenChat: (friendId: string) => void }) {
   const [onlineFriendIds, setOnlineFriendIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -2251,11 +2258,10 @@ function FriendsPage({ onOpenAlphaAuth }: { onOpenAlphaAuth: () => void }) {
           <div className="friends-section-heading"><div><h2>Outgoing requests</h2><p>Players you have sent a request to.</p></div><span className="friends-count">{outgoing.length}</span></div>
           {outgoing.length === 0 ? <div className="friends-empty">You haven't sent any pending requests.</div> : outgoing.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{request.profile?.avatar_url ? <img src={request.profile.avatar_url} alt="" onError={event => { event.currentTarget.style.display = "none"; }} /> : (request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div><span className="friends-pending"><i /> Pending</span><button className="friends-secondary compact" type="button" disabled={busyId === request.id} onClick={() => void cancelRequest(request)}>{busyId === request.id ? "Cancelling…" : "Cancel request"}</button></div>)}
         </section>
-        <PrivateChatPanel userId={userId} friends={friends} selectedFriendId={selectedChatFriendId} onSelectFriend={setSelectedChatFriendId} />
         </div>
         <section className="section-card friends-list-card friends-roster-card">
           <div className="friends-section-heading"><div><h2>Your friends</h2><p>Players connected to your account.</p></div><span className="friends-count">{friends.length}</span></div>
-          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className={`friends-user-row friends-roster-clickable${selectedChatFriendId === friend.id ? " is-chat-selected" : ""}`} role="listitem" tabIndex={0} aria-label={`Open private chat with ${friend.username}`} key={friend.id} onClick={() => setSelectedChatFriendId(friend.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedChatFriendId(friend.id); } }}><button type="button" className="friends-avatar friends-profile-open" aria-label={`View ${friend.username} profile`} onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : friend.username.slice(0,1).toUpperCase()}</button><div className="friends-user-copy"><div className="friends-roster-name-line"><button type="button" className="friends-profile-name-button" onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.username}</button><CommunityRankBadge rankKey={friend.rank_key || (friend.is_founder ? "founder" : "member")} /></div><span>@{friend.username}</span></div><span className={`friends-presence ${onlineFriendIds.has(friend.id) ? "is-online" : "is-offline"}`}><i />{onlineFriendIds.has(friend.id) ? "Online" : "Offline"}</span></div>)}</div>}
+          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className="friends-user-row friends-roster-row" role="listitem" key={friend.id}><button type="button" className="friends-avatar friends-profile-open" aria-label={`View ${friend.username} profile`} onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : friend.username.slice(0,1).toUpperCase()}</button><div className="friends-user-copy"><div className="friends-roster-name-line"><button type="button" className="friends-profile-name-button" onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.username}</button><CommunityRankBadge rankKey={friend.rank_key || (friend.is_founder ? "founder" : "member")} /><button type="button" className="friends-chat-icon-button" aria-label={`Chat with ${friend.username}`} title={`Message ${friend.username}`} onClick={() => onOpenChat(friend.id)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5 8.2 8.2 0 0 1-3.3-.7L4 20l1.7-4.2A7.5 7.5 0 1 1 20 11.5Z" /></svg></button></div><span>@{friend.username}</span></div><span className={`friends-presence ${onlineFriendIds.has(friend.id) ? "is-online" : "is-offline"}`}><i />{onlineFriendIds.has(friend.id) ? "Online" : "Offline"}</span></div>)}</div>}
         </section>
       </div>
     </>}
