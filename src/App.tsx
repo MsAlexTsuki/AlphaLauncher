@@ -1378,18 +1378,18 @@ const COMMUNITY_RANK_ORDER = [
 ] as const;
 
 const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
-  founder: { label: "Founder of Alpha", color: "#FFD866" },
-  owner: { label: "Owner of Alpha", color: "#FF2D00" },
-  management: { label: "Manager of Alpha", color: "#5C0303" },
-  senior_admin: { label: "Senior Admin on Alpha", color: "#D67020" },
-  admin: { label: "Admin on Alpha", color: "#E08D16" },
-  senior_moderator: { label: "Senior Moderator on Alpha", color: "#8C17D1" },
-  moderator: { label: "Moderator on Alpha", color: "#29AFCC" },
-  trial_moderator: { label: "Trial Moderator on Alpha", color: "#166534" },
-  beta: { label: "Beta Tester on Alpha", color: "#00FF52" },
-  alpha_plus: { label: "Donator on Alpha", color: "#FFF300" },
-  alpha: { label: "Donator on Alpha", color: "#F300FF" },
-  member: { label: "Member on Alpha", color: "#C3BFE0" },
+  founder: { label: "FOUNDER", color: "#FFD866" },
+  owner: { label: "OWNER", color: "#FF2D00" },
+  management: { label: "MANAGEMENT", color: "#5C0303" },
+  senior_admin: { label: "SENIOR ADMIN", color: "#D67020" },
+  admin: { label: "ADMIN", color: "#E08D16" },
+  senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" },
+  moderator: { label: "MODERATOR", color: "#29AFCC" },
+  trial_moderator: { label: "TRIAL MODERATOR", color: "#166534" },
+  beta: { label: "BETA", color: "#00FF52" },
+  alpha_plus: { label: "ALPHA+", color: "#FFF300" },
+  alpha: { label: "ALPHA", color: "#F300FF" },
+  member: { label: "MEMBER", color: "#C3BFE0" },
 };
 
 const COMMUNITY_RANK_ICONS: Record<string, string> = {
@@ -1849,7 +1849,29 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
       <p className="profile-bio-preview">{profile.bio?.trim() || "You haven't added a bio yet."}</p>
       <div className="profile-preview-divider" />
       <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>
-      {profile.is_founder && <div className="profile-founder-status"><span className="profile-founder-crown">♛</span> Founder of Alpha Client</div>}
+      {(() => {
+        const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member");
+        const rankLabels: Record<string, string> = {
+          founder: "Founder of Alpha",
+          owner: "Owner of Alpha",
+          management: "Manager of Alpha",
+          senior_admin: "Senior Admin on Alpha",
+          admin: "Admin on Alpha",
+          senior_moderator: "Senior Moderator on Alpha",
+          moderator: "Moderator on Alpha",
+          trial_moderator: "Trial Moderator on Alpha",
+          beta: "Beta Tester on Alpha",
+          alpha_plus: "Donator on Alpha",
+          alpha: "Donator on Alpha",
+          member: "Member on Alpha",
+        };
+        const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member;
+        const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member);
+        return <div className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}>
+          <span className="profile-founder-crown" aria-hidden="true">{icon}</span>
+          {rankLabels[rankKey] || rankLabels.member}
+        </div>;
+      })()}
     </section>}
     {profile && isEditing && <form className="profile-edit-page" onSubmit={saveProfile}>
       <section className="section-card profile-edit-card">
