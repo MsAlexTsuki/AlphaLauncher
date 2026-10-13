@@ -6648,3 +6648,38 @@ button:not(:disabled):active {
 
 /* Nudge the Find Players search card up slightly. */
 .friends-search-card { transform: translateY(-5px); }
+
+
+/* Small direct-message shortcut beside each friend's rank. */
+.friends-chat-icon-button {
+  display: inline-grid;
+  flex: 0 0 27px;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  margin-left: 3px;
+  padding: 0;
+  border: 1px solid rgba(255, 216, 102, 0.16);
+  border-radius: 8px;
+  color: #b9bac3;
+  background: rgba(255, 216, 102, 0.045);
+  cursor: pointer;
+  transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+.friends-chat-icon-button svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.friends-chat-icon-button:hover {
+  color: #ffd866;
+  background: rgba(255, 216, 102, 0.11);
+  border-color: rgba(255, 216, 102, 0.38);
+}
+.friends-roster-name-line {
+  min-width: 0;
+}
