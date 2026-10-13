@@ -5104,7 +5104,7 @@ button:not(:disabled):active {
 .friends-primary:disabled,.friends-secondary:disabled,.friends-refresh:disabled { opacity:.55; cursor:not-allowed; }
 .rank-save-button:disabled { cursor:not-allowed; }
 .friends-page .section-card { padding:22px; }
-.friends-search-card { width:min(100%,600px); margin-bottom:0; }
+.friends-search-card { width:min(100%,600px); margin:0 auto; }
 .friends-section-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
 .friends-section-heading h2,.friends-signin h2 { font-size:16px; margin:0; font-weight:700; }
 .friends-section-heading p { margin:6px 0 0; color:#9699a6; font-size:12px; }
