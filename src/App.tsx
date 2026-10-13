@@ -2322,7 +2322,7 @@ function AlphaAccountAuthModal({ onClose }: { onClose: () => void }) {
           </button>
           <div className="alpha-access-logo" aria-hidden="true"><AlphaLogo /></div>
           <span className="alpha-access-overline">ONE ACCOUNT. ALL OF ALPHA.</span>
-          <h2>Your Alpha<br /><span>starts here.</span></h2>
+          <h2>Your Alpha journey starts here.</h2>
           <p>Sign in to connect with the community, manage your profile, and make your Alpha experience yours.</p>
           <div className="alpha-access-showcase-footer">
             <span className="alpha-access-status-dot" />
