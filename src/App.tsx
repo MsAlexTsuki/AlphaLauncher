@@ -1897,7 +1897,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
       <div className="profile-username">@{profile.username}</div>
       <p className="profile-bio-preview">{profile.bio?.trim() || "You haven't added a bio yet."}</p>
       <div className="profile-preview-divider" />
-      <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div><div className={`public-profile-presence ${onlineFriendIds.has(publicProfile.id) ? "is-online" : "is-offline"}`}><i />{onlineFriendIds.has(publicProfile.id) ? "Online" : "Offline"}</div>
+      <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>
       {(() => {
         const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member");
         const rankLabels: Record<string, string> = {
