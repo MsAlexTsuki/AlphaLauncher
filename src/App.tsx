@@ -238,6 +238,7 @@ function LauncherApp() {
 
   const [account, setAccount] = useState<MicrosoftAccount | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isMinecraftRunning, setIsMinecraftRunning] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const [isInstalling, setIsInstalling] = useState(false);
@@ -254,6 +255,29 @@ function LauncherApp() {
     useState<AlphaClientUpdateInfo | null>(null);
   const [isUpdatingClient, setIsUpdatingClient] = useState(false);
   const [clientDirectory, setClientDirectory] = useState<string | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+
+    const refreshMinecraftStatus = async () => {
+      try {
+        const running = await invoke<boolean>("get_minecraft_process_status");
+        if (!disposed) setIsMinecraftRunning(running);
+      } catch (error) {
+        console.warn("Could not check Minecraft process status:", error);
+      }
+    };
+
+    void refreshMinecraftStatus();
+    const interval = window.setInterval(() => {
+      void refreshMinecraftStatus();
+    }, 1000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const [offlineMode, setOfflineMode] = useState(() => {
     try {
@@ -800,7 +824,7 @@ console.error("Developer permission check failed:", errorMessage);
   };
 
   const handleMicrosoftLogin = async () => {
-    if (isLoggingIn) return;
+    if (isLoggingIn || isMinecraftRunning) return;
 
     setIsLoggingIn(true);
     setLoginError(null);
@@ -816,6 +840,11 @@ console.error("Developer permission check failed:", errorMessage);
   };
 
   const handleMicrosoftLogout = async () => {
+    if (isMinecraftRunning) {
+      setLoginError("Je kunt niet uitloggen zolang Minecraft actief is. Sluit Minecraft eerst af.");
+      return;
+    }
+
     try {
       await invoke("logout_microsoft");
       setAccount(null);
@@ -1148,6 +1177,7 @@ console.error("Developer permission check failed:", errorMessage);
               <AccountPage
                 account={account}
                 isLoggingIn={isLoggingIn}
+                isMinecraftRunning={isMinecraftRunning}
                 loginError={loginError}
                 onLogin={handleMicrosoftLogin}
                 onLogout={handleMicrosoftLogout}
@@ -3860,12 +3890,14 @@ function SettingsPage({
 function AccountPage({
   account,
   isLoggingIn,
+  isMinecraftRunning,
   loginError,
   onLogin,
   onLogout,
 }: {
   account: MicrosoftAccount | null;
   isLoggingIn: boolean;
+  isMinecraftRunning: boolean;
   loginError: string | null;
   onLogin: () => void;
   onLogout: () => void;
@@ -3928,16 +3960,19 @@ function AccountPage({
               type="button"
               className="secondary-button"
               onClick={onLogin}
-              disabled={isLoggingIn}
+              disabled={isLoggingIn || isMinecraftRunning}
+              title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}
             >
-              {isLoggingIn ? "LOGGING IN..." : "SWITCH ACCOUNT"}
+              {isMinecraftRunning ? "MINECRAFT IS RUNNING" : isLoggingIn ? "LOGGING IN..." : "SWITCH ACCOUNT"}
             </button>
             <button
               type="button"
               className="secondary-button"
               onClick={onLogout}
+              disabled={isMinecraftRunning}
+              title={isMinecraftRunning ? "Close Minecraft before logging out." : undefined}
             >
-              LOG OUT
+              {isMinecraftRunning ? "MINECRAFT IS RUNNING" : "LOG OUT"}
             </button>
           </>
         )}
