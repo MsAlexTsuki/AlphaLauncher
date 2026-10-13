@@ -6292,3 +6292,20 @@ button:not(:disabled):active {
     width: min(326px, calc(100vw - 24px));
   }
 }
+
+/* Simplified notifications box */
+.inbox-popover-header {
+  padding: 16px 18px;
+}
+.inbox-popover-header strong {
+  font-size: 14px;
+}
+.inbox-empty {
+  padding: 18px 22px 20px;
+}
+.inbox-empty-icon {
+  display: none;
+}
+.inbox-empty p {
+  margin-top: 0;
+}
