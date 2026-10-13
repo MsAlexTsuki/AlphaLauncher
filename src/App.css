@@ -5119,6 +5119,7 @@ button:not(:disabled):active {
 .friends-user-row { display:flex; align-items:center; gap:11px; min-width:0; padding:12px 0; border-top:1px solid #ffffff0c; }
 .friends-user-row:first-child { border-top:0; }
 .friends-avatar { width:36px; height:36px; flex:0 0 36px; display:grid; place-items:center; border-radius:11px; background:linear-gradient(145deg,#ffd86622,#ffc83d0a); border:1px solid #ffc83d30; color:var(--yellow-light); font-weight:800; font-size:13px; }
+.friends-avatar img { width:100%; height:100%; object-fit:cover; border-radius:inherit; }
 .friends-user-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:4px; }
 .friends-user-copy strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:700; color:#f1f1f4; }
 .friends-user-copy span { color:#9295a2; font-size:11px; }
