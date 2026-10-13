@@ -222,6 +222,7 @@ function LauncherApp() {
     null,
   );
   const [developerAuthorized, setDeveloperAuthorized] = useState(false);
+  const [canManageReleases, setCanManageReleases] = useState(false);
   const [developerAuthLoading, setDeveloperAuthLoading] = useState(true);
   const [developerAuthError, setDeveloperAuthError] = useState("");
   const [developerSigningIn, setDeveloperSigningIn] = useState(false);
@@ -287,6 +288,7 @@ function LauncherApp() {
       setDeveloperAuthError("");
       setDeveloperUserEmail(user?.email ?? null);
       setDeveloperAuthorized(false);
+      setCanManageReleases(false);
 
       if (!user) {
         setDeveloperAuthLoading(false);
@@ -294,31 +296,39 @@ function LauncherApp() {
       }
 
       try {
-        const { data, error } = await supabase.rpc("has_rank_permission", {
-          p_scope: "launcher",
-          p_permission_key: "developer.tools",
-        });
+        const [
+          { data: developerToolsPermission, error: developerToolsError },
+          { data: releasePermission, error: releasePermissionError },
+        ] = await Promise.all([
+          supabase.rpc("has_rank_permission", { p_scope: "launcher", p_permission_key: "developer.tools" }),
+          supabase.rpc("has_rank_permission", { p_scope: "launcher", p_permission_key: "releases.manage" }),
+        ]);
 
         if (cancelled) return;
 
-        if (error) {
+        if (developerToolsError || releasePermissionError) {
+          const error = developerToolsError ?? releasePermissionError;
           console.error("Developer permission check failed:", error.message);
           setDeveloperAuthError(
             "Developer permissions could not be verified. Check that the Supabase function has_rank_permission exists and is configured correctly.",
           );
           setDeveloperAuthorized(false);
-        } else if (data === true) {
-          setDeveloperAuthorized(true);
-          setDeveloperAuthError("");
+          setCanManageReleases(false);
         } else {
-          setDeveloperAuthorized(false);
+          const hasDeveloperTools = developerToolsPermission === true;
+          const hasReleasePermission = releasePermission === true;
+          setDeveloperAuthorized(hasDeveloperTools);
+          setCanManageReleases(hasReleasePermission);
           setDeveloperAuthError(
-            "This account does not have the launcher permission 'developer.tools'.",
+            hasDeveloperTools || hasReleasePermission
+              ? ""
+              : "This account does not have the launcher permission 'developer.tools' or 'releases.manage'.",
           );
         }
       } catch (error) {
         if (cancelled) return;
         setDeveloperAuthorized(false);
+        setCanManageReleases(false);
         setDeveloperAuthError(errorText(error));
       } finally {
         if (!cancelled) setDeveloperAuthLoading(false);
@@ -354,10 +364,10 @@ function LauncherApp() {
   }, []);
 
   useEffect(() => {
-    if (!developerAuthLoading && !developerAuthorized && page === "Developer") {
+    if (!developerAuthLoading && !developerAuthorized && !canManageReleases && page === "Developer") {
       setPage("Home");
     }
-  }, [developerAuthLoading, developerAuthorized, page]);
+  }, [developerAuthLoading, developerAuthorized, canManageReleases, page]);
 
   // Public users only receive published entries. Verified developers receive drafts too.
   useEffect(() => {
@@ -368,7 +378,7 @@ function LauncherApp() {
         .from("changelogs")
         .select("id, version, title, body, created_at, product, published");
 
-      if (!developerAuthorized) {
+      if (!developerAuthorized && !canManageReleases) {
         query = query.eq("published", true);
       }
 
@@ -391,14 +401,14 @@ function LauncherApp() {
     return () => {
       cancelled = true;
     };
-  }, [developerAuthorized]);
+  }, [developerAuthorized, canManageReleases]);
 
   const refreshChangelogs = async () => {
     let query = supabase
       .from("changelogs")
       .select("id, version, title, body, created_at, product, published");
 
-    if (!developerAuthorized) {
+    if (!developerAuthorized && !canManageReleases) {
       query = query.eq("published", true);
     }
 
@@ -456,8 +466,8 @@ function LauncherApp() {
   };
 
   const handleSaveChangelog = async (draft: ChangelogDraft) => {
-    if (!developerAuthorized) {
-      const message = "You are not authorized to edit changelogs. Make sure you are signed in with an authorized developer account.";
+    if (!developerAuthorized && !canManageReleases) {
+      const message = "You are not authorized to edit changelogs. Make sure you have the launcher permission 'releases.manage'.";
       setChangelogMessage(message);
       throw new Error(message);
     }
@@ -502,7 +512,7 @@ function LauncherApp() {
   };
 
   const handleDeleteChangelog = async (id: number) => {
-    if (!developerAuthorized) {
+    if (!developerAuthorized && !canManageReleases) {
       setChangelogMessage("You are not authorized to delete changelogs.");
       return;
     }
@@ -533,7 +543,7 @@ function LauncherApp() {
   };
 
   const handleTogglePublish = async (entry: ChangelogEntry) => {
-    if (!developerAuthorized) {
+    if (!developerAuthorized && !canManageReleases) {
       setChangelogMessage("You are not authorized to publish changelogs.");
       return;
     }
@@ -841,7 +851,7 @@ function LauncherApp() {
 
           <nav className="navigation">
             {navigation
-              .filter((item) => item.name !== "Developer" || developerAuthorized)
+              .filter((item) => item.name !== "Developer" || developerAuthorized || canManageReleases)
               .map((item) => (
               <span key={item.name}>
                 {item.name === "Developer" && <div className="nav-separator" />}
@@ -1036,6 +1046,7 @@ function LauncherApp() {
               setDeveloperPassword={setDeveloperPassword}
               developerUserEmail={developerUserEmail}
               developerAuthorized={developerAuthorized}
+              canManageReleases={canManageReleases}
               developerAuthLoading={developerAuthLoading}
               developerAuthError={developerAuthError}
               developerSigningIn={developerSigningIn}
@@ -2965,6 +2976,7 @@ function DeveloperPage({
   setDeveloperPassword,
   developerUserEmail,
   developerAuthorized,
+  canManageReleases,
   developerAuthLoading,
   developerAuthError,
   developerSigningIn,
@@ -2989,6 +3001,7 @@ function DeveloperPage({
   setDeveloperPassword: (value: string) => void;
   developerUserEmail: string | null;
   developerAuthorized: boolean;
+  canManageReleases: boolean;
   developerAuthLoading: boolean;
   developerAuthError: string;
   developerSigningIn: boolean;
@@ -3112,7 +3125,7 @@ function DeveloperPage({
     );
   }
 
-  if (!developerAuthorized) {
+  if (!developerAuthorized && !canManageReleases) {
     return (
       <div className="page developer-page">
         <PageTitle
@@ -3282,7 +3295,9 @@ function DeveloperPage({
 
             <span className="card-label">DEVELOPER MENU</span>
 
-            {developerTools.map((tool) => (
+            {developerTools
+              .filter((tool) => developerAuthorized || tool.name === "Release Manager")
+              .map((tool) => (
               <button
                 type="button"
                 key={tool.name}
@@ -3305,23 +3320,23 @@ function DeveloperPage({
           </nav>
 
           <div className="developer-tool-content">
-            {activeTool === "Rank Management" && <RankManagement />}
+            {developerAuthorized && activeTool === "Rank Management" && <RankManagement />}
 
-            {activeTool === "Permission Explorer" &&
+            {developerAuthorized && activeTool === "Permission Explorer" &&
               renderPlaceholder(
                 "Permission Explorer",
                 "Explore available actions, which ranks receive them, and where each permission is used.",
               )}
 
-            {activeTool === "Audit Timeline" && <AuditTimeline />}
+            {developerAuthorized && activeTool === "Audit Timeline" && <AuditTimeline />}
 
-            {activeTool === "Change Review" &&
+            {developerAuthorized && activeTool === "Change Review" &&
               renderPlaceholder(
                 "Change Review",
                 "Review proposed changes and approve them before they are applied.",
               )}
 
-            {activeTool === "Development Sandbox" && (
+            {developerAuthorized && activeTool === "Development Sandbox" && (
               <>
                 <section className="section-card developer-card">
                   <div className="section-header">
@@ -3415,7 +3430,7 @@ function DeveloperPage({
               </>
             )}
 
-            {activeTool === "Feature Rollout Manager" &&
+            {developerAuthorized && activeTool === "Feature Rollout Manager" &&
               renderPlaceholder(
                 "Feature Rollout Manager",
                 "Plan feature flags, target groups and staged rollouts. Publishing and remote targeting are not connected yet.",
