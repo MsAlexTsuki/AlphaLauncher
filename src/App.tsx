@@ -303,7 +303,7 @@ function LauncherApp() {
         if (error) {
           console.error("Developer permission check failed:", error.message);
           setDeveloperAuthError(
-            "Developerrechten konden niet worden gecontroleerd. Controleer of de Supabase-functie has_rank_permission bestaat en correct is ingesteld.",
+            "Developer permissions could not be verified. Check that the Supabase function has_rank_permission exists and is configured correctly.",
           );
           setDeveloperAuthorized(false);
         } else if (data === true) {
@@ -312,7 +312,7 @@ function LauncherApp() {
         } else {
           setDeveloperAuthorized(false);
           setDeveloperAuthError(
-            "Dit account heeft geen launcher-permissie 'developer.tools'.",
+            "This account does not have the launcher permission 'developer.tools'.",
           );
         }
       } catch (error) {
@@ -414,7 +414,7 @@ function LauncherApp() {
 
     const email = developerEmail.trim();
     if (!email || !developerPassword) {
-      setDeveloperAuthError("Vul je e-mailadres en wachtwoord in.");
+      setDeveloperAuthError("Enter your email address and password.");
       return;
     }
 
@@ -456,7 +456,7 @@ function LauncherApp() {
 
   const handleSaveChangelog = async (draft: ChangelogDraft) => {
     if (!developerAuthorized) {
-      const message = "Je hebt geen toestemming om changelogs te wijzigen. Controleer of je developer-account is ingelogd en geautoriseerd.";
+      const message = "You are not authorized to edit changelogs. Make sure you are signed in with an authorized developer account.";
       setChangelogMessage(message);
       throw new Error(message);
     }
@@ -466,7 +466,7 @@ function LauncherApp() {
     const body = draft.body.trim();
 
     if (!version || !title || !body) {
-      setChangelogMessage("Vul versie, titel en wijzigingen in.");
+      setChangelogMessage("Enter a version, title, and changes.");
       return;
     }
 
@@ -488,12 +488,12 @@ function LauncherApp() {
 
       setChangelogMessage(
         draft.id !== undefined
-          ? "Changelog bijgewerkt en geregistreerd in de auditlog."
-          : "Concept opgeslagen en geregistreerd in de auditlog.",
+          ? "Changelog updated and recorded in the audit log."
+          : "Draft saved and recorded in the audit log.",
       );
       await refreshChangelogs();
     } catch (error) {
-      setChangelogMessage(`Opslaan mislukt: ${errorText(error)}`);
+      setChangelogMessage(`Save failed: ${errorText(error)}`);
       throw error;
     } finally {
       setChangelogBusy(false);
@@ -502,7 +502,7 @@ function LauncherApp() {
 
   const handleDeleteChangelog = async (id: number) => {
     if (!developerAuthorized) {
-      setChangelogMessage("Je hebt geen toestemming om changelogs te verwijderen.");
+      setChangelogMessage("You are not authorized to delete changelogs.");
       return;
     }
 
@@ -523,9 +523,9 @@ function LauncherApp() {
       if (error) throw error;
 
       await refreshChangelogs();
-      setChangelogMessage("Changelog verwijderd en geregistreerd in de auditlog.");
+      setChangelogMessage("Changelog deleted and recorded in the audit log.");
     } catch (error) {
-      setChangelogMessage(`Verwijderen mislukt: ${errorText(error)}`);
+      setChangelogMessage(`Delete failed: ${errorText(error)}`);
     } finally {
       setChangelogBusy(false);
     }
@@ -533,7 +533,7 @@ function LauncherApp() {
 
   const handleTogglePublish = async (entry: ChangelogEntry) => {
     if (!developerAuthorized) {
-      setChangelogMessage("Je hebt geen toestemming om changelogs te publiceren.");
+      setChangelogMessage("You are not authorized to publish changelogs.");
       return;
     }
 
@@ -556,11 +556,11 @@ function LauncherApp() {
       await refreshChangelogs();
       setChangelogMessage(
         entry.published
-          ? "Changelog is niet meer gepubliceerd en de actie is gelogd."
-          : "Changelog gepubliceerd en de actie is gelogd. Deze is nu zichtbaar voor gebruikers.",
+          ? "Changelog unpublished and the action was logged."
+          : "Changelog published and the action was logged. It is now visible to users.",
       );
     } catch (error) {
-      setChangelogMessage(`Publiceren mislukt: ${errorText(error)}`);
+      setChangelogMessage(`Publishing failed: ${errorText(error)}`);
     } finally {
       setChangelogBusy(false);
     }
@@ -1074,7 +1074,7 @@ function LauncherApp() {
                 <div
                   className="changelog-tabs"
                   role="tablist"
-                  aria-label="Kies product"
+                  aria-label="Choose product"
                 >
                   <button
                     type="button"
@@ -1113,7 +1113,7 @@ function LauncherApp() {
                     if (entries.length === 0) {
                       return (
                         <p className="modal-body-text">
-                          Nog geen gepubliceerde changelogs voor{" "}
+                          No published changelogs yet for{" "}
                           {activeChangelogTab === "launcher"
                             ? "Alpha Launcher"
                             : "Alpha Client"}
@@ -2180,7 +2180,7 @@ function HomePage(props: {
               ))}
               {changelogs.length === 0 && (
                 <p className="subtitle">
-                  Er zijn nog geen gepubliceerde changelogs.
+                  There are no published changelogs yet.
                 </p>
               )}
             </div>
@@ -3056,7 +3056,7 @@ function DeveloperPage({
           description="Beveiligde toegang tot developer tools en releasebeheer."
         />
         <section className="section-card developer-card">
-          <p className="subtitle">Supabase-sessie en developerrechten controleren…</p>
+          <p className="subtitle">Checking Supabase session and developer permissions…</p>
         </section>
       </div>
     );
@@ -3082,8 +3082,8 @@ function DeveloperPage({
 
           {developerUserEmail && (
             <p className="subtitle">
-              Ingelogd als {developerUserEmail}, maar dit account heeft geen
-              bevestigde developerrechten.
+              Signed in as {developerUserEmail}, but this account does not have
+              verified developer permissions.
             </p>
           )}
 
@@ -3409,7 +3409,7 @@ function DeveloperPage({
                   className="developer-input-label"
                   htmlFor="changelog-version"
                 >
-                  Versie
+                  Version
                 </label>
                 <input
                   id="changelog-version"
@@ -3423,7 +3423,7 @@ function DeveloperPage({
                   className="developer-input-label"
                   htmlFor="changelog-title"
                 >
-                  Titel
+                  Title
                 </label>
                 <input
                   id="changelog-title"
@@ -3446,7 +3446,7 @@ function DeveloperPage({
                   value={draftBody}
                   onChange={(event) => setDraftBody(event.target.value)}
                   placeholder={
-                    "Added — Nieuwe functies\nFixed — Bugs opgelost\nImproved — Verbeteringen"
+                    "Added — New features\nFixed — Bug fixes\nImproved — Improvements"
                   }
                 />
 
@@ -3458,8 +3458,8 @@ function DeveloperPage({
                 {changelogMessage && (
                   <p
                     className={
-                      changelogMessage.toLowerCase().includes("mislukt") ||
-                      changelogMessage.toLowerCase().includes("geen toestemming")
+                      changelogMessage.toLowerCase().includes("failed") ||
+                      changelogMessage.toLowerCase().includes("not authorized")
                         ? "launch-error"
                         : "launch-success"
                     }
