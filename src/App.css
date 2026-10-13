@@ -5895,6 +5895,13 @@ button:not(:disabled):active {
 .community-friend-copy strong { overflow: hidden; color: var(--text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .community-friend-copy span { color: var(--muted); font-size: 9px; }
 .community-friend-presence { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; background: #737783; }
+.community-friend-presence.is-online { background: #22c55e; box-shadow: 0 0 8px #22c55e66; }
+.community-friend-presence.is-offline { background: #9ca3af; }
+.public-profile-presence { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:12px; color:#9ca3af; font-size:11px; }
+.public-profile-presence i { width:7px; height:7px; flex:0 0 7px; border-radius:50%; background:#9ca3af; }
+.public-profile-presence.is-online { color:#a5dcb9; }
+.public-profile-presence.is-online i { background:#22c55e; box-shadow:0 0 8px #22c55e55; }
+.public-profile-presence.is-offline i { background:#9ca3af; }
 .community-friends-error { color: #ff8f8f; font-size: 11px; }
 .community-friends-footnote { margin: 12px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
 @media (max-width: 1050px) { .community-main-layout { grid-template-columns: minmax(0, 1fr) 240px; } }
