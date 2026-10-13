@@ -5228,8 +5228,24 @@ fn finish_startup(app: tauri::AppHandle) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run()
 {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(
+            tauri_plugin_single_instance::init(|_app, _argv, _cwd| {})
+        );
+    }
+
+    builder = builder
+        .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
+            #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                app.deep_link().register_all()?;
+            }
+
             // Open the launcher at a comfortable, centered size by default.
             // This avoids requiring the user to maximize the window every time.
             if let Some(window) = app.get_webview_window("main") {
@@ -5259,7 +5275,9 @@ pub fn run()
         })
         .plugin(
             tauri_plugin_opener::init()
-        )
+        );
+
+    builder
         .invoke_handler(
             tauri::generate_handler![
                 greet,
