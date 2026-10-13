@@ -1604,6 +1604,7 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
           email: cleanEmail,
           password: authPassword,
           options: {
+            emailRedirectTo: "alphaclient://auth/callback",
             data: { username: cleanUsername, display_name: cleanUsername },
           },
         });
@@ -2269,6 +2270,7 @@ function AlphaAccountAuthModal({ onClose }: { onClose: () => void }) {
           email: cleanEmail,
           password,
           options: {
+            emailRedirectTo: "alphaclient://auth/callback",
             data: { username: cleanUsername, display_name: cleanUsername },
           },
         });
