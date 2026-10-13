@@ -1137,9 +1137,9 @@ console.error("Developer permission check failed:", errorMessage);
             />
           )}
 
-          {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
+          {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
-          {page === "Friends" && <FriendsPage />}
+          {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} />}
 
 
           {page === "Developer" && (
@@ -1532,7 +1532,7 @@ function CommunityRankBadge({ rankKey }: { rankKey: string | null | undefined })
 }
 
 
-function CommunityPage({ isMinecraftRunning, onOpenProfile, openLoginRequested, onLoginRequestHandled }: { isMinecraftRunning: boolean; onOpenProfile: () => void; openLoginRequested: boolean; onLoginRequestHandled: () => void }) {
+function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, openLoginRequested, onLoginRequestHandled }: { isMinecraftRunning: boolean; onOpenProfile: () => void; onOpenAlphaAuth: () => void; openLoginRequested: boolean; onLoginRequestHandled: () => void }) {
   useEffect(() => {
     const updatePresence = (event: Event) => {
       const ids = (event as CustomEvent<string[]>).detail;
@@ -1755,8 +1755,8 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, openLoginRequested, 
               <button type="button" className="secondary-button community-logout-button" onClick={() => void handleCommunityLogout()} disabled={communityLogoutLoading || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before logging out." : undefined}>{isMinecraftRunning ? "MINECRAFT IS RUNNING" : communityLogoutLoading ? "SIGNING OUT..." : "LOG OUT"}</button>
             </>
           ) : (
-            <button type="button" className="friends-primary community-profile-button" onClick={() => { setAuthPanelOpen((open) => !open); setAuthError(""); setAuthMessage(""); }}>
-              {authPanelOpen ? "Close sign in" : "Log in / Sign up"} <span aria-hidden="true">↗</span>
+            <button type="button" className="friends-primary community-profile-button" onClick={onOpenAlphaAuth}>
+              Log in / Sign up <span aria-hidden="true">↗</span>
             </button>
           )}
         </div>
@@ -2020,7 +2020,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
 type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; avatar_url?: string | null; bio?: string | null; created_at?: string | null; last_played_at?: string | null; last_played_version?: string | null };
 type CommunityFriendRequest = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string };
 
-function FriendsPage() {
+function FriendsPage({ onOpenAlphaAuth }: { onOpenAlphaAuth: () => void }) {
   const [onlineFriendIds, setOnlineFriendIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -2170,7 +2170,7 @@ function FriendsPage() {
     <div className="page-header"><div><div className="eyebrow">ALPHA COMMUNITY</div><h1>Friends</h1><p>Find people to play AlphaClient with.</p></div><button className="friends-refresh" onClick={() => void loadCommunity()} disabled={loading} title="Refresh">↻ Refresh</button></div>
     {error && <div className="friends-notice error">{error}</div>}
     {message && <div className="friends-notice success">{message}</div>}
-    {!userId && !loading && <section className="section-card friends-signin"><div className="friends-empty-icon">♧</div><h2>Sign in to Alpha Community</h2><p>Your Microsoft Minecraft account and Alpha community account are separate. The current developer login is not intended to be the general community login, so sign in to a community account before using friends.</p><button className="friends-primary" onClick={() => setError("Community account sign-in is not connected yet. We need to add a dedicated Alpha community account flow next.")}>Community account required</button></section>}
+    {!userId && !loading && <section className="section-card friends-signin"><div className="friends-empty-icon">♧</div><h2>Sign in to Alpha Community</h2><p>Your Microsoft Minecraft account and Alpha community account are separate. The current developer login is not intended to be the general community login, so sign in to a community account before using friends.</p><button className="friends-primary" onClick={onOpenAlphaAuth}>Community account required</button></section>}
     {userId && !myProfile && !loading && <section className="section-card"><h2>Community profile not found</h2><p>Your signed-in Supabase account has no Alpha profile yet. Check that the database migration and new-account trigger ran successfully.</p></section>}
     {userId && myProfile && profileSetupRequired && <div className="friends-modal-backdrop"><section className="section-card friends-profile-setup" role="dialog" aria-modal="true" aria-labelledby="friends-profile-title"><div className="friends-empty-icon">✦</div><div className="eyebrow">WELCOME TO ALPHA COMMUNITY</div><h2 id="friends-profile-title">Choose your username</h2><p>Choose a unique username. Other players will use this name to find you and send friend requests.</p><form onSubmit={saveCommunityProfile} className="friends-profile-form"><label htmlFor="friends-username">Username</label><div className="friends-username-field"><span>@</span><input id="friends-username" value={setupUsername} onChange={event => setSetupUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0,20))} minLength={3} maxLength={20} pattern="[a-z0-9_]{3,20}" placeholder="yourname" required autoFocus /></div><small>3–20 characters: lowercase letters, numbers, and underscores.</small>{error && <div className="friends-notice error">{error}</div>}<button className="friends-primary friends-save-profile" type="submit" disabled={savingProfile}>{savingProfile ? "Saving profile…" : "Save and continue"}</button></form></section></div>}
     {userId && myProfile && !profileSetupRequired && <>
