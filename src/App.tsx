@@ -16,6 +16,7 @@ type Page =
   | "Community"
   | "Friends"
   | "Developer"
+  | "Chats"
   | "Settings"
   | "Account";
 
@@ -906,6 +907,7 @@ console.error("Developer permission check failed:", errorMessage);
     { name: "Community", icon: "◉" },
     { name: "Friends", icon: "♧" },
     { name: "Developer", icon: "⌘" },
+    { name: "Chats", icon: "✉" },
   ];
 
   const bottomNavigation: { name: Page; icon: string }[] = [
@@ -1140,6 +1142,8 @@ console.error("Developer permission check failed:", errorMessage);
           {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
           {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} />}
+
+          {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} />}
 
 
           {page === "Developer" && (
@@ -2022,6 +2026,62 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
 }
 
 type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; avatar_url?: string | null; bio?: string | null; created_at?: string | null; last_played_at?: string | null; last_played_version?: string | null };
+
+function ChatsPage({ onOpenAlphaAuth }: { onOpenAlphaAuth: () => void }) {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [friends, setFriends] = useState<CommunityProfile[]>([]);
+  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadChats = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        const user = authData.user;
+        if (!user) {
+          if (!cancelled) { setUserId(null); setFriends([]); setSelectedFriendId(null); }
+          return;
+        }
+        if (cancelled) return;
+        setUserId(user.id);
+        const { data: friendshipRows, error: friendshipError } = await supabase
+          .from("friendships")
+          .select("user_a, user_b")
+          .or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
+        if (friendshipError) throw friendshipError;
+        const friendIds = [...new Set((friendshipRows ?? []).map((row: { user_a: string; user_b: string }) => row.user_a === user.id ? row.user_b : row.user_a))];
+        const { data: people, error: peopleError } = friendIds.length
+          ? await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url").in("id", friendIds)
+          : { data: [], error: null };
+        if (peopleError) throw peopleError;
+        if (cancelled) return;
+        const loadedFriends = ((people ?? []) as CommunityProfile[]).sort((a, b) => a.username.localeCompare(b.username));
+        setFriends(loadedFriends);
+        setSelectedFriendId(current => current && loadedFriends.some(friend => friend.id === current) ? current : null);
+      } catch (loadError) {
+        if (!cancelled) setError(errorText(loadError));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void loadChats();
+    return () => { cancelled = true; };
+  }, []);
+
+  return <div className="page">
+    <div className="page-header"><div><div className="eyebrow">ALPHA COMMUNITY</div><h1>Chats</h1><p>Your private conversations with Alpha friends.</p></div></div>
+    {!loading && !userId && <section className="section-card friends-signin"><div className="friends-empty-icon">✉</div><h2>Sign in to Alpha Community</h2><p>Sign in to your Alpha Account to open private chats with your friends.</p><button className="friends-primary" onClick={onOpenAlphaAuth}>Sign in to Alpha Account</button></section>}
+    {loading && <section className="section-card"><div className="friends-loading">Loading your chats…</div></section>}
+    {error && <section className="section-card"><p className="friends-notice error" role="alert">{error}</p></section>}
+    {userId && !loading && !error && <PrivateChatPanel userId={userId} friends={friends} selectedFriendId={selectedFriendId} onSelectFriend={setSelectedFriendId} />}
+  </div>;
+}
+
 type CommunityFriendRequest = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string };
 
 function FriendsPage({ onOpenAlphaAuth }: { onOpenAlphaAuth: () => void }) {
