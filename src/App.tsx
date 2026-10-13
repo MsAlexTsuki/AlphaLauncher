@@ -351,6 +351,12 @@ function LauncherApp() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!developerAuthLoading && !developerAuthorized && page === "Developer") {
+      setPage("Home");
+    }
+  }, [developerAuthLoading, developerAuthorized, page]);
+
   // Public users only receive published entries. Verified developers receive drafts too.
   useEffect(() => {
     let cancelled = false;
