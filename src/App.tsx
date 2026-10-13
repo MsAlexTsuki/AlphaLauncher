@@ -1132,7 +1132,8 @@ function LauncherApp() {
                 <div className="changelog-tab-panel" role="tabpanel">
                   {(() => {
                     const entries = changelogs.filter(
-                      (entry) => entry.product === activeChangelogTab,
+                      (entry) =>
+                        entry.published && entry.product === activeChangelogTab,
                     );
 
                     if (entries.length === 0) {
