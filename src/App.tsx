@@ -719,11 +719,30 @@ console.error("Developer permission check failed:", errorMessage);
       }
 
       const message = await invoke<string>("launch_alphaclient");
-      recordLaunch(
-        updateInfo?.update_available
-          ? updateInfo.latest_version
-          : clientVersion,
-      );
+      const launchedVersion = updateInfo?.update_available
+        ? updateInfo.latest_version
+        : clientVersion;
+      recordLaunch(launchedVersion);
+
+      // Sync Last played separately so a database setup issue never blocks launching.
+      void (async () => {
+        try {
+          const { data: authData, error: authError } = await supabase.auth.getUser();
+          if (authError) throw authError;
+          if (!authData.user) return;
+          const { error: activityError } = await supabase
+            .from("profile_activity")
+            .upsert({
+              user_id: authData.user.id,
+              last_played_at: new Date().toISOString(),
+              last_played_version: launchedVersion,
+            }, { onConflict: "user_id" });
+          if (activityError) throw activityError;
+        } catch (activityError) {
+          console.warn("Could not sync Last played to Supabase:", activityError);
+        }
+      })();
+
       setLaunchMessage(message || "AlphaClient is starting.");
     } catch (error) {
       setIsUpdatingClient(false);
@@ -1944,7 +1963,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
   </div>;
 }
 
-type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; avatar_url?: string | null; bio?: string | null; created_at?: string | null };
+type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; avatar_url?: string | null; bio?: string | null; created_at?: string | null; last_played_at?: string | null; last_played_version?: string | null };
 type CommunityFriendRequest = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string };
 
 function FriendsPage() {
@@ -2052,8 +2071,19 @@ function FriendsPage() {
     setPublicProfile(person);
     setProfileLoading(true);
     const { data, error: profileError } = await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url, bio, created_at").eq("id", person.id).maybeSingle();
-    if (!profileError && data) setPublicProfile(data as CommunityProfile);
-    else if (profileError) setError(errorText(profileError));
+    if (!profileError && data) {
+      const { data: activity, error: activityError } = await supabase
+        .from("profile_activity")
+        .select("last_played_at, last_played_version")
+        .eq("user_id", person.id)
+        .maybeSingle();
+      setPublicProfile({
+        ...(data as CommunityProfile),
+        last_played_at: activityError ? null : activity?.last_played_at ?? null,
+        last_played_version: activityError ? null : activity?.last_played_version ?? null,
+      });
+      if (activityError) console.warn("Could not load profile Last played:", activityError);
+    } else if (profileError) setError(errorText(profileError));
     setProfileLoading(false);
   };
 
@@ -2111,7 +2141,7 @@ function FriendsPage() {
         </section>
       </div>
     </>}
-    {publicProfile && <div className="public-profile-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setPublicProfile(null); }}><section className="section-card profile-preview-card profile-view-card public-profile-modal" role="dialog" aria-modal="true" aria-labelledby="public-profile-name"><button type="button" className="public-profile-close" aria-label="Close profile" onClick={() => setPublicProfile(null)}>×</button><div className="profile-preview-glow" /><div className="eyebrow profile-account-label">ALPHA ACCOUNT</div><div className="profile-avatar-large">{publicProfile.avatar_url ? <img src={publicProfile.avatar_url} alt={publicProfile.username + " avatar"} /> : <span>{publicProfile.username.slice(0, 1).toUpperCase()}</span>}</div><h2 className="profile-name-row" id="public-profile-name">{(() => { const key = publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[key] || COMMUNITY_RANKS.member; return key === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-rank-icon" aria-hidden="true">{COMMUNITY_RANK_ICONS[key] || COMMUNITY_RANK_ICONS.member}</span>{rank.label}</span>; })()}{publicProfile.username}</h2><div className="profile-username">@{publicProfile.username}</div><p className="profile-bio-preview">{publicProfile.bio?.trim() || "This player hasn't added a bio yet."}</p><div className="profile-preview-divider" /><div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>{(() => { const rankKey = publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member"); const rankLabels: Record<string, string> = { founder: "Founder of Alpha Client", owner: "Owner of Alpha", management: "Manager of Alpha", senior_admin: "Senior Admin on Alpha", admin: "Admin on Alpha", senior_moderator: "Senior Moderator on Alpha", moderator: "Moderator on Alpha", trial_moderator: "Trial Moderator on Alpha", beta: "Beta Tester on Alpha", alpha_plus: "Donator on Alpha", alpha: "Donator on Alpha", member: "Member on Alpha" }; const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member); return <div className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-founder-crown" aria-hidden="true">{icon}</span>{rankLabels[rankKey] || rankLabels.member}</div>; })()}{publicProfile.created_at && <div className="public-profile-meta">Member since {new Date(publicProfile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</div>}{profileLoading && <div className="public-profile-meta">Refreshing profile…</div>}<div className="public-profile-actions">{friends.some(friend => friend.id === publicProfile.id) ? <><span className="friends-connected"><i /> Friend</span><button className="friends-secondary" type="button" onClick={() => { setSelectedChatFriendId(publicProfile.id); setPublicProfile(null); }}>Message</button></> : incoming.find(request => request.profile?.id === publicProfile.id) ? <><button className="friends-primary" type="button" disabled={busyId === incoming.find(request => request.profile?.id === publicProfile.id)?.id} onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, true); }}>Accept request</button><button className="friends-secondary" type="button" onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, false); }}>Decline</button></> : outgoing.find(request => request.profile?.id === publicProfile.id) ? <button className="friends-secondary" type="button" onClick={() => { const request = outgoing.find(item => item.profile?.id === publicProfile.id); if (request) void cancelRequest(request); }}>Request sent · Cancel</button> : <button className="friends-primary" type="button" disabled={busyId === publicProfile.id} onClick={() => void sendRequest(publicProfile)}>{busyId === publicProfile.id ? "Sending…" : "Add friend"}</button>}</div></section></div>}
+    {publicProfile && <div className="public-profile-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setPublicProfile(null); }}><section className="section-card profile-preview-card profile-view-card public-profile-modal" role="dialog" aria-modal="true" aria-labelledby="public-profile-name"><button type="button" className="public-profile-close" aria-label="Close profile" onClick={() => setPublicProfile(null)}>×</button><div className="profile-preview-glow" /><div className="eyebrow profile-account-label">ALPHA ACCOUNT</div><div className="profile-avatar-large">{publicProfile.avatar_url ? <img src={publicProfile.avatar_url} alt={publicProfile.username + " avatar"} /> : <span>{publicProfile.username.slice(0, 1).toUpperCase()}</span>}</div><h2 className="profile-name-row" id="public-profile-name">{(() => { const key = publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[key] || COMMUNITY_RANKS.member; return key === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-rank-icon" aria-hidden="true">{COMMUNITY_RANK_ICONS[key] || COMMUNITY_RANK_ICONS.member}</span>{rank.label}</span>; })()}{publicProfile.username}</h2><div className="profile-username">@{publicProfile.username}</div><p className="profile-bio-preview">{publicProfile.bio?.trim() || "This player hasn't added a bio yet."}</p><div className="profile-preview-divider" /><div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>{(() => { const rankKey = publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member"); const rankLabels: Record<string, string> = { founder: "Founder of Alpha Client", owner: "Owner of Alpha", management: "Manager of Alpha", senior_admin: "Senior Admin on Alpha", admin: "Admin on Alpha", senior_moderator: "Senior Moderator on Alpha", moderator: "Moderator on Alpha", trial_moderator: "Trial Moderator on Alpha", beta: "Beta Tester on Alpha", alpha_plus: "Donator on Alpha", alpha: "Donator on Alpha", member: "Member on Alpha" }; const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member); return <div className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-founder-crown" aria-hidden="true">{icon}</span>{rankLabels[rankKey] || rankLabels.member}</div>; })()}{publicProfile.last_played_at ? <div className="public-profile-meta">Last played: {new Date(publicProfile.last_played_at).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}{publicProfile.last_played_version ? ` · ${publicProfile.last_played_version}` : ""}</div> : <div className="public-profile-meta">Last played: Not recorded yet</div>}{publicProfile.created_at && <div className="public-profile-meta">Member since {new Date(publicProfile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</div>}{profileLoading && <div className="public-profile-meta">Refreshing profile…</div>}<div className="public-profile-actions">{friends.some(friend => friend.id === publicProfile.id) ? <><span className="friends-connected"><i /> Friend</span><button className="friends-secondary" type="button" onClick={() => { setSelectedChatFriendId(publicProfile.id); setPublicProfile(null); }}>Message</button></> : incoming.find(request => request.profile?.id === publicProfile.id) ? <><button className="friends-primary" type="button" disabled={busyId === incoming.find(request => request.profile?.id === publicProfile.id)?.id} onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, true); }}>Accept request</button><button className="friends-secondary" type="button" onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, false); }}>Decline</button></> : outgoing.find(request => request.profile?.id === publicProfile.id) ? <button className="friends-secondary" type="button" onClick={() => { const request = outgoing.find(item => item.profile?.id === publicProfile.id); if (request) void cancelRequest(request); }}>Request sent · Cancel</button> : <button className="friends-primary" type="button" disabled={busyId === publicProfile.id} onClick={() => void sendRequest(publicProfile)}>{busyId === publicProfile.id ? "Sending…" : "Add friend"}</button>}</div></section></div>}
     {loading && <div className="friends-loading">Loading community…</div>}
   </div>;
 }
