@@ -1316,6 +1316,21 @@ type EditableCommunityProfile = {
   rank_key?: string | null;
 };
 
+const COMMUNITY_RANK_ORDER = [
+  "founder",
+  "owner",
+  "management",
+  "senior_admin",
+  "admin",
+  "senior_moderator",
+  "moderator",
+  "trial_moderator",
+  "beta",
+  "alpha_plus",
+  "alpha",
+  "member",
+] as const;
+
 const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   founder: { label: "FOUNDER", color: "#FFD866" }, owner: { label: "OWNER", color: "#FF2D00" }, management: { label: "MANAGEMENT", color: "#5C0303" }, senior_admin: { label: "SENIOR ADMIN", color: "#D67020" }, admin: { label: "ADMIN", color: "#E08D16" }, senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" }, moderator: { label: "MODERATOR", color: "#29AFCC" }, trial_moderator: { label: "TRIAL MODERATOR", color: "#166534" }, beta: { label: "BETA", color: "#00FF52" }, alpha_plus: { label: "ALPHA+", color: "#FFF300" }, alpha: { label: "ALPHA", color: "#F300FF" }, member: { label: "MEMBER", color: "#C3BFE0" },
 };
@@ -2588,11 +2603,25 @@ function RankManagement() {
     }
   };
 
-  const protectedTarget = (actorRank === "owner" || actorRank === "management") &&
-    (selectedMember?.rank_key === "owner" || selectedMember?.rank_key === "founder");
+  const actorRankIndex = COMMUNITY_RANK_ORDER.indexOf(
+    (actorRank ?? "member") as (typeof COMMUNITY_RANK_ORDER)[number],
+  );
+  const selectedRankIndex = COMMUNITY_RANK_ORDER.indexOf(
+    selectedRank as (typeof COMMUNITY_RANK_ORDER)[number],
+  );
+  const targetRankIndex = selectedMember
+    ? COMMUNITY_RANK_ORDER.indexOf(
+        (selectedMember.rank_key || "member") as (typeof COMMUNITY_RANK_ORDER)[number],
+      )
+    : -1;
+  const isFounder = actorRank === "founder";
+  const protectedTarget = !isFounder && selectedMember !== null && targetRankIndex >= 0 &&
+    actorRankIndex >= 0 && targetRankIndex <= actorRankIndex;
   const canManageTarget = canManageRanks && Boolean(selectedMember) &&
     selectedMember?.id !== actorId &&
-    !protectedTarget && selectedRank !== "founder";
+    !protectedTarget &&
+    selectedRank !== "founder" &&
+    selectedRankIndex > actorRankIndex;
 
   return (
     <section className="section-card developer-card">
@@ -2640,7 +2669,18 @@ function RankManagement() {
                 <label className="setting-line developer-setting-line">
                   <span>Assign rank</span>
                   <select className="developer-input" value={selectedRank} onChange={(event) => setSelectedRank(event.target.value)}>
-                    {rankEntries.map(([key, rank]) => <option key={key} value={key} disabled={key === "founder" && selectedMember.rank_key !== "founder"}>{rank.label}</option>)}
+                    {rankEntries.map(([key, rank]) => {
+                      const rankIndex = COMMUNITY_RANK_ORDER.indexOf(
+                        key as (typeof COMMUNITY_RANK_ORDER)[number],
+                      );
+                      const cannotAssign = key === "founder" ||
+                        (!isFounder && rankIndex <= actorRankIndex);
+                      return (
+                        <option key={key} value={key} disabled={cannotAssign}>
+                          {rank.label}
+                        </option>
+                      );
+                    })}
                   </select>
                 </label>
                 <div className="developer-actions">
@@ -2661,8 +2701,9 @@ function RankManagement() {
                 {!canManageTarget && <p className="subtitle" role="status">
                   {saving ? "Saving rank…" :
                     selectedMember.id === actorId ? "You cannot change your own rank." :
-                    protectedTarget ? "Owners and Management cannot change Founder or Owner accounts." :
+                    protectedTarget ? "You cannot change a member whose rank is equal to or higher than yours." :
                     selectedRank === "founder" ? "Founder rank cannot be assigned here." :
+                    selectedRankIndex <= actorRankIndex ? "You cannot assign a rank equal to or higher than your own." :
                     "This rank change is not permitted."}
                 </p>}
                 {canManageTarget && selectedRank === selectedMember.rank_key && <p className="subtitle">Choose a different rank to enable Save rank.</p>}
