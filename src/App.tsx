@@ -2105,7 +2105,6 @@ function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => v
   const [userId, setUserId] = useState<string | null>(null);
   const [myProfile, setMyProfile] = useState<CommunityProfile | null>(null);
   const [friends, setFriends] = useState<CommunityProfile[]>([]);
-  const [selectedChatFriendId, setSelectedChatFriendId] = useState<string | null>(null);
   const [publicProfile, setPublicProfile] = useState<CommunityProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [incoming, setIncoming] = useState<Array<CommunityFriendRequest & { profile?: CommunityProfile }>>([]);
