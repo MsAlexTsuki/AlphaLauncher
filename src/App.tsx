@@ -880,6 +880,16 @@ console.error("Developer permission check failed:", errorMessage);
     navigate(next);
   };
 
+  const handleOpenAlphaAuth = async () => {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data.user) return;
+    } catch {
+      // If the session cannot be checked, keep the login option available.
+    }
+    setAlphaAuthModalOpen(true);
+  };
+
   const openSettings = (section: string) => {
     setModal({
       title: `${section} settings`,
@@ -1070,7 +1080,7 @@ console.error("Developer permission check failed:", errorMessage);
               launchError={launchError}
               launchMessage={launchMessage}
               onAccount={() => navigate("Account")}
-              onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)}
+              onOpenAlphaAuth={() => void handleOpenAlphaAuth()}
               onChangelog={() => {
                 setActiveChangelogTab("client");
                 setModal({
