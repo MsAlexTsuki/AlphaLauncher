@@ -6309,3 +6309,21 @@ button:not(:disabled):active {
 .inbox-empty p {
   margin-top: 0;
 }
+
+
+/* Quick account logout action below Settings in the sidebar. */
+.sidebar-bottom-group .sidebar-logout-item {
+  color: #d9a0a0;
+  margin-top: 2px;
+}
+.sidebar-bottom-group .sidebar-logout-item .nav-icon {
+  color: #e08a8a;
+}
+.sidebar-bottom-group .sidebar-logout-item:hover {
+  color: #ffe8e8;
+  border-color: rgba(235, 112, 112, 0.2);
+  background: rgba(235, 92, 92, 0.09);
+}
+.sidebar-bottom-group .sidebar-logout-item:hover .nav-icon {
+  color: #ffaaaa;
+}
