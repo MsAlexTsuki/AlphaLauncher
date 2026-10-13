@@ -39,7 +39,7 @@ use std::{
         Path,
         PathBuf,
     },
-    process::Command,
+    process::{Child, Command},
     sync::{
         Mutex,
         OnceLock,
@@ -203,6 +203,78 @@ static MINECRAFT_ACCESS_TOKEN: OnceLock<
 static MINECRAFT_UUID: OnceLock<
     Mutex<Option<String>>
 > = OnceLock::new();
+
+// Keep the child handles for Minecraft processes started by this launcher.
+// Polling Child::try_wait lets us release the account lock when the game exits.
+static MINECRAFT_PROCESSES: OnceLock<
+    Mutex<Vec<Child>>
+> = OnceLock::new();
+
+
+fn minecraft_processes_state()
+    -> &'static Mutex<Vec<Child>>
+{
+    MINECRAFT_PROCESSES.get_or_init(|| {
+        Mutex::new(Vec::new())
+    })
+}
+
+
+fn track_minecraft_process(
+    child: Child
+) -> Result<(), String>
+{
+    minecraft_processes_state()
+        .lock()
+        .map_err(|_| {
+            "Could not access Minecraft process state.".to_string()
+        })?
+        .push(child);
+
+    Ok(())
+}
+
+
+fn minecraft_process_is_running()
+    -> bool
+{
+    let mut processes =
+        match minecraft_processes_state().lock() {
+            Ok(processes) => processes,
+            Err(_) => {
+                // Fail closed: if state cannot be checked, don't allow logout.
+                return true;
+            }
+        };
+
+    let mut index = 0;
+    let mut running = false;
+
+    while index < processes.len() {
+        match processes[index].try_wait() {
+            Ok(Some(_)) => {
+                processes.swap_remove(index);
+            }
+            Ok(None) => {
+                running = true;
+                index += 1;
+            }
+            Err(_) => {
+                // Treat an uncheckable process as active to protect the session.
+                running = true;
+                index += 1;
+            }
+        }
+    }
+
+    running
+}
+
+
+fn minecraft_running_error() -> String
+{
+    "Je kunt niet uitloggen of van account wisselen zolang Minecraft actief is. Sluit Minecraft eerst af.".to_string()
+}
 
 
 fn microsoft_account_state()
@@ -457,6 +529,10 @@ fn clear_microsoft_auth_state() {
 async fn start_microsoft_login()
     -> Result<MicrosoftAccount, String>
 {
+    if minecraft_process_is_running() {
+        return Err(minecraft_running_error());
+    }
+
     tauri::async_runtime::spawn_blocking(
         perform_microsoft_login
     )
@@ -474,8 +550,20 @@ async fn start_microsoft_login()
 fn logout_microsoft()
     -> Result<(), String>
 {
+    if minecraft_process_is_running() {
+        return Err(minecraft_running_error());
+    }
+
     clear_microsoft_auth_state();
     Ok(())
+}
+
+
+#[tauri::command]
+fn get_minecraft_process_status()
+    -> bool
+{
+    minecraft_process_is_running()
 }
 
 
@@ -499,6 +587,10 @@ fn get_microsoft_account()
 fn perform_microsoft_login()
     -> Result<MicrosoftAccount, String>
 {
+    if minecraft_process_is_running() {
+        return Err(minecraft_running_error());
+    }
+
     clear_microsoft_auth_state();
 
     // --------------------------------------------------------
@@ -4724,15 +4816,18 @@ async fn launch_alphaclient()
                 .arg(main_class)
                 .args(game_arguments);
 
-            command
-                .spawn()
-                .map_err(|e| {
-                    format!(
-                        "Minecraft kon niet worden gestart met Java {}: {}",
-                        java.display(),
-                        e
-                    )
-                })?;
+            let child =
+                command
+                    .spawn()
+                    .map_err(|e| {
+                        format!(
+                            "Minecraft kon niet worden gestart met Java {}: {}",
+                            java.display(),
+                            e
+                        )
+                    })?;
+
+            track_minecraft_process(child)?;
 
             Ok(
                 format!(
@@ -4988,15 +5083,18 @@ fn start_offline_test_internal(
         .arg(main_class)
         .args(game_arguments);
 
-    command
-        .spawn()
-        .map_err(|error| {
-            format!(
-                "Minecraft kon niet worden gestart met Java {}: {}",
-                java.display(),
-                error
-            )
-        })?;
+    let child =
+        command
+            .spawn()
+            .map_err(|error| {
+                format!(
+                    "Minecraft kon niet worden gestart met Java {}: {}",
+                    java.display(),
+                    error
+                )
+            })?;
+
+    track_minecraft_process(child)?;
 
     Ok(
         format!(
@@ -5172,7 +5270,8 @@ pub fn run()
                 get_alphaclient_directory_path,
                 start_microsoft_login,
                 logout_microsoft,
-                get_microsoft_account
+                get_microsoft_account,
+                get_minecraft_process_status
             ]
         )
         .run(
