@@ -1543,6 +1543,7 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
   }, []);
   const [displayName, setDisplayName] = useState("Community member");
   const [communityRank, setCommunityRank] = useState("member");
+  const [communityAvatarUrl, setCommunityAvatarUrl] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [signedIn, setSignedIn] = useState(false);
   const [identityLoading, setIdentityLoading] = useState(true);
@@ -1639,6 +1640,7 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
       setEmail("");
       setDisplayName("Community member");
       setCommunityRank("member");
+      setCommunityAvatarUrl(null);
       setCommunityFriends([]);
     } catch (error) {
       setCommunityLogoutError(errorText(error));
@@ -1664,7 +1666,7 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
       // The editable community profile is the source of truth for the displayed profile name.
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("username, display_name, rank_key, is_founder")
+        .select("username, display_name, rank_key, is_founder, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -1683,6 +1685,7 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
       );
       setDisplayName(name?.trim() ?? "Community member");
       setCommunityRank(profile?.rank_key || (profile?.is_founder ? "founder" : "member"));
+      setCommunityAvatarUrl(typeof profile?.avatar_url === "string" && profile.avatar_url.trim() ? profile.avatar_url : null);
       setSignedIn(true);
       setIdentityLoading(false);
     };
@@ -1743,7 +1746,7 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
       </header>
 
       <section className="community-welcome-card">
-        <div className="community-avatar" aria-hidden="true">{identityLoading ? "…" : displayName.trim().charAt(0).toUpperCase() || "A"}</div>
+        <div className="community-avatar" aria-hidden="true">{communityAvatarUrl ? <img src={communityAvatarUrl} alt="" onError={() => setCommunityAvatarUrl(null)} /> : (identityLoading ? "…" : displayName.trim().charAt(0).toUpperCase() || "A")}</div>
         <div className="community-welcome-copy">
           <span className="community-kicker">{signedIn ? "YOUR ALPHA ACCOUNT" : "ALPHA ACCOUNT"}</span>
           <div className="community-name-rank"><h2>{identityLoading ? "Loading profile…" : signedIn ? displayName : "Welcome to the community"}</h2>{signedIn && !identityLoading && <span className={`community-menu-rank ${communityRank === "founder" ? "is-founder" : ""}`} style={{ "--rank-color": COMMUNITY_RANKS[communityRank]?.color ?? COMMUNITY_RANKS.member.color } as React.CSSProperties}>{COMMUNITY_RANKS[communityRank]?.label ?? "MEMBER"}</span>}</div>
