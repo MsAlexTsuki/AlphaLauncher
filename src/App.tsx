@@ -862,6 +862,24 @@ console.error("Developer permission check failed:", errorMessage);
     setLaunchMessage(null);
   };
 
+  const handleNavigation = async (next: Page) => {
+    if (next === "Friends") {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error || !data.user) {
+          navigate("Friends");
+          setAlphaAuthModalOpen(true);
+          return;
+        }
+      } catch {
+        navigate("Friends");
+        setAlphaAuthModalOpen(true);
+        return;
+      }
+    }
+    navigate(next);
+  };
+
   const openSettings = (section: string) => {
     setModal({
       title: `${section} settings`,
@@ -899,7 +917,7 @@ console.error("Developer permission check failed:", errorMessage);
         </div>
 
         <div className="titlebar-actions" data-tauri-drag-region="false">
-          <InboxButton onOpenFriends={() => setPage("Friends")} />
+          <InboxButton onOpenFriends={() => void handleNavigation("Friends")} />
         </div>
 
         <div className="window-controls">
@@ -968,7 +986,7 @@ console.error("Developer permission check failed:", errorMessage);
                   type="button"
                   title={!sidebarExpanded ? item.name : undefined}
                   className={`nav-item ${page === item.name ? "active" : ""}`}
-                  onClick={() => navigate(item.name)}
+                  onClick={() => void handleNavigation(item.name)}
                 >
                   <span className="nav-icon">{item.icon}</span>
                   {sidebarExpanded && <span>{item.name}</span>}
@@ -1022,10 +1040,7 @@ console.error("Developer permission check failed:", errorMessage);
                 type="button"
                 title={!sidebarExpanded ? "Login" : undefined}
                 className="nav-item sidebar-logout-item"
-                onClick={() => {
-                  setCommunityLoginRequested(true);
-                  navigate("Community");
-                }}
+                onClick={() => setAlphaAuthModalOpen(true)}
               >
                 <span className="nav-icon">↪</span>
                 {sidebarExpanded && <span>Login</span>}
