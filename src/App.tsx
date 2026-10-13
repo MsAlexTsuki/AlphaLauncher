@@ -10,6 +10,7 @@ import "./App.css";
 
 type Page =
   | "Home"
+  | "AlphaAuth"
   | "Play"
   | "Versions"
   | "Mods"
@@ -227,7 +228,6 @@ function LauncherApp() {
   }, []);
   const [page, setPage] = useState<Page>("Home");
   const [communityLoginRequested, setCommunityLoginRequested] = useState(false);
-  const [alphaAuthModalOpen, setAlphaAuthModalOpen] = useState(false);
   const [openProfileEditor, setOpenProfileEditor] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -931,7 +931,8 @@ console.error("Developer permission check failed:", errorMessage);
         </div>
       </header>
 
-      <div className="launcher-body">
+      <div className={`launcher-body${page === "AlphaAuth" ? " alpha-auth-standalone" : ""}`}>
+        {page !== "AlphaAuth" && (
         <aside
           className={`sidebar ${sidebarExpanded ? "expanded" : "collapsed"}`}
         >
@@ -1040,8 +1041,12 @@ console.error("Developer permission check failed:", errorMessage);
             </div>
           )}
         </aside>
+        )}
 
-        <main className="content">
+        <main className={`content${page === "AlphaAuth" ? " alpha-auth-content" : ""}`}>
+          {page === "AlphaAuth" ? (
+            <AlphaAccountAuthPage onClose={() => navigate("Home")} />
+          ) : <>
           {page === "Home" && (
             <HomePage
               account={account}
@@ -1055,7 +1060,7 @@ console.error("Developer permission check failed:", errorMessage);
               launchError={launchError}
               launchMessage={launchMessage}
               onAccount={() => navigate("Account")}
-              onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)}
+              onOpenAlphaAuth={() => navigate("AlphaAuth")}
               onChangelog={() => {
                 setActiveChangelogTab("client");
                 setModal({
@@ -1186,12 +1191,9 @@ console.error("Developer permission check failed:", errorMessage);
               <ProfilePage startEditing={openProfileEditor} />
             </div>
           )}
+          </>}
         </main>
       </div>
-
-      {alphaAuthModalOpen && (
-        <AlphaAccountAuthModal onClose={() => setAlphaAuthModalOpen(false)} />
-      )}
 
       {modal && (
         <div
@@ -2204,7 +2206,7 @@ function PageTitle({
 }
 
 
-function AlphaAccountAuthModal({ onClose }: { onClose: () => void }) {
+function AlphaAccountAuthPage({ onClose }: { onClose: () => void }) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -2282,17 +2284,9 @@ function AlphaAccountAuthModal({ onClose }: { onClose: () => void }) {
   }, [busy, onClose]);
 
   return (
-    <div
-      className="alpha-auth-backdrop"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !busy) onClose();
-      }}
-    >
+    <div className="alpha-auth-page">
       <section
-        className="alpha-auth-modal"
-        role="dialog"
-        aria-modal="true"
+        className="alpha-auth-card"
         aria-labelledby="alpha-auth-title"
       >
         <button
