@@ -307,8 +307,12 @@ function LauncherApp() {
         if (cancelled) return;
 
         if (developerToolsError || releasePermissionError) {
-          const error = developerToolsError ?? releasePermissionError;
-          console.error("Developer permission check failed:", error.message);
+         const errorMessage =
+  developerToolsError?.message ??
+  releasePermissionError?.message ??
+  "Unknown permission-check error.";
+
+console.error("Developer permission check failed:", errorMessage);
           setDeveloperAuthError(
             "Developer permissions could not be verified. Check that the Supabase function has_rank_permission exists and is configured correctly.",
           );
@@ -2905,7 +2909,7 @@ function AuditTimeline() {
                     "changelog.publish": "Publish",
                     "changelog.unpublish": "Unpublish",
                     "changelog.delete": "Delete",
-                  } as Record<string, string>)[row.action] ?? row.action.replaceAll("_", " ")}</strong>
+                  } as Record<string, string>)[row.action] ?? row.action.replace(/_/g, " ")}</strong>
                   <span className="audit-product">{row.product}</span>
                 </div>
                 <p>{row.category}{row.target_label ? ` · Doel: ${row.target_label}` : ""}</p>

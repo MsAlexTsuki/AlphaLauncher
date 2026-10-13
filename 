@@ -1,0 +1,28 @@
+[1mdiff --git a/src/App.tsx b/src/App.tsx[m
+[1mindex 88620aa..0f558a6 100644[m
+[1m--- a/src/App.tsx[m
+[1m+++ b/src/App.tsx[m
+[36m@@ -307,8 +307,12 @@[m [mfunction LauncherApp() {[m
+         if (cancelled) return;[m
+ [m
+         if (developerToolsError || releasePermissionError) {[m
+[31m-          const error = developerToolsError ?? releasePermissionError;[m
+[31m-          console.error("Developer permission check failed:", error.message);[m
+[32m+[m[32m         const errorMessage =[m
+[32m+[m[32m  developerToolsError?.message ??[m
+[32m+[m[32m  releasePermissionError?.message ??[m
+[32m+[m[32m  "Unknown permission-check error.";[m
+[32m+[m
+[32m+[m[32mconsole.error("Developer permission check failed:", errorMessage);[m
+           setDeveloperAuthError([m
+             "Developer permissions could not be verified. Check that the Supabase function has_rank_permission exists and is configured correctly.",[m
+           );[m
+[36m@@ -2905,7 +2909,7 @@[m [mfunction AuditTimeline() {[m
+                     "changelog.publish": "Publish",[m
+                     "changelog.unpublish": "Unpublish",[m
+                     "changelog.delete": "Delete",[m
+[31m-                  } as Record<string, string>)[row.action] ?? row.action.replaceAll("_", " ")}</strong>[m
+[32m+[m[32m                  } as Record<string, string>)[row.action] ?? row.action.replace(/_/g, " ")}</strong>[m
+                   <span className="audit-product">{row.product}</span>[m
+                 </div>[m
+                 <p>{row.category}{row.target_label ? ` · Doel: ${row.target_label}` : ""}</p>[m
