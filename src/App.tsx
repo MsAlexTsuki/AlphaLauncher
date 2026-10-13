@@ -2492,6 +2492,7 @@ type ManagedCommunityProfile = {
 function RankManagement() {
   const [actorId, setActorId] = useState<string | null>(null);
   const [actorRank, setActorRank] = useState<string | null>(null);
+  const [canManageRanks, setCanManageRanks] = useState(false);
   const [members, setMembers] = useState<ManagedCommunityProfile[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [selectedRank, setSelectedRank] = useState("member");
@@ -2518,7 +2519,15 @@ function RankManagement() {
       if (actorError) throw actorError;
       const resolvedRank = actor?.rank_key || (actor?.is_founder ? "founder" : "member");
       setActorRank(resolvedRank);
-      if (resolvedRank !== "founder" && resolvedRank !== "owner") {
+
+      const { data: permissionData, error: permissionError } = await supabase.rpc("has_rank_permission", {
+        p_scope: "community",
+        p_permission_key: "ranks.manage",
+      });
+      if (permissionError) throw permissionError;
+      const permitted = permissionData === true || resolvedRank === "founder" || actor?.is_founder === true;
+      setCanManageRanks(permitted);
+      if (!permitted) {
         setMembers([]);
         return;
       }
@@ -2539,7 +2548,7 @@ function RankManagement() {
   useEffect(() => { void loadMembers(); }, []);
 
   useEffect(() => {
-    if (actorRank !== "founder" && actorRank !== "owner") return;
+    if (!canManageRanks) return;
     const refresh = async () => {
       try {
         const { data, error: queryError } = await supabase.rpc(
@@ -2553,7 +2562,7 @@ function RankManagement() {
       }
     };
     void refresh();
-  }, [search, actorRank]);
+  }, [search, canManageRanks]);
 
   const selectedMember = members.find((member) => member.id === selectedId) ?? null;
   const filteredMembers = members;
@@ -2579,12 +2588,11 @@ function RankManagement() {
     }
   };
 
-  const canManageTarget = Boolean(selectedMember) &&
+  const protectedTarget = (actorRank === "owner" || actorRank === "management") &&
+    (selectedMember?.rank_key === "owner" || selectedMember?.rank_key === "founder");
+  const canManageTarget = canManageRanks && Boolean(selectedMember) &&
     selectedMember?.id !== actorId &&
-    (actorRank === "founder" ||
-      (selectedMember?.rank_key !== "owner" &&
-        selectedMember?.rank_key !== "founder" &&
-        selectedRank !== "founder"));
+    !protectedTarget && selectedRank !== "founder";
 
   return (
     <section className="section-card developer-card">
@@ -2593,16 +2601,16 @@ function RankManagement() {
           <span className="card-label">COMMUNITY ADMINISTRATION</span>
           <h3>Rank Management</h3>
         </div>
-        <span className={`developer-status ${actorRank === "founder" || actorRank === "owner" ? "active" : ""}`}>
-          {actorRank === "founder" ? "Founder access" : actorRank === "owner" ? "Owner access" : "Restricted"}
+        <span className={`developer-status ${canManageRanks ? "active" : ""}`}>
+          {canManageRanks ? (actorRank === "founder" ? "Founder access" : actorRank === "owner" ? "Owner access" : actorRank === "management" ? "Management access" : "Rank management access") : "Restricted"}
         </span>
       </div>
       <p className="subtitle">Search for a community member, review their current rank, and assign a new rank or reset them to Member.</p>
       {loading ? <p className="subtitle">Loading community members…</p> :
-        actorRank !== "founder" && actorRank !== "owner" ? (
+        !canManageRanks ? (
           <div className="developer-warning">
             <span className="developer-warning-icon">!</span>
-            <div><strong>Access denied</strong><p>Only Founder and Owner accounts can manage ranks.</p></div>
+            <div><strong>Access denied</strong><p>Your account does not have the community ranks.manage permission.</p></div>
           </div>
         ) : (
           <>
@@ -2653,8 +2661,8 @@ function RankManagement() {
                 {!canManageTarget && <p className="subtitle" role="status">
                   {saving ? "Saving rank…" :
                     selectedMember.id === actorId ? "You cannot change your own rank." :
-                    actorRank === "owner" && (selectedMember.rank_key === "owner" || selectedMember.rank_key === "founder") ? "Owners cannot change Founder or Owner accounts." :
-                    actorRank === "owner" && selectedRank === "founder" ? "Only the protected Founder account can grant Founder access; Founder cannot be assigned here." :
+                    protectedTarget ? "Owners and Management cannot change Founder or Owner accounts." :
+                    selectedRank === "founder" ? "Founder rank cannot be assigned here." :
                     "This rank change is not permitted."}
                 </p>}
                 {canManageTarget && selectedRank === selectedMember.rank_key && <p className="subtitle">Choose a different rank to enable Save rank.</p>}
