@@ -170,6 +170,7 @@ function mapChangelogRows(data: any[]): ChangelogEntry[] {
 
 function LauncherApp() {
   const [page, setPage] = useState<Page>("Home");
+  const [communityLoginRequested, setCommunityLoginRequested] = useState(false);
   const [openProfileEditor, setOpenProfileEditor] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -887,12 +888,12 @@ function LauncherApp() {
                 {sidebarExpanded && <span>{item.name}</span>}
               </button>
             ))}
-            {account ? (
+            {developerUserEmail ? (
               <button
                 type="button"
                 title={!sidebarExpanded ? "Log out" : undefined}
                 className="nav-item sidebar-logout-item"
-                onClick={() => void handleMicrosoftLogout()}
+                onClick={() => void handleDeveloperLogout()}
               >
                 <span className="nav-icon">↪</span>
                 {sidebarExpanded && <span>Log out</span>}
@@ -902,13 +903,13 @@ function LauncherApp() {
                 type="button"
                 title={!sidebarExpanded ? "Login" : undefined}
                 className="nav-item sidebar-logout-item"
-                onClick={() => void handleMicrosoftLogin()}
-                disabled={isLoggingIn}
+                onClick={() => {
+                  setCommunityLoginRequested(true);
+                  navigate("Community");
+                }}
               >
                 <span className="nav-icon">↪</span>
-                {sidebarExpanded && (
-                  <span>{isLoggingIn ? "Logging in..." : "Login"}</span>
-                )}
+                {sidebarExpanded && <span>Login</span>}
               </button>
             )}
           </div>
@@ -1002,7 +1003,7 @@ function LauncherApp() {
             />
           )}
 
-          {page === "Community" && <CommunityPage onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} />}
+          {page === "Community" && <CommunityPage onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
           {page === "Friends" && <FriendsPage />}
 
@@ -1364,7 +1365,7 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   founder: { label: "FOUNDER", color: "#FFD866" }, owner: { label: "OWNER", color: "#FF2D00" }, management: { label: "MANAGEMENT", color: "#5C0303" }, senior_admin: { label: "SENIOR ADMIN", color: "#D67020" }, admin: { label: "ADMIN", color: "#E08D16" }, senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" }, moderator: { label: "MODERATOR", color: "#29AFCC" }, trial_moderator: { label: "TRIAL MODERATOR", color: "#166534" }, beta: { label: "BETA", color: "#00FF52" }, alpha_plus: { label: "ALPHA+", color: "#FFF300" }, alpha: { label: "ALPHA", color: "#F300FF" }, member: { label: "MEMBER", color: "#C3BFE0" },
 };
 
-function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
+function CommunityPage({ onOpenProfile, openLoginRequested, onLoginRequestHandled }: { onOpenProfile: () => void; openLoginRequested: boolean; onLoginRequestHandled: () => void }) {
   const [displayName, setDisplayName] = useState("Community member");
   const [communityRank, setCommunityRank] = useState("member");
   const [email, setEmail] = useState("");
@@ -1383,6 +1384,15 @@ function CommunityPage({ onOpenProfile }: { onOpenProfile: () => void }) {
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authMessage, setAuthMessage] = useState("");
+
+  useEffect(() => {
+    if (!openLoginRequested) return;
+    setAuthPanelOpen(true);
+    setAuthMode("login");
+    setAuthError("");
+    setAuthMessage("");
+    onLoginRequestHandled();
+  }, [openLoginRequested, onLoginRequestHandled]);
 
   const handleCommunityAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
