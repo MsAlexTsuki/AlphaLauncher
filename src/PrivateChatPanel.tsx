@@ -5,6 +5,29 @@ type ChatFriend = { id: string; username: string; display_name?: string; is_foun
 type PrivateMessage = { id: string; sender_id: string; recipient_id: string; body: string; created_at: string };
 type Props = { userId: string; friends: ChatFriend[]; selectedFriendId: string | null; onSelectFriend: (friendId: string) => void };
 
+function formatRank(rankKey: string | null | undefined, isFounder?: boolean) {
+  const key = (rankKey || (isFounder ? "founder" : "member")).toLowerCase();
+  const labels: Record<string, string> = {
+    member: "Member",
+    donator: "Donator",
+    donor: "Donator",
+    trial_moderator: "T-Mod",
+    t_mod: "T-Mod",
+    moderator: "Mod",
+    mod: "Mod",
+    senior_moderator: "SrMod",
+    srmod: "SrMod",
+    admin: "Admin",
+    senior_admin: "SrAdmin",
+    sradmin: "SrAdmin",
+    management: "Manager",
+    manager: "Manager",
+    owner: "Owner",
+    founder: "FOUNDER",
+  };
+  return labels[key] || "Member";
+}
+
 function formatMessageTime(value: string) {
   return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
@@ -70,7 +93,7 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
         {friends.length === 0 ? <div className="private-chat-no-contacts">Add friends to start a private conversation.</div> : friends.map(friend =>
           <button type="button" className={`private-chat-contact${selectedFriendId === friend.id ? " is-active" : ""}`} key={friend.id} onClick={() => onSelectFriend(friend.id)} aria-pressed={selectedFriendId === friend.id}>
             <span className="private-chat-avatar">{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : friend.username.slice(0,1).toUpperCase()}<i /></span>
-            <span className="private-chat-contact-copy"><strong>{friend.username}</strong><small>{friend.is_founder ? "FOUNDER" : "Alpha friend"}</small></span><span className="private-chat-contact-arrow">›</span>
+            <span className="private-chat-contact-copy"><strong>{friend.username}</strong><small className={`private-chat-rank${formatRank(friend.rank_key, friend.is_founder) === "FOUNDER" ? " is-founder" : ""}`}>{formatRank(friend.rank_key, friend.is_founder)}</small></span><span className="private-chat-contact-arrow">›</span>
           </button>)}
       </aside>
       <div className="private-chat-conversation">
