@@ -153,7 +153,7 @@ export default function InboxButton({ onOpenFriends }: InboxButtonProps) {
           ) : requests.length === 0 ? (
             <div className="inbox-empty">
               <span className="inbox-empty-icon">✓</span>
-<p>Je hebt momenteel geen notificaties.</p>
+<p>You currently have no notifications.</p>
             </div>
           ) : (
             <div className="inbox-request-list">
