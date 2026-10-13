@@ -5853,6 +5853,8 @@ button:not(:disabled):active {
 .community-rank-badge.community-rank-founder { border-color: rgba(255,155,190,.28); background: rgba(255,155,190,.08); color: #ffb4d0; }
 .friends-user-row { display: flex; align-items: center; gap: 12px; }
 .friends-user-copy { min-width: 0; flex: 1 1 auto; }
+.friends-roster-name-line { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.friends-roster-name-line .community-rank-badge { margin-left: 0; padding: 3px 6px; }
 
 
 /* Keep the signed-in community rank to the right of the account name. */
