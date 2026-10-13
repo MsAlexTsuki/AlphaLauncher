@@ -136,7 +136,7 @@ export default function InboxButton({ onOpenFriends }: InboxButtonProps) {
         <section className="inbox-popover" role="dialog" aria-label="Inbox notifications">
           <div className="inbox-popover-header">
             <div>
-<strong>Notificaties</strong>
+<strong>Notifications</strong>
             </div>
             {unreadCount > 0 && <span className="inbox-count">{unreadCount > 9 ? "9+" : unreadCount}</span>}
           </div>
@@ -144,7 +144,7 @@ export default function InboxButton({ onOpenFriends }: InboxButtonProps) {
           {!signedIn ? (
             <div className="inbox-empty">
               <span className="inbox-empty-icon">♧</span>
-<p>Meldingen verschijnen hier wanneer je er een ontvangt.</p>
+<p>Notifications will appear here when you receive them.</p>
             </div>
           ) : loading ? (
             <div className="inbox-status">Loading notifications…</div>
@@ -173,7 +173,7 @@ export default function InboxButton({ onOpenFriends }: InboxButtonProps) {
                     )}
                     <span className="inbox-request-copy">
                       <strong>{name}</strong>
-<span>Heeft je een vriendschapsverzoek gestuurd</span>
+<span>sent you a friend request</span>
                     </span>
                     <span className="inbox-request-arrow" aria-hidden="true">›</span>
                   </button>
