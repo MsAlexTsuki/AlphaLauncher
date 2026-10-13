@@ -6644,4 +6644,4 @@ button:not(:disabled):active {
 
 
 /* Nudge the Find Players search card up slightly. */
-.friends-search-card { transform: translateY(-3px); }
+.friends-search-card { transform: translateY(-5px); }
