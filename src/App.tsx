@@ -1812,6 +1812,22 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
     {profile && !isEditing && <section className="section-card profile-preview-card profile-view-card">
       <div className="profile-preview-glow" />
       <div className="eyebrow profile-account-label">ALPHA ACCOUNT</div>
+      <div className="profile-rank-title" style={{ color: COMMUNITY_RANKS[profile.rank_key || (profile.is_founder ? "founder" : "member")]?.color ?? COMMUNITY_RANKS.member.color }}>
+        {({
+          founder: "Founder of Alpha",
+          owner: "Owner of Alpha",
+          management: "Manager of Alpha",
+          moderator: "Moderator on Alpha",
+          senior_moderator: "Senior Moderator on Alpha",
+          admin: "Admin on Alpha",
+          senior_admin: "Senior Admin on Alpha",
+          beta: "Beta Tester on Alpha",
+          alpha_plus: "Donator on Alpha",
+          alpha: "Donator on Alpha",
+          trial_moderator: "Trial Moderator on Alpha",
+          member: "Member on Alpha",
+        } as Record<string, string>)[profile.rank_key || (profile.is_founder ? "founder" : "member")] ?? "Member on Alpha"}
+      </div>
       <div className="profile-avatar-large">{profile.avatar_url ? <img src={profile.avatar_url} alt="Your profile avatar" /> : <span>{profile.username.slice(0, 1).toUpperCase()}</span>}</div>
       <h2 className="profile-name-row">{(() => { const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; return rankKey === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-rank-icon" aria-hidden="true">{COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member}</span>{rank.label}</span>; })()}{profile.username}</h2>
       <div className="profile-username">@{profile.username}</div>
