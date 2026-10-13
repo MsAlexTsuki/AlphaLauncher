@@ -169,6 +169,44 @@ function mapChangelogRows(data: any[]): ChangelogEntry[] {
 }
 
 function LauncherApp() {
+  // Advertise this signed-in Alpha Account as online for the lifetime of the launcher.
+  useEffect(() => {
+    let disposed = false;
+    let presenceChannel: ReturnType<typeof supabase.channel> | null = null;
+
+    const connectPresence = async (userId: string | null) => {
+      if (presenceChannel) {
+        const oldChannel = presenceChannel;
+        presenceChannel = null;
+        await supabase.removeChannel(oldChannel);
+      }
+      if (disposed || !userId) return;
+
+      const channel = supabase.channel("alphaclient-presence", {
+        config: { presence: { key: userId } },
+      });
+      presenceChannel = channel;
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED" && !disposed) {
+          void channel.track({ user_id: userId, online_at: new Date().toISOString() });
+        }
+      });
+    };
+
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (!error && !disposed) void connectPresence(data.user?.id ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      void connectPresence(session?.user?.id ?? null);
+    });
+
+    return () => {
+      disposed = true;
+      subscription.unsubscribe();
+      if (presenceChannel) void supabase.removeChannel(presenceChannel);
+    };
+  }, []);
   const [page, setPage] = useState<Page>("Home");
   const [communityLoginRequested, setCommunityLoginRequested] = useState(false);
   const [openProfileEditor, setOpenProfileEditor] = useState(false);
@@ -1883,6 +1921,35 @@ type CommunityProfile = { id: string; username: string; display_name: string; is
 type CommunityFriendRequest = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string };
 
 function FriendsPage() {
+  const [onlineFriendIds, setOnlineFriendIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    let active = true;
+    const channel = supabase.channel("alphaclient-presence", {
+      config: { presence: { key: "friends-view" } },
+    });
+    const updatePresence = () => {
+      const state = channel.presenceState() as Record<string, Array<{ user_id?: string }>>;
+      const onlineIds = new Set<string>();
+      for (const [key, entries] of Object.entries(state)) {
+        if (entries.length > 0) onlineIds.add(entries[0]?.user_id || key);
+      }
+      if (active) setOnlineFriendIds(onlineIds);
+    };
+
+    channel
+      .on("presence", { event: "sync" }, updatePresence)
+      .on("presence", { event: "join" }, updatePresence)
+      .on("presence", { event: "leave" }, updatePresence)
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") updatePresence();
+      });
+
+    return () => {
+      active = false;
+      void supabase.removeChannel(channel);
+    };
+  }, []);
   const [userId, setUserId] = useState<string | null>(null);
   const [myProfile, setMyProfile] = useState<CommunityProfile | null>(null);
   const [friends, setFriends] = useState<CommunityProfile[]>([]);
@@ -2032,7 +2099,7 @@ function FriendsPage() {
         </div>
         <section className="section-card friends-list-card friends-roster-card">
           <div className="friends-section-heading"><div><h2>Your friends</h2><p>Players connected to your account.</p></div><span className="friends-count">{friends.length}</span></div>
-          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className={`friends-user-row friends-roster-clickable${selectedChatFriendId === friend.id ? " is-chat-selected" : ""}`} role="listitem" tabIndex={0} aria-label={`Open private chat with ${friend.username}`} key={friend.id} onClick={() => setSelectedChatFriendId(friend.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedChatFriendId(friend.id); } }}><button type="button" className="friends-avatar friends-profile-open" aria-label={`View ${friend.username} profile`} onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : friend.username.slice(0,1).toUpperCase()}</button><div className="friends-user-copy"><button type="button" className="friends-profile-name-button" onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.username}</button><span>@{friend.username}</span></div><CommunityRankBadge rankKey={friend.rank_key || (friend.is_founder ? "founder" : "member")} /><span className="friends-connected"><i/> Friend</span></div>)}</div>}
+          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className={`friends-user-row friends-roster-clickable${selectedChatFriendId === friend.id ? " is-chat-selected" : ""}`} role="listitem" tabIndex={0} aria-label={`Open private chat with ${friend.username}`} key={friend.id} onClick={() => setSelectedChatFriendId(friend.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedChatFriendId(friend.id); } }}><button type="button" className="friends-avatar friends-profile-open" aria-label={`View ${friend.username} profile`} onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : friend.username.slice(0,1).toUpperCase()}</button><div className="friends-user-copy"><button type="button" className="friends-profile-name-button" onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.username}</button><span>@{friend.username}</span></div><CommunityRankBadge rankKey={friend.rank_key || (friend.is_founder ? "founder" : "member")} /><span className={`friends-presence ${onlineFriendIds.has(friend.id) ? "is-online" : "is-offline"}`}><i />{onlineFriendIds.has(friend.id) ? "Online" : "Offline"}</span></div>)}</div>}
         </section>
       </div>
     </>}
