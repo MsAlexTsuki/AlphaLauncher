@@ -6360,32 +6360,3 @@ button:not(:disabled):active {
 
 /* Keep the public-profile close control anchored to the modal, not in the content flow. */
 .public-profile-modal > .public-profile-close { position:absolute; top:12px; right:14px; z-index:5; flex:0 0 auto; }
-
-/* Dedicated Alpha Account login/register screen (outside the launcher navigation). */
-.launcher-body.alpha-auth-standalone { background: radial-gradient(ellipse at 50% 20%, rgba(255, 216, 102, 0.09), transparent 42%), #080a0e; }
-.content.alpha-auth-content { display: flex; align-items: center; justify-content: center; padding: 28px; overflow: auto; background: transparent; }
-.alpha-auth-page { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 100%; padding: 18px; }
-.alpha-auth-card { position: relative; width: min(100%, 460px); padding: 42px 38px 30px; border: 1px solid rgba(255, 216, 102, 0.2); border-radius: 18px; background: linear-gradient(155deg, rgba(24, 26, 32, 0.98), rgba(11, 13, 18, 0.99)); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38), 0 0 55px rgba(255, 216, 102, 0.035); color: #f3f3f4; }
-.alpha-auth-close { position: absolute; top: 13px; right: 14px; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9px; background: rgba(255, 255, 255, 0.035); color: #b9bbc2; font-size: 22px; cursor: pointer; }
-.alpha-auth-close:hover:not(:disabled) { border-color: rgba(255, 216, 102, 0.4); color: #ffd866; }
-.alpha-auth-brand-mark { display: grid; place-items: center; width: 48px; height: 48px; margin: 0 auto 16px; border: 1px solid rgba(255, 216, 102, 0.32); border-radius: 14px; background: rgba(255, 216, 102, 0.08); color: #ffd866; font-size: 25px; }
-.alpha-auth-card > .community-kicker { display: block; color: #ffd866; text-align: center; font-size: 10px; font-weight: 800; letter-spacing: 0.2em; }
-.alpha-auth-card h2 { margin: 10px 0 8px; color: #fff; text-align: center; font-size: clamp(24px, 3vw, 30px); font-weight: 750; letter-spacing: -0.035em; }
-.alpha-auth-subtitle { margin: 0 auto 24px; max-width: 330px; color: #a7a9b1; text-align: center; font-size: 13px; line-height: 1.65; }
-.alpha-auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 5px; margin-bottom: 22px; border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 11px; background: rgba(0, 0, 0, 0.22); }
-.alpha-auth-tabs button { min-height: 37px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #9b9da5; font-size: 12px; font-weight: 700; cursor: pointer; }
-.alpha-auth-tabs button.is-active { border-color: rgba(255, 216, 102, 0.18); background: rgba(255, 216, 102, 0.1); color: #ffd866; }
-.alpha-auth-form { display: flex; flex-direction: column; gap: 9px; }
-.alpha-auth-form label { margin-top: 5px; color: #d8d9de; font-size: 12px; font-weight: 650; }
-.alpha-auth-form input { width: 100%; min-height: 44px; padding: 0 13px; border: 1px solid rgba(255, 255, 255, 0.11); border-radius: 9px; outline: none; background: rgba(0, 0, 0, 0.22); color: #f4f4f5; font: inherit; font-size: 13px; box-sizing: border-box; }
-.alpha-auth-form input:focus { border-color: rgba(255, 216, 102, 0.62); box-shadow: 0 0 0 3px rgba(255, 216, 102, 0.08); }
-.alpha-auth-form input::placeholder { color: #656872; }
-.alpha-auth-submit { min-height: 45px; margin-top: 13px; border: 1px solid rgba(255, 216, 102, 0.5); border-radius: 9px; background: linear-gradient(135deg, #ffe18b, #ffd04f); color: #17130a; font-size: 11px; font-weight: 850; letter-spacing: 0.06em; cursor: pointer; }
-.alpha-auth-submit:hover:not(:disabled) { filter: brightness(1.06); }
-.alpha-auth-submit:disabled, .alpha-auth-close:disabled { opacity: 0.55; cursor: not-allowed; }
-.alpha-auth-feedback { margin: 5px 0 0; padding: 10px 11px; border-radius: 8px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-.alpha-auth-feedback.is-error { border: 1px solid rgba(255, 105, 105, 0.22); background: rgba(255, 75, 75, 0.07); color: #ff9696; }
-.alpha-auth-feedback.is-success { border: 1px solid rgba(113, 222, 157, 0.2); background: rgba(113, 222, 157, 0.07); color: #8fe3ae; }
-.alpha-auth-switch-copy { margin: 22px 0 0; color: #9698a1; text-align: center; font-size: 12px; }
-.alpha-auth-switch-copy button { padding: 0; border: 0; background: transparent; color: #ffd866; font: inherit; font-weight: 750; cursor: pointer; }
-@media (max-width: 560px) { .content.alpha-auth-content { padding: 10px; } .alpha-auth-page { padding: 8px; } .alpha-auth-card { padding: 40px 22px 24px; } }
