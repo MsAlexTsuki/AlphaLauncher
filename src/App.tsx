@@ -292,14 +292,17 @@ function LauncherApp() {
       }
 
       try {
-        const { data, error } = await supabase.rpc("is_developer_admin");
+        const { data, error } = await supabase.rpc("has_rank_permission", {
+          p_scope: "launcher",
+          p_permission_key: "developer.tools",
+        });
 
         if (cancelled) return;
 
         if (error) {
           console.error("Developer permission check failed:", error.message);
           setDeveloperAuthError(
-            "Developerrechten konden niet worden gecontroleerd. Controleer of de Supabase-functie is_developer_admin bestaat en correct is ingesteld.",
+            "Developerrechten konden niet worden gecontroleerd. Controleer of de Supabase-functie has_rank_permission bestaat en correct is ingesteld.",
           );
           setDeveloperAuthorized(false);
         } else if (data === true) {
@@ -308,7 +311,7 @@ function LauncherApp() {
         } else {
           setDeveloperAuthorized(false);
           setDeveloperAuthError(
-            "Dit account heeft geen developerrechten.",
+            "Dit account heeft geen launcher-permissie 'developer.tools'.",
           );
         }
       } catch (error) {
@@ -825,7 +828,9 @@ function LauncherApp() {
           </button>
 
           <nav className="navigation">
-            {navigation.map((item) => (
+            {navigation
+              .filter((item) => item.name !== "Developer" || developerAuthorized)
+              .map((item) => (
               <span key={item.name}>
                 {item.name === "Developer" && <div className="nav-separator" />}
                 <button
