@@ -887,6 +887,15 @@ function LauncherApp() {
                 {sidebarExpanded && <span>{item.name}</span>}
               </button>
             ))}
+            <button
+              type="button"
+              title={!sidebarExpanded ? "Log out" : undefined}
+              className="nav-item sidebar-logout-item"
+              onClick={() => void handleMicrosoftLogout()}
+            >
+              <span className="nav-icon">↪</span>
+              {sidebarExpanded && <span>Log out</span>}
+            </button>
           </div>
 
           {sidebarExpanded && (
