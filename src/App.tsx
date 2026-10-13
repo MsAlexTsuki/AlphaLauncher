@@ -1045,17 +1045,7 @@ console.error("Developer permission check failed:", errorMessage);
                 <span className="nav-icon">↪</span>
                 {sidebarExpanded && <span>Log out</span>}
               </button>
-            ) : (
-              <button
-                type="button"
-                title={!sidebarExpanded ? "Login" : undefined}
-                className="nav-item sidebar-logout-item"
-                onClick={() => setAlphaAuthModalOpen(true)}
-              >
-                <span className="nav-icon">↪</span>
-                {sidebarExpanded && <span>Login</span>}
-              </button>
-            )}
+            ) : null}
           </div>
 
           {sidebarExpanded && (
@@ -2308,64 +2298,89 @@ function AlphaAccountAuthModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="alpha-auth-backdrop"
+      className="alpha-access-backdrop"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
     >
       <section
-        className="alpha-auth-modal"
+        className="alpha-access-window"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="alpha-auth-title"
+        aria-labelledby="alpha-access-title"
       >
-        <button
-          type="button"
-          className="alpha-auth-close"
-          onClick={onClose}
-          disabled={busy}
-          aria-label="Close Alpha Account login"
-        >
-          ×
-        </button>
-        <div className="alpha-auth-brand-mark" aria-hidden="true">✦</div>
-        <span className="community-kicker">ALPHA ACCOUNT</span>
-        <h2 id="alpha-auth-title">{mode === "login" ? "Welcome back" : "Create your Alpha Account"}</h2>
-        <p className="alpha-auth-subtitle">
-          {mode === "login"
-            ? "Log in to access your profile and the Alpha community."
-            : "Register to create your Alpha identity and join the community."}
-        </p>
+        <aside className="alpha-access-showcase">
+          <button
+            type="button"
+            className="alpha-access-close alpha-access-close-showcase"
+            onClick={onClose}
+            disabled={busy}
+            aria-label="Close Alpha Account login"
+          >
+            ×
+          </button>
+          <div className="alpha-access-logo" aria-hidden="true"><AlphaLogo /></div>
+          <span className="alpha-access-overline">ONE ACCOUNT. ALL OF ALPHA.</span>
+          <h2>Your Alpha<br /><span>starts here.</span></h2>
+          <p>Sign in to connect with the community, manage your profile, and make your Alpha experience yours.</p>
+          <div className="alpha-access-showcase-footer">
+            <span className="alpha-access-status-dot" />
+            <span>ALPHACLIENT ACCOUNT</span>
+          </div>
+        </aside>
 
-        <div className="alpha-auth-tabs" role="tablist" aria-label="Alpha Account access">
-          <button type="button" role="tab" aria-selected={mode === "login"} className={mode === "login" ? "is-active" : ""} onClick={() => changeMode("login")}>Log in</button>
-          <button type="button" role="tab" aria-selected={mode === "signup"} className={mode === "signup" ? "is-active" : ""} onClick={() => changeMode("signup")}>Register</button>
+        <div className="alpha-access-form-side">
+          <button
+            type="button"
+            className="alpha-access-close alpha-access-close-form"
+            onClick={onClose}
+            disabled={busy}
+            aria-label="Close Alpha Account login"
+          >
+            ×
+          </button>
+          <div className="alpha-access-form-heading">
+            <span className="alpha-access-kicker">{mode === "login" ? "WELCOME BACK" : "JOIN THE COMMUNITY"}</span>
+            <h3 id="alpha-access-title">{mode === "login" ? "Sign in" : "Create account"}</h3>
+            <p>{mode === "login" ? "Enter your details to continue to Alpha." : "Create your Alpha Account in just a moment."}</p>
+          </div>
+
+          <div className="alpha-access-tabs" role="tablist" aria-label="Alpha Account access">
+            <button type="button" role="tab" aria-selected={mode === "login"} className={mode === "login" ? "is-active" : ""} onClick={() => changeMode("login")}>Sign in</button>
+            <button type="button" role="tab" aria-selected={mode === "signup"} className={mode === "signup" ? "is-active" : ""} onClick={() => changeMode("signup")}>Create account</button>
+          </div>
+
+          <form className="alpha-access-form" onSubmit={(event) => void handleSubmit(event)}>
+            {mode === "signup" && (
+              <div className="alpha-access-field">
+                <label htmlFor="alpha-access-username">USERNAME</label>
+                <input id="alpha-access-username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))} maxLength={20} placeholder="Choose a username" required />
+              </div>
+            )}
+            <div className="alpha-access-field">
+              <label htmlFor="alpha-access-email">EMAIL ADDRESS</label>
+              <input id="alpha-access-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required />
+            </div>
+            <div className="alpha-access-field">
+              <label htmlFor="alpha-access-password">PASSWORD</label>
+              <input id="alpha-access-password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={mode === "signup" ? 6 : undefined} placeholder={mode === "signup" ? "At least 6 characters" : "Enter your password"} required />
+            </div>
+            {error && <p className="alpha-access-feedback is-error" role="alert">{error}</p>}
+            {message && <p className="alpha-access-feedback is-success" role="status">{message}</p>}
+            <button type="submit" className="alpha-access-submit" disabled={busy}>
+              {busy ? "PLEASE WAIT..." : mode === "login" ? "SIGN IN TO ALPHA" : "CREATE ALPHA ACCOUNT"}
+              {!busy && <span aria-hidden="true">↗</span>}
+            </button>
+          </form>
+          <p className="alpha-access-switch-copy">
+            {mode === "login" ? "New to Alpha?" : "Already have an account?"}{" "}
+            <button type="button" onClick={() => changeMode(mode === "login" ? "signup" : "login")} disabled={busy}>
+              {mode === "login" ? "Create an account" : "Sign in instead"}
+            </button>
+          </p>
+          <p className="alpha-access-legal">By continuing, you agree to use your Alpha Account responsibly.</p>
         </div>
-
-        <form className="alpha-auth-form" onSubmit={(event) => void handleSubmit(event)}>
-          {mode === "signup" && (
-            <>
-              <label htmlFor="alpha-auth-username">Alpha username</label>
-              <input id="alpha-auth-username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))} maxLength={20} placeholder="Choose a username" required />
-            </>
-          )}
-          <label htmlFor="alpha-auth-email">Email address</label>
-          <input id="alpha-auth-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required />
-          <label htmlFor="alpha-auth-password">Password</label>
-          <input id="alpha-auth-password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={mode === "signup" ? 6 : undefined} placeholder={mode === "signup" ? "At least 6 characters" : "Enter your password"} required />
-          {error && <p className="alpha-auth-feedback is-error" role="alert">{error}</p>}
-          {message && <p className="alpha-auth-feedback is-success" role="status">{message}</p>}
-          <button type="submit" className="alpha-auth-submit" disabled={busy}>
-            {busy ? "PLEASE WAIT..." : mode === "login" ? "LOGIN TO ALPHA ACCOUNT" : "CREATE ALPHA ACCOUNT"}
-          </button>
-        </form>
-        <p className="alpha-auth-switch-copy">
-          {mode === "login" ? "New to Alpha?" : "Already have an Alpha Account?"}{" "}
-          <button type="button" onClick={() => changeMode(mode === "login" ? "signup" : "login")} disabled={busy}>
-            {mode === "login" ? "Register here" : "Log in here"}
-          </button>
-        </p>
       </section>
     </div>
   );
