@@ -186,11 +186,29 @@ function LauncherApp() {
         config: { presence: { key: userId } },
       });
       presenceChannel = channel;
-      channel.subscribe((status) => {
-        if (status === "SUBSCRIBED" && !disposed) {
-          void channel.track({ user_id: userId, online_at: new Date().toISOString() });
+
+      // Keep all presence listeners on the one channel before it is subscribed.
+      const publishPresence = () => {
+        const state = channel.presenceState() as Record<string, Array<{ user_id?: string }>>;
+        const onlineIds = new Set<string>();
+        for (const [key, entries] of Object.entries(state)) {
+          if (entries.length > 0) onlineIds.add(entries[0]?.user_id || key);
         }
-      });
+        window.dispatchEvent(new CustomEvent("alphaclient-presence-update", {
+          detail: Array.from(onlineIds),
+        }));
+      };
+
+      channel
+        .on("presence", { event: "sync" }, publishPresence)
+        .on("presence", { event: "join" }, publishPresence)
+        .on("presence", { event: "leave" }, publishPresence)
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED" && !disposed) {
+            void channel.track({ user_id: userId, online_at: new Date().toISOString() });
+            publishPresence();
+          }
+        });
     };
 
     void supabase.auth.getUser().then(({ data, error }) => {
@@ -1447,24 +1465,12 @@ function CommunityRankBadge({ rankKey }: { rankKey: string | null | undefined })
 
 function CommunityPage({ onOpenProfile, openLoginRequested, onLoginRequestHandled }: { onOpenProfile: () => void; openLoginRequested: boolean; onLoginRequestHandled: () => void }) {
   useEffect(() => {
-    let active = true;
-    const channel = supabase.channel("alphaclient-presence", {
-      config: { presence: { key: "community-friends-view" } },
-    });
-    const updatePresence = () => {
-      const state = channel.presenceState() as Record<string, Array<{ user_id?: string }>>;
-      const ids = new Set<string>();
-      for (const [key, entries] of Object.entries(state)) {
-        if (entries.length > 0) ids.add(entries[0]?.user_id || key);
-      }
-      if (active) setCommunityOnlineIds(ids);
+    const updatePresence = (event: Event) => {
+      const ids = (event as CustomEvent<string[]>).detail;
+      setCommunityOnlineIds(new Set(Array.isArray(ids) ? ids : []));
     };
-    channel
-      .on("presence", { event: "sync" }, updatePresence)
-      .on("presence", { event: "join" }, updatePresence)
-      .on("presence", { event: "leave" }, updatePresence)
-      .subscribe(status => { if (status === "SUBSCRIBED") updatePresence(); });
-    return () => { active = false; void supabase.removeChannel(channel); };
+    window.addEventListener("alphaclient-presence-update", updatePresence);
+    return () => window.removeEventListener("alphaclient-presence-update", updatePresence);
   }, []);
   const [displayName, setDisplayName] = useState("Community member");
   const [communityRank, setCommunityRank] = useState("member");
@@ -1945,31 +1951,12 @@ function FriendsPage() {
   const [onlineFriendIds, setOnlineFriendIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    let active = true;
-    const channel = supabase.channel("alphaclient-presence", {
-      config: { presence: { key: "friends-view" } },
-    });
-    const updatePresence = () => {
-      const state = channel.presenceState() as Record<string, Array<{ user_id?: string }>>;
-      const onlineIds = new Set<string>();
-      for (const [key, entries] of Object.entries(state)) {
-        if (entries.length > 0) onlineIds.add(entries[0]?.user_id || key);
-      }
-      if (active) setOnlineFriendIds(onlineIds);
+    const updatePresence = (event: Event) => {
+      const ids = (event as CustomEvent<string[]>).detail;
+      setOnlineFriendIds(new Set(Array.isArray(ids) ? ids : []));
     };
-
-    channel
-      .on("presence", { event: "sync" }, updatePresence)
-      .on("presence", { event: "join" }, updatePresence)
-      .on("presence", { event: "leave" }, updatePresence)
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") updatePresence();
-      });
-
-    return () => {
-      active = false;
-      void supabase.removeChannel(channel);
-    };
+    window.addEventListener("alphaclient-presence-update", updatePresence);
+    return () => window.removeEventListener("alphaclient-presence-update", updatePresence);
   }, []);
   const [userId, setUserId] = useState<string | null>(null);
   const [myProfile, setMyProfile] = useState<CommunityProfile | null>(null);
