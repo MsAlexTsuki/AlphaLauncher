@@ -887,7 +887,7 @@ function LauncherApp() {
                 {sidebarExpanded && <span>{item.name}</span>}
               </button>
             ))}
-{account ? (
+            {account ? (
               <button
                 type="button"
                 title={!sidebarExpanded ? "Log out" : undefined}
@@ -906,7 +906,9 @@ function LauncherApp() {
                 disabled={isLoggingIn}
               >
                 <span className="nav-icon">↪</span>
-                {sidebarExpanded && <span>{isLoggingIn ? "Logging in..." : "Login"}</span>}
+                {sidebarExpanded && (
+                  <span>{isLoggingIn ? "Logging in..." : "Login"}</span>
+                )}
               </button>
             )}
           </div>
