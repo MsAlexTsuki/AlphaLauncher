@@ -1374,7 +1374,18 @@ const COMMUNITY_RANK_ORDER = [
 ] as const;
 
 const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
-  founder: { label: "FOUNDER", color: "#FFD866" }, owner: { label: "OWNER", color: "#FF2D00" }, management: { label: "MANAGEMENT", color: "#5C0303" }, senior_admin: { label: "SENIOR ADMIN", color: "#D67020" }, admin: { label: "ADMIN", color: "#E08D16" }, senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" }, moderator: { label: "MODERATOR", color: "#29AFCC" }, trial_moderator: { label: "TRIAL MODERATOR", color: "#166534" }, beta: { label: "BETA", color: "#00FF52" }, alpha_plus: { label: "ALPHA+", color: "#FFF300" }, alpha: { label: "ALPHA", color: "#F300FF" }, member: { label: "MEMBER", color: "#C3BFE0" },
+  founder: { label: "Founder of Alpha", color: "#FFD866" },
+  owner: { label: "Owner of Alpha", color: "#FF2D00" },
+  management: { label: "Manager of Alpha", color: "#5C0303" },
+  senior_admin: { label: "Senior Admin on Alpha", color: "#D67020" },
+  admin: { label: "Admin on Alpha", color: "#E08D16" },
+  senior_moderator: { label: "Senior Moderator on Alpha", color: "#8C17D1" },
+  moderator: { label: "Moderator on Alpha", color: "#29AFCC" },
+  trial_moderator: { label: "Trial Moderator on Alpha", color: "#166534" },
+  beta: { label: "Beta Tester on Alpha", color: "#00FF52" },
+  alpha_plus: { label: "Donator on Alpha", color: "#FFF300" },
+  alpha: { label: "Donator on Alpha", color: "#F300FF" },
+  member: { label: "Member on Alpha", color: "#C3BFE0" },
 };
 
 const COMMUNITY_RANK_ICONS: Record<string, string> = {
