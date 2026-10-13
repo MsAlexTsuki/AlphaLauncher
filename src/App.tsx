@@ -227,6 +227,7 @@ function LauncherApp() {
   }, []);
   const [page, setPage] = useState<Page>("Home");
   const [communityLoginRequested, setCommunityLoginRequested] = useState(false);
+  const [alphaAuthModalOpen, setAlphaAuthModalOpen] = useState(false);
   const [openProfileEditor, setOpenProfileEditor] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -1054,7 +1055,7 @@ console.error("Developer permission check failed:", errorMessage);
               launchError={launchError}
               launchMessage={launchMessage}
               onAccount={() => navigate("Account")}
-              onCommunity={() => navigate("Community")}
+              onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)}
               onChangelog={() => {
                 setActiveChangelogTab("client");
                 setModal({
@@ -1187,6 +1188,10 @@ console.error("Developer permission check failed:", errorMessage);
           )}
         </main>
       </div>
+
+      {alphaAuthModalOpen && (
+        <AlphaAccountAuthModal onClose={() => setAlphaAuthModalOpen(false)} />
+      )}
 
       {modal && (
         <div
@@ -2198,6 +2203,149 @@ function PageTitle({
   );
 }
 
+
+function AlphaAccountAuthModal({ onClose }: { onClose: () => void }) {
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const changeMode = (nextMode: "login" | "signup") => {
+    setMode(nextMode);
+    setError("");
+    setMessage("");
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busy) return;
+
+    const cleanEmail = email.trim();
+    const cleanUsername = username.trim();
+    if (!cleanEmail || !password) {
+      setError("Enter your email address and password.");
+      return;
+    }
+    if (mode === "signup" && !cleanUsername) {
+      setError("Choose an Alpha Account username.");
+      return;
+    }
+    if (mode === "signup" && password.length < 6) {
+      setError("Your password must contain at least 6 characters.");
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      if (mode === "login") {
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+        if (loginError) throw loginError;
+        window.location.reload();
+      } else {
+        const { data, error: signupError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            data: { username: cleanUsername, display_name: cleanUsername },
+          },
+        });
+        if (signupError) throw signupError;
+        if (data.session) {
+          window.location.reload();
+        } else {
+          setMessage("Account created. Check your email to confirm your account, then sign in here.");
+          setMode("login");
+          setPassword("");
+        }
+      }
+    } catch (submitError) {
+      setError(errorText(submitError));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [busy, onClose]);
+
+  return (
+    <div
+      className="alpha-auth-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose();
+      }}
+    >
+      <section
+        className="alpha-auth-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="alpha-auth-title"
+      >
+        <button
+          type="button"
+          className="alpha-auth-close"
+          onClick={onClose}
+          disabled={busy}
+          aria-label="Close Alpha Account login"
+        >
+          ×
+        </button>
+        <div className="alpha-auth-brand-mark" aria-hidden="true">✦</div>
+        <span className="community-kicker">ALPHA ACCOUNT</span>
+        <h2 id="alpha-auth-title">{mode === "login" ? "Welcome back" : "Create your Alpha Account"}</h2>
+        <p className="alpha-auth-subtitle">
+          {mode === "login"
+            ? "Log in to access your profile and the Alpha community."
+            : "Register to create your Alpha identity and join the community."}
+        </p>
+
+        <div className="alpha-auth-tabs" role="tablist" aria-label="Alpha Account access">
+          <button type="button" role="tab" aria-selected={mode === "login"} className={mode === "login" ? "is-active" : ""} onClick={() => changeMode("login")}>Log in</button>
+          <button type="button" role="tab" aria-selected={mode === "signup"} className={mode === "signup" ? "is-active" : ""} onClick={() => changeMode("signup")}>Register</button>
+        </div>
+
+        <form className="alpha-auth-form" onSubmit={(event) => void handleSubmit(event)}>
+          {mode === "signup" && (
+            <>
+              <label htmlFor="alpha-auth-username">Alpha username</label>
+              <input id="alpha-auth-username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))} maxLength={20} placeholder="Choose a username" required />
+            </>
+          )}
+          <label htmlFor="alpha-auth-email">Email address</label>
+          <input id="alpha-auth-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required />
+          <label htmlFor="alpha-auth-password">Password</label>
+          <input id="alpha-auth-password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={mode === "signup" ? 6 : undefined} placeholder={mode === "signup" ? "At least 6 characters" : "Enter your password"} required />
+          {error && <p className="alpha-auth-feedback is-error" role="alert">{error}</p>}
+          {message && <p className="alpha-auth-feedback is-success" role="status">{message}</p>}
+          <button type="submit" className="alpha-auth-submit" disabled={busy}>
+            {busy ? "PLEASE WAIT..." : mode === "login" ? "LOGIN TO ALPHA ACCOUNT" : "CREATE ALPHA ACCOUNT"}
+          </button>
+        </form>
+        <p className="alpha-auth-switch-copy">
+          {mode === "login" ? "New to Alpha?" : "Already have an Alpha Account?"}{" "}
+          <button type="button" onClick={() => changeMode(mode === "login" ? "signup" : "login")} disabled={busy}>
+            {mode === "login" ? "Register here" : "Log in here"}
+          </button>
+        </p>
+      </section>
+    </div>
+  );
+}
+
 function HomePage(props: {
   account: MicrosoftAccount | null;
   clientVersion: string;
@@ -2210,7 +2358,7 @@ function HomePage(props: {
   launchError: string | null;
   launchMessage: string | null;
   onAccount: () => void;
-  onCommunity: () => void;
+  onOpenAlphaAuth: () => void;
   onChangelog: () => void;
   onNews: () => void;
 }) {
@@ -2226,7 +2374,7 @@ function HomePage(props: {
     launchError,
     launchMessage,
     onAccount,
-    onCommunity,
+    onOpenAlphaAuth,
     onChangelog,
     onNews,
   } = props;
@@ -2491,10 +2639,10 @@ function HomePage(props: {
         <button
           type="button"
           className="home-community-account-button"
-          onClick={onCommunity}
+          onClick={onOpenAlphaAuth}
         >
           <span aria-hidden="true">✦</span>
-          Make your Alpha Client account
+          Login to your Alpha Account
           <span className="home-community-account-arrow" aria-hidden="true">›</span>
         </button>
       </div>
