@@ -251,7 +251,10 @@ fn minecraft_process_is_running()
     let mut running = false;
 
     while index < processes.len() {
-        match processes[index].try_wait() {
+        // End the mutable Child borrow before removing an exited process.
+        let status = processes[index].try_wait();
+
+        match status {
             Ok(Some(_)) => {
                 processes.swap_remove(index);
             }
