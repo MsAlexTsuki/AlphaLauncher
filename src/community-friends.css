@@ -458,3 +458,21 @@
 .community-auth-note{margin:12px 0 0;color:#777d8c;font-size:9px;line-height:1.55}
 .community-logout-error{overflow-wrap:anywhere}
 @media(max-width:600px){.community-auth-panel{padding:14px}.community-auth-heading{flex-direction:column}.community-auth-mode{align-self:flex-start}.community-account-actions{align-items:stretch}.community-account-actions button{flex:1}}
+
+
+/* Rank-specific icons use each rank's existing color without changing rank labels. */
+.friends-page .community-rank-badge {
+  border-color: color-mix(in srgb, var(--rank-color, #ffd866) 38%, transparent);
+  background: color-mix(in srgb, var(--rank-color, #ffd866) 9%, transparent);
+  color: var(--rank-color, #ffd866);
+}
+.friends-page .community-rank-badge.community-rank-founder {
+  border-color: rgba(255, 155, 190, .28);
+  background: rgba(255, 155, 190, .08);
+  color: #ffb4d0;
+}
+.friends-page .community-rank-icon-founder {
+  border-color: rgba(255, 155, 190, .35);
+  color: #ffb4d0;
+  letter-spacing: 0;
+}
