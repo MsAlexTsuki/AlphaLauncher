@@ -6779,7 +6779,7 @@ button:not(:disabled):active {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 920px;
+  max-width: 960px;
   height: min(600px, calc(100vh - 240px));
   min-height: 360px;
   margin: 0 auto;
@@ -6798,7 +6798,7 @@ button:not(:disabled):active {
 .chats-page .private-chat-layout {
   display: grid;
   grid-template-columns: minmax(180px, 0.42fr) minmax(0, 1fr);
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   min-height: 0;
   width: 100%;
