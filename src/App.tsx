@@ -6,6 +6,7 @@ import { supabase } from "./lib/supabase";
 import PrivateChatPanel from "./PrivateChatPanel";
 import InboxButton from "./InboxButton";
 import RankPermissionsManager from "./RankPermissionsManager";
+import ClientModPermissionsManager from "./ClientModPermissionsManager";
 import "./App.css";
 
 type Page =
@@ -3414,6 +3415,7 @@ function AuditTimeline() {
 
 type DeveloperTool =
   | "Rank Management"
+  | "Mods"
   | "Permission Explorer"
   | "Audit Timeline"
   | "Change Review"
@@ -3430,6 +3432,11 @@ const developerTools: {
     name: "Rank Management",
     description: "Manage Alpha ranks and rank assignments.",
     icon: "◆",
+  },
+  {
+    name: "Mods",
+    description: "Manage AlphaClient mod access, rank defaults, and player grants.",
+    icon: "▦",
   },
   {
     name: "Permission Explorer",
@@ -3822,6 +3829,7 @@ function DeveloperPage({
 
           <div className="developer-tool-content">
             {developerAuthorized && activeTool === "Rank Management" && <RankManagement />}
+            {developerAuthorized && activeTool === "Mods" && <ClientModPermissionsManager />}
 
             {developerAuthorized && activeTool === "Permission Explorer" &&
               renderPlaceholder(
