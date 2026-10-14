@@ -6766,6 +6766,7 @@ button:not(:disabled):active {
 .chats-page {
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
 .chats-page .page-header {
@@ -6777,11 +6778,12 @@ button:not(:disabled):active {
 .chats-page .private-chat-card {
   display: flex;
   flex-direction: column;
-  width: min(100%, 920px);
-  height: min(660px, calc(100vh - 220px));
-  min-height: 440px;
+  width: 100%;
+  max-width: 920px;
+  height: min(560px, calc(100vh - 270px));
+  min-height: 360px;
   margin: 0 auto;
-  padding: 22px;
+  padding: 20px;
   overflow: hidden;
   border: 1px solid rgba(255, 216, 102, 0.12);
   border-radius: 16px;
@@ -6790,14 +6792,17 @@ button:not(:disabled):active {
 
 .chats-page .private-chat-heading {
   flex: 0 0 auto;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .chats-page .private-chat-layout {
   display: grid;
-  grid-template-columns: minmax(190px, 0.72fr) minmax(0, 1.65fr);
-  flex: 1;
+  grid-template-columns: minmax(180px, 0.42fr) minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
+  width: 100%;
+  margin: 0;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -6806,9 +6811,12 @@ button:not(:disabled):active {
 
 .chats-page .private-chat-contacts {
   min-width: 0;
-  padding: 14px 10px;
+  min-height: 0;
+  padding: 12px 9px;
+  overflow-x: hidden;
   overflow-y: auto;
   border-right: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.012);
 }
 
 .chats-page .private-chat-subheading {
@@ -6837,11 +6845,12 @@ button:not(:disabled):active {
 .chats-page .private-chat-contact {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   margin: 3px 0;
-  padding: 10px 9px;
+  padding: 9px 8px;
   border: 1px solid transparent;
   border-radius: 9px;
   background: transparent;
@@ -6900,11 +6909,41 @@ button:not(:disabled):active {
   color: var(--muted-2);
 }
 
+.chats-page .private-chat-contact-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.chats-page .private-chat-contact-copy strong {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chats-page .private-chat-contact-copy .private-chat-rank {
+  color: #8f929e;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.045em;
+  text-transform: none;
+}
+
+.chats-page .private-chat-contact-copy .private-chat-rank.is-founder {
+  color: #ffd866;
+}
+
 .chats-page .private-chat-conversation {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .chats-page .private-chat-conversation-header {
@@ -6912,8 +6951,8 @@ button:not(:disabled):active {
   flex: 0 0 auto;
   align-items: center;
   gap: 11px;
-  min-height: 66px;
-  padding: 12px 16px;
+  min-height: 62px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.018);
 }
@@ -6950,11 +6989,12 @@ button:not(:disabled):active {
 
 .chats-page .private-chat-messages {
   display: flex;
-  flex: 1;
+  flex: 1 1 0;
   flex-direction: column;
   gap: 12px;
   min-height: 0;
-  padding: 18px;
+  padding: 16px;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
@@ -6970,10 +7010,10 @@ button:not(:disabled):active {
 .chats-page .private-chat-message {
   max-width: min(82%, 460px);
   padding: 10px 12px 7px;
+  overflow-wrap: anywhere;
   border: 1px solid var(--border);
   border-radius: 12px 12px 12px 4px;
   background: #24262e;
-  overflow-wrap: anywhere;
 }
 
 .chats-page .private-chat-message-row.is-mine .private-chat-message {
@@ -7006,7 +7046,7 @@ button:not(:disabled):active {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 24px;
+  padding: 20px;
   color: var(--muted);
   text-align: center;
 }
@@ -7043,14 +7083,17 @@ button:not(:disabled):active {
   display: flex;
   flex: 0 0 auto;
   gap: 8px;
-  padding: 12px 14px 8px;
+  min-width: 0;
+  padding: 10px 12px 7px;
   border-top: 1px solid var(--border);
 }
 
 .chats-page .private-chat-composer input {
+  box-sizing: border-box;
   flex: 1;
+  width: 100%;
   min-width: 0;
-  height: 40px;
+  height: 38px;
   padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -7065,9 +7108,9 @@ button:not(:disabled):active {
 }
 
 .chats-page .private-chat-composer button {
-  flex: 0 0 40px;
-  width: 40px;
-  height: 40px;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
   border: 1px solid rgba(255, 216, 102, 0.22);
   border-radius: 9px;
   background: rgba(255, 216, 102, 0.12);
@@ -7077,12 +7120,13 @@ button:not(:disabled):active {
 
 .chats-page .private-chat-footnote {
   flex: 0 0 auto;
-  padding: 0 14px 12px;
+  padding: 0 12px 10px;
   font-size: 9px;
+  text-align: center;
 }
 
 .chats-page .private-chat-error {
-  margin: 0 14px;
+  margin: 0 12px;
   color: var(--red);
   font-size: 10px;
 }
@@ -7096,13 +7140,13 @@ button:not(:disabled):active {
 
 @media (max-width: 760px) {
   .chats-page .private-chat-card {
-    height: calc(100vh - 220px);
-    min-height: 400px;
+    height: calc(100vh - 250px);
+    min-height: 320px;
     padding: 14px;
   }
 
   .chats-page .private-chat-layout {
-    grid-template-columns: minmax(105px, 0.65fr) minmax(0, 1.4fr);
+    grid-template-columns: minmax(105px, 0.62fr) minmax(0, 1fr);
   }
 
   .chats-page .private-chat-contacts {
@@ -7127,317 +7171,4 @@ button:not(:disabled):active {
   .chats-page .private-chat-messages {
     padding: 12px 9px;
   }
-}
-
-.chats-page .private-chat-layout {
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  border-radius: 13px;
-  isolation: isolate;
-}
-.chats-page .private-chat-contacts {
-  box-sizing: border-box;
-  height: 100%;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-radius: 12px 0 0 12px;
-  background: rgba(255, 255, 255, 0.012);
-}
-.chats-page .private-chat-contact { box-sizing: border-box; max-width: 100%; }
-.chats-page .private-chat-conversation {
-  height: 100%;
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
-  border-radius: 0 12px 12px 0;
-}
-.chats-page .private-chat-messages {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-.chats-page .private-chat-composer { box-sizing: border-box; min-width: 0; }
-.chats-page .private-chat-composer input { box-sizing: border-box; width: 100%; }
-.chats-page .private-chat-footnote { text-align: center; }
-@media (max-width: 760px) {
-  .chats-page .private-chat-layout { border-radius: 11px; }
-  .chats-page .private-chat-contacts { border-radius: 10px 0 0 10px; }
-  .chats-page .private-chat-conversation { border-radius: 0 10px 10px 0; }
-}
-
-
-/* Give the chat frame more breathing room and extend the inner panel to the bottom. */
-.chats-page .private-chat-card {
-  width: min(100%, 1040px);
-  height: min(760px, calc(100vh - 150px));
-  min-height: 520px;
-  padding: 24px;
-  margin-bottom: 18px;
-}
-
-.chats-page .private-chat-heading {
-  margin-bottom: 20px;
-}
-
-.chats-page .private-chat-layout {
-  flex: 1 1 auto;
-  min-height: 0;
-  height: 100%;
-  border-radius: 14px;
-}
-
-.chats-page .private-chat-contacts {
-  align-self: stretch;
-  height: 100%;
-  padding: 16px 12px;
-  border-radius: 13px 0 0 13px;
-}
-
-.chats-page .private-chat-conversation {
-  align-self: stretch;
-  height: 100%;
-  border-radius: 0 13px 13px 0;
-}
-
-.chats-page .private-chat-contact {
-  margin: 4px 0;
-  padding: 11px 10px;
-  border-radius: 10px;
-}
-
-.chats-page .private-chat-messages {
-  padding: 22px;
-}
-
-.chats-page .private-chat-composer {
-  padding: 14px 16px 8px;
-}
-
-.chats-page .private-chat-footnote {
-  padding-bottom: 14px;
-}
-
-@media (max-width: 760px) {
-  .chats-page .private-chat-card {
-    height: calc(100vh - 170px);
-    min-height: 460px;
-    padding: 14px;
-  }
-
-  .chats-page .private-chat-contacts {
-    padding: 12px 6px;
-  }
-
-  .chats-page .private-chat-messages {
-    padding: 14px 10px;
-  }
-}
-
-
-/* Fill the unused lower space: the chat workspace stretches to the frame bottom. */
-.chats-page .private-chat-card {
-  height: min(860px, calc(100vh - 90px));
-  min-height: 620px;
-  padding-bottom: 18px;
-}
-.chats-page .private-chat-layout {
-  flex: 1 1 auto;
-  height: auto;
-  min-height: 0;
-  margin-bottom: 0;
-}
-.chats-page .private-chat-contacts,
-.chats-page .private-chat-conversation {
-  height: auto;
-  min-height: 0;
-}
-@media (max-width: 760px) {
-  .chats-page .private-chat-card {
-    height: calc(100vh - 110px);
-    min-height: 540px;
-  }
-}
-
-
-/* Force the inner workspace to occupy the full remaining height of the outer card. */
-.chats-page .private-chat-card {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  box-sizing: border-box;
-}
-.chats-page .private-chat-layout {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.42fr) minmax(0, 1fr);
-  width: 100%;
-  height: auto;
-  min-height: 0;
-  align-self: stretch;
-  margin: 0;
-  box-sizing: border-box;
-}
-.chats-page .private-chat-contacts,
-.chats-page .private-chat-conversation {
-  min-height: 0;
-  height: 100%;
-  box-sizing: border-box;
-}
-@media (max-width: 760px) {
-  .chats-page .private-chat-layout {
-    grid-template-columns: minmax(110px, 0.62fr) minmax(0, 1fr);
-  }
-}
-
-
-/* Explicitly size the card and its inner panel against the available viewport.
-   The previous grid-only sizing left the inner panel at its content height. */
-.chats-page .private-chat-card.section-card {
-  display: flex !important;
-  flex-direction: column !important;
-  height: calc(100vh - 120px) !important;
-  min-height: 620px !important;
-  max-height: 900px;
-}
-.chats-page .private-chat-card.section-card > .private-chat-heading {
-  flex: 0 0 auto !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-layout {
-  display: grid !important;
-  flex: 1 1 0 !important;
-  grid-template-columns: minmax(220px, 0.42fr) minmax(0, 1fr) !important;
-  height: auto !important;
-  min-height: 0 !important;
-  margin-bottom: 0 !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-contacts,
-.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-conversation {
-  height: 100% !important;
-  min-height: 0 !important;
-}
-@media (max-width: 760px) {
-  .chats-page .private-chat-card.section-card {
-    height: calc(100vh - 140px) !important;
-    min-height: 520px !important;
-  }
-  .chats-page .private-chat-card.section-card > .private-chat-layout {
-    grid-template-columns: minmax(110px, 0.62fr) minmax(0, 1fr) !important;
-  }
-}
-
-
-/* Corrective layout: explicitly allocate all remaining card height to the inner panel. */
-.chats-page .private-chat-card.section-card {
-  display: grid !important;
-  grid-template-rows: auto minmax(0, 1fr) !important;
-  align-content: stretch !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-layout {
-  box-sizing: border-box !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  align-self: stretch !important;
-  flex: none !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-contacts,
-.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-conversation {
-  min-height: 0 !important;
-  height: 100% !important;
-}
-
-
-/* Definitive sizing: anchor the inner chat frame to the outer card's bottom edge. */
-.chats-page .private-chat-card.section-card {
-  position: relative !important;
-  display: block !important;
-  width: 100% !important;
-  max-width: none !important;
-  height: calc(100vh - 120px) !important;
-  min-height: 620px !important;
-  max-height: none !important;
-  padding: 24px !important;
-  box-sizing: border-box !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-heading {
-  position: absolute !important;
-  top: 24px !important;
-  left: 24px !important;
-  right: 24px !important;
-  margin: 0 !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-layout {
-  position: absolute !important;
-  top: 86px !important;
-  right: 24px !important;
-  bottom: 24px !important;
-  left: 24px !important;
-  display: grid !important;
-  grid-template-columns: minmax(220px, 0.42fr) minmax(0, 1fr) !important;
-  width: auto !important;
-  height: auto !important;
-  min-height: 0 !important;
-  margin: 0 !important;
-  flex: none !important;
-  overflow: hidden !important;
-  border-radius: 14px !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-contacts,
-.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-conversation {
-  min-height: 0 !important;
-  height: 100% !important;
-  overflow: hidden !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-contacts {
-  overflow-y: auto !important;
-  border-radius: 13px 0 0 13px !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-conversation {
-  display: flex !important;
-  flex-direction: column !important;
-  border-radius: 0 13px 13px 0 !important;
-}
-.chats-page .private-chat-card.section-card .private-chat-messages {
-  flex: 1 1 0 !important;
-  min-height: 0 !important;
-  overflow-y: auto !important;
-}
-@media (max-width: 760px) {
-  .chats-page .private-chat-card.section-card {
-    height: calc(100vh - 100px) !important;
-    min-height: 540px !important;
-    padding: 16px !important;
-  }
-  .chats-page .private-chat-card.section-card > .private-chat-heading {
-    top: 16px !important;
-    left: 16px !important;
-    right: 16px !important;
-  }
-  .chats-page .private-chat-card.section-card > .private-chat-layout {
-    top: 78px !important;
-    right: 16px !important;
-    bottom: 16px !important;
-    left: 16px !important;
-    grid-template-columns: minmax(110px, 0.62fr) minmax(0, 1fr) !important;
-  }
-}
-
-
-/* Targeted fix only: let the chat workspace fill the empty bottom area. */
-.chats-page .private-chat-card.section-card {
-  display: flex !important;
-  flex-direction: column !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-layout {
-  position: static !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  height: auto !important;
-  margin-top: 18px !important;
-  margin-bottom: 0 !important;
-}
-.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-contacts,
-.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-conversation {
-  height: 100% !important;
-  min-height: 0 !important;
 }
