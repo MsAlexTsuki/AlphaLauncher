@@ -4375,59 +4375,55 @@ fn update_alphaclient_internal()
     fs::create_dir_all(&mods_dir).map_err(|error| format!("Could not create mods directory: {}", error))?;
     let destination = mods_dir.join(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME);
 
-    // Prefer a locally built Alpha Staff Mod when its version is at least as
-    // recent as the official release. The launch path calls the updater every
-    // time, so without this check a fresh local build would be overwritten by
-    // the GitHub release before Minecraft starts.
     let installed_jar_version = if destination.is_file() {
         alphastaffmod_version_from_jar(&destination)
     } else {
         None
     };
 
+    // Prefer a local development build when one is available. The local build
+    // must not be rejected just because the public release has a higher version.
+    // Compare the actual JAR bytes: two builds can share a version string while
+    // containing different bytecode, including a corrected reobfuscated method.
     if let Ok(local_jar) = find_built_alphastaffmod_jar() {
         if let Some(local_version) = alphastaffmod_version_from_jar(&local_jar) {
-            // A local development build must be installed even when the public
-            // release has a higher version number. Version equality alone is
-            // not enough: rebuilt JARs can have the same mcmod.info version but
-            // different (for example, correctly reobfuscated) bytecode.
             let local_is_already_installed = destination.is_file()
                 && fs::read(&destination).ok() == fs::read(&local_jar).ok();
 
             if !local_is_already_installed {
-                    let temporary_destination = mods_dir.join("AlphaClient.jar.new");
-                    fs::copy(&local_jar, &temporary_destination)
-                        .map_err(|error| format!(
-                            "Could not stage local AlphaClient build from {}: {}",
-                            local_jar.display(),
-                            error
-                        ))?;
-                    if destination.exists() {
-                        fs::remove_file(&destination)
-                            .map_err(|error| format!("Could not replace existing AlphaClient JAR: {}", error))?;
-                    }
-                    fs::rename(&temporary_destination, &destination)
-                        .map_err(|error| format!("Could not install local AlphaClient build: {}", error))?;
+                let temporary_destination = mods_dir.join("AlphaClient.jar.new");
+                fs::copy(&local_jar, &temporary_destination)
+                    .map_err(|error| format!(
+                        "Could not stage local AlphaClient build from {}: {}",
+                        local_jar.display(),
+                        error
+                    ))?;
+                if destination.exists() {
+                    fs::remove_file(&destination)
+                        .map_err(|error| format!("Could not replace existing AlphaClient JAR: {}", error))?;
                 }
+                fs::rename(&temporary_destination, &destination)
+                    .map_err(|error| format!("Could not install local AlphaClient build: {}", error))?;
+            }
 
-                // Remove legacy copies so Forge cannot load an older build alongside AlphaClient.jar.
-                if let Ok(entries) = fs::read_dir(&mods_dir) {
-                    for entry in entries.flatten() {
-                        let path = entry.path();
-                        if path == destination
-                            || path.extension().and_then(|ext| ext.to_str())
-                                .map(|ext| !ext.eq_ignore_ascii_case("jar"))
-                                .unwrap_or(true)
-                        {
-                            continue;
-                        }
-                        if jar_is_alphastaffmod(&path) {
-                            let _ = fs::remove_file(path);
-                        }
+            // Remove legacy copies so Forge cannot load an older build alongside AlphaClient.jar.
+            if let Ok(entries) = fs::read_dir(&mods_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path == destination
+                        || path.extension().and_then(|ext| ext.to_str())
+                            .map(|ext| !ext.eq_ignore_ascii_case("jar"))
+                            .unwrap_or(true)
+                    {
+                        continue;
+                    }
+                    if jar_is_alphastaffmod(&path) {
+                        let _ = fs::remove_file(path);
                     }
                 }
+            }
 
-                write_installed_alphaclient_version(&root, &local_version)?;
+            write_installed_alphaclient_version(&root, &local_version)?;
             return Ok(format!(
                 "Using local AlphaClient build {} from {}.",
                 local_version,
