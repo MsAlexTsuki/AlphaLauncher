@@ -7421,3 +7421,23 @@ button:not(:disabled):active {
     grid-template-columns: minmax(110px, 0.62fr) minmax(0, 1fr) !important;
   }
 }
+
+
+/* Targeted fix only: let the chat workspace fill the empty bottom area. */
+.chats-page .private-chat-card.section-card {
+  display: flex !important;
+  flex-direction: column !important;
+}
+.chats-page .private-chat-card.section-card > .private-chat-layout {
+  position: static !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin-top: 18px !important;
+  margin-bottom: 0 !important;
+}
+.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-contacts,
+.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-conversation {
+  height: 100% !important;
+  min-height: 0 !important;
+}
