@@ -715,6 +715,22 @@ console.error("Developer permission check failed:", errorMessage);
     }
   };
 
+  const handleLaunchPartnerServer = async () => {
+    if (isMinecraftRunning) {
+      setLaunchError("Minecraft is already running. Close it before joining the partner server.");
+      return;
+    }
+    setLaunchError(null);
+    setLaunchMessage("Starting AlphaClient and connecting to alpha.rip…");
+    try {
+      const message = await invoke<string>("launch_partner_server");
+      setLaunchMessage(message);
+    } catch (error) {
+      setLaunchMessage(null);
+      setLaunchError(errorText(error));
+    }
+  };
+
   const handlePlay = async () => {
     if (isLaunching || isUpdatingClient) return;
 
@@ -1013,12 +1029,12 @@ console.error("Developer permission check failed:", errorMessage);
                 <button
                   type="button"
                   className="partner-nav-item"
-                  onClick={() => void openUrl("https://alpha.rip")}
+                  onClick={() => void handleLaunchPartnerServer()}
                 >
                   <span className="nav-icon">◈</span>
                   <span className="partner-nav-content">
                     <strong>Alpha.rip</strong>
-                    <small>Partner Server · Open website</small>
+                    <small>Partner Server · Join alpha.rip</small>
                   </span>
                 </button>
               </div>
