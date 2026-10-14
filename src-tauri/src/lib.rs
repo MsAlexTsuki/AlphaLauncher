@@ -4387,13 +4387,14 @@ fn update_alphaclient_internal()
 
     if let Ok(local_jar) = find_built_alphastaffmod_jar() {
         if let Some(local_version) = alphastaffmod_version_from_jar(&local_jar) {
-            if !version_is_newer(&manifest.version, &local_version) {
-                let local_is_already_installed = installed_jar_version
-                    .as_deref()
-                    .map(|version| parse_version_parts(version) == parse_version_parts(&local_version))
-                    .unwrap_or(false);
+            // A local development build must be installed even when the public
+            // release has a higher version number. Version equality alone is
+            // not enough: rebuilt JARs can have the same mcmod.info version but
+            // different (for example, correctly reobfuscated) bytecode.
+            let local_is_already_installed = destination.is_file()
+                && fs::read(&destination).ok() == fs::read(&local_jar).ok();
 
-                if !local_is_already_installed {
+            if !local_is_already_installed {
                     let temporary_destination = mods_dir.join("AlphaClient.jar.new");
                     fs::copy(&local_jar, &temporary_destination)
                         .map_err(|error| format!(
@@ -4427,12 +4428,11 @@ fn update_alphaclient_internal()
                 }
 
                 write_installed_alphaclient_version(&root, &local_version)?;
-                return Ok(format!(
-                    "Using local AlphaClient build {} from {}.",
-                    local_version,
-                    local_jar.display()
-                ));
-            }
+            return Ok(format!(
+                "Using local AlphaClient build {} from {}.",
+                local_version,
+                local_jar.display()
+            ));
         }
     }
 
