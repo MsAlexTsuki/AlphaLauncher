@@ -4375,14 +4375,70 @@ fn update_alphaclient_internal()
     fs::create_dir_all(&mods_dir).map_err(|error| format!("Could not create mods directory: {}", error))?;
     let destination = mods_dir.join(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME);
 
-    // Trust the actual mod JAR, not only the bookkeeping marker. A stale JAR can
-    // still report an older mcmod.info version even when the version file says current.
-    let jar_missing = !destination.is_file();
-    let installed_jar_version = if jar_missing {
-        None
-    } else {
+    // Prefer a locally built Alpha Staff Mod when its version is at least as
+    // recent as the official release. The launch path calls the updater every
+    // time, so without this check a fresh local build would be overwritten by
+    // the GitHub release before Minecraft starts.
+    let installed_jar_version = if destination.is_file() {
         alphastaffmod_version_from_jar(&destination)
+    } else {
+        None
     };
+
+    if let Ok(local_jar) = find_built_alphastaffmod_jar() {
+        if let Some(local_version) = alphastaffmod_version_from_jar(&local_jar) {
+            if !version_is_newer(&manifest.version, &local_version) {
+                let local_is_already_installed = installed_jar_version
+                    .as_deref()
+                    .map(|version| parse_version_parts(version) == parse_version_parts(&local_version))
+                    .unwrap_or(false);
+
+                if !local_is_already_installed {
+                    let temporary_destination = mods_dir.join("AlphaClient.jar.new");
+                    fs::copy(&local_jar, &temporary_destination)
+                        .map_err(|error| format!(
+                            "Could not stage local AlphaClient build from {}: {}",
+                            local_jar.display(),
+                            error
+                        ))?;
+                    if destination.exists() {
+                        fs::remove_file(&destination)
+                            .map_err(|error| format!("Could not replace existing AlphaClient JAR: {}", error))?;
+                    }
+                    fs::rename(&temporary_destination, &destination)
+                        .map_err(|error| format!("Could not install local AlphaClient build: {}", error))?;
+                }
+
+                // Remove legacy copies so Forge cannot load an older build alongside AlphaClient.jar.
+                if let Ok(entries) = fs::read_dir(&mods_dir) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path == destination
+                            || path.extension().and_then(|ext| ext.to_str())
+                                .map(|ext| !ext.eq_ignore_ascii_case("jar"))
+                                .unwrap_or(true)
+                        {
+                            continue;
+                        }
+                        if jar_is_alphastaffmod(&path) {
+                            let _ = fs::remove_file(path);
+                        }
+                    }
+                }
+
+                write_installed_alphaclient_version(&root, &local_version)?;
+                return Ok(format!(
+                    "Using local AlphaClient build {} from {}.",
+                    local_version,
+                    local_jar.display()
+                ));
+            }
+        }
+    }
+
+    // Trust the actual mod JAR, not only the bookkeeping marker. Repair missing,
+    // invalid, or outdated installations even when the marker claims they're current.
+    let jar_missing = !destination.is_file();
     let jar_version_mismatch = installed_jar_version
         .as_deref()
         .map(|version| parse_version_parts(version) != parse_version_parts(&manifest.version))
