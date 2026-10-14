@@ -7284,3 +7284,44 @@ button:not(:disabled):active {
   gap: 10px;
   margin-top: 24px;
 }
+
+
+/* High-specificity confirmation button colors */
+.action-confirm-modal .action-confirm-actions .friends-secondary {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid #35bd78 !important;
+  border-radius: 9px;
+  background: #167747 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  opacity: 1;
+  cursor: pointer;
+}
+
+.action-confirm-modal .action-confirm-actions .friends-secondary:hover:not(:disabled) {
+  border-color: #55e49a !important;
+  background: #1b9658 !important;
+}
+
+.action-confirm-modal .action-confirm-actions .friends-danger {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid #ff646e !important;
+  border-radius: 9px;
+  background: #a92131 !important;
+  color: #ffffff !important;
+  font-weight: 750;
+  opacity: 1;
+  cursor: pointer;
+}
+
+.action-confirm-modal .action-confirm-actions .friends-danger:hover:not(:disabled) {
+  border-color: #ff9298 !important;
+  background: #d12c3e !important;
+}
+
+.action-confirm-modal .action-confirm-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
