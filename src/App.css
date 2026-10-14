@@ -7325,3 +7325,23 @@ button:not(:disabled):active {
     grid-template-columns: minmax(110px, 0.62fr) minmax(0, 1fr) !important;
   }
 }
+
+
+/* Corrective layout: explicitly allocate all remaining card height to the inner panel. */
+.chats-page .private-chat-card.section-card {
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  align-content: stretch !important;
+}
+.chats-page .private-chat-card.section-card > .private-chat-layout {
+  box-sizing: border-box !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  align-self: stretch !important;
+  flex: none !important;
+}
+.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-contacts,
+.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-conversation {
+  min-height: 0 !important;
+  height: 100% !important;
+}
