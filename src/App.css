@@ -7222,3 +7222,65 @@ button:not(:disabled):active {
     font-size: 9px;
   }
 }
+
+
+/* In-app confirmation dialogs for destructive community actions */
+.action-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3, 4, 8, 0.76);
+  backdrop-filter: blur(7px);
+}
+
+.action-confirm-modal {
+  width: min(420px, 100%);
+  padding: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #202127, #14151a);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.action-confirm-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 14px;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.action-confirm-icon.danger {
+  border: 1px solid rgba(255, 105, 105, 0.28);
+  background: rgba(255, 85, 85, 0.1);
+  color: #ff9292;
+}
+
+.action-confirm-modal h2 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.action-confirm-modal p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.action-confirm-modal p strong { color: var(--text); }
+
+.action-confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
