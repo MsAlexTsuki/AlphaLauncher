@@ -4583,11 +4583,20 @@ fn greet(
 
 
 #[tauri::command]
-async fn launch_alphaclient()
+async fn launch_alphaclient() -> Result<String, String> {
+    launch_alphaclient_for_server(None).await
+}
+
+#[tauri::command]
+async fn launch_partner_server() -> Result<String, String> {
+    launch_alphaclient_for_server(Some("alpha.rip".to_string())).await
+}
+
+async fn launch_alphaclient_for_server(server: Option<String>)
     -> Result<String, String>
 {
     tauri::async_runtime::spawn_blocking(
-        || {
+        move || {
             let account =
                 microsoft_account_state()
                     .lock()
@@ -4798,6 +4807,15 @@ async fn launch_alphaclient()
                         )
                     })
                     .collect::<Vec<_>>();
+
+            // Optional direct-connect target used only by the Partner Server button.
+            let mut game_arguments = game_arguments;
+            if let Some(server_address) = server.as_deref() {
+                game_arguments.push("--server".to_string());
+                game_arguments.push(server_address.to_string());
+                game_arguments.push("--port".to_string());
+                game_arguments.push("25565".to_string());
+            }
 
             let mut command =
                 Command::new(
@@ -5283,6 +5301,7 @@ pub fn run()
                 greet,
                 finish_startup,
                 launch_alphaclient,
+                launch_partner_server,
                 start_offline_test,
                 get_alphaclient_version,
                 check_alphaclient_update,
