@@ -2121,10 +2121,14 @@ function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => v
   const [profileSetupRequired, setProfileSetupRequired] = useState(false);
 
   const loadCommunity = async () => {
+    const startedAt = performance.now();
+    const mark = (step: string) => console.debug(`[Alpha Friends] ${step}: ${Math.round(performance.now() - startedAt)}ms`);
     setLoading(true);
     setError("");
     try {
+      const authStartedAt = performance.now();
       const { data: authData, error: authError } = await supabase.auth.getUser();
+      mark(`auth.getUser (${Math.round(performance.now() - authStartedAt)}ms)`);
       if (authError) throw authError;
       const user = authData.user;
       if (!user) {
@@ -2133,13 +2137,14 @@ function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => v
       }
       setUserId(user.id);
 
-      // Load independent profile and relationship data together so the Friends
-      // page does not wait for the profile request before starting the others.
+      // Independent profile and relationship requests run in parallel.
+      const initialStartedAt = performance.now();
       const [profileResult, friendshipResult, requestResult] = await Promise.all([
         supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url, bio, created_at").eq("id", user.id).maybeSingle(),
         supabase.from("friendships").select("user_a, user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
         supabase.from("friend_requests").select("id, sender_id, recipient_id, status, created_at").or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).eq("status", "pending").order("created_at", { ascending: false }),
       ]);
+      mark(`profile/friendship/request queries (${Math.round(performance.now() - initialStartedAt)}ms)`);
       const { data: profile, error: profileError } = profileResult;
       const { data: friendshipRows, error: friendshipError } = friendshipResult;
       const { data: requestRows, error: requestError } = requestResult;
@@ -2151,21 +2156,39 @@ function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => v
       setMyProfile(loadedProfile);
       const needsSetup = Boolean(loadedProfile && loadedProfile.username.startsWith("alpha_"));
       setProfileSetupRequired(needsSetup);
-      if (loadedProfile && needsSetup) {
-        setSetupUsername("");
-      }
+      if (loadedProfile && needsSetup) setSetupUsername("");
+
       const friendIds = (friendshipRows ?? []).map((row: { user_a: string; user_b: string }) => row.user_a === user.id ? row.user_b : row.user_a);
       const requests = (requestRows ?? []) as CommunityFriendRequest[];
       const otherIds = [...new Set([...friendIds, ...requests.map(r => r.sender_id === user.id ? r.recipient_id : r.sender_id)])];
-      const { data: people, error: peopleError } = otherIds.length ? await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url").in("id", otherIds) : { data: [], error: null };
+
+      if (!otherIds.length) {
+        setFriends([]);
+        setIncoming([]);
+        setOutgoing([]);
+        mark("complete (no friend profiles to fetch)");
+        return;
+      }
+
+      const peopleStartedAt = performance.now();
+      const { data: people, error: peopleError } = await supabase.from("profiles")
+        .select("id, username, display_name, is_founder, rank_key, avatar_url")
+        .in("id", otherIds);
+      mark(`friend/request profiles query (${Math.round(performance.now() - peopleStartedAt)}ms, ${otherIds.length} profiles)`);
       if (peopleError) throw peopleError;
+
       const profileMap = new Map(((people ?? []) as CommunityProfile[]).map(person => [person.id, person]));
       setFriends(friendIds.map(id => profileMap.get(id)).filter((person): person is CommunityProfile => Boolean(person)).sort((a,b) => a.username.localeCompare(b.username)));
       setIncoming(requests.filter(r => r.recipient_id === user.id).map(r => ({ ...r, profile: profileMap.get(r.sender_id) })));
       setOutgoing(requests.filter(r => r.sender_id === user.id).map(r => ({ ...r, profile: profileMap.get(r.recipient_id) })));
+      mark("complete");
     } catch (e) {
       setError(errorText(e));
-    } finally { setLoading(false); }
+      console.error("[Alpha Friends] Failed to load community data:", e);
+    } finally {
+      setLoading(false);
+      mark("loading state cleared");
+    }
   };
 
   useEffect(() => { void loadCommunity(); }, []);
