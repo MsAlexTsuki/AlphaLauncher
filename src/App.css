@@ -7173,3 +7173,52 @@ button:not(:disabled):active {
     padding: 12px 9px;
   }
 }
+
+
+/* Friend and private-chat destructive actions */
+.public-profile-actions .friends-danger {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 105, 105, 0.28);
+  border-radius: 10px;
+  background: rgba(255, 85, 85, 0.08);
+  color: #ff9292;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.public-profile-actions .friends-danger:hover:not(:disabled),
+.chats-page .private-chat-delete:hover:not(:disabled) {
+  border-color: rgba(255, 105, 105, 0.5);
+  background: rgba(255, 85, 85, 0.14);
+}
+
+.public-profile-actions .friends-danger:disabled,
+.chats-page .private-chat-delete:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.chats-page .private-chat-delete {
+  flex: 0 0 auto;
+  margin-left: 8px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 105, 105, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 85, 85, 0.06);
+  color: #ff9292;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .chats-page .private-chat-delete {
+    margin-left: auto;
+    padding: 6px 7px;
+    font-size: 9px;
+  }
+}
