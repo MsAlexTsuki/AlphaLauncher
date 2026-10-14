@@ -6798,7 +6798,8 @@ button:not(:disabled):active {
 .chats-page .private-chat-layout {
   display: grid;
   grid-template-columns: minmax(180px, 0.42fr) minmax(0, 1fr);
-  flex: 1 1 0;
+  flex: 1 1 auto;
+  height: 0;
   min-width: 0;
   min-height: 0;
   width: 100%;
