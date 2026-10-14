@@ -4488,11 +4488,11 @@ fn greet(
 
 
 #[tauri::command]
-async fn launch_alphaclient()
+async fn launch_alphaclient(server_address: Option<String>)
     -> Result<String, String>
 {
     tauri::async_runtime::spawn_blocking(
-        || {
+        move || {
             let account =
                 microsoft_account_state()
                     .lock()
@@ -4723,6 +4723,15 @@ async fn launch_alphaclient()
                 .arg(classpath)
                 .arg(main_class)
                 .args(game_arguments);
+
+            if let Some(server_address) = server_address {
+                let server_address = server_address.trim();
+                if server_address.is_empty() {
+                    return Err("Server address cannot be empty.".to_string());
+                }
+
+                command.arg("--server").arg(server_address);
+            }
 
             command
                 .spawn()
