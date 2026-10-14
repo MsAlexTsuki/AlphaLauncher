@@ -7128,3 +7128,42 @@ button:not(:disabled):active {
     padding: 12px 9px;
   }
 }
+
+.chats-page .private-chat-layout {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 13px;
+  isolation: isolate;
+}
+.chats-page .private-chat-contacts {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: 12px 0 0 12px;
+  background: rgba(255, 255, 255, 0.012);
+}
+.chats-page .private-chat-contact { box-sizing: border-box; max-width: 100%; }
+.chats-page .private-chat-conversation {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 0 12px 12px 0;
+}
+.chats-page .private-chat-messages {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.chats-page .private-chat-composer { box-sizing: border-box; min-width: 0; }
+.chats-page .private-chat-composer input { box-sizing: border-box; width: 100%; }
+.chats-page .private-chat-footnote { text-align: center; }
+@media (max-width: 760px) {
+  .chats-page .private-chat-layout { border-radius: 11px; }
+  .chats-page .private-chat-contacts { border-radius: 10px 0 0 10px; }
+  .chats-page .private-chat-conversation { border-radius: 0 10px 10px 0; }
+}
