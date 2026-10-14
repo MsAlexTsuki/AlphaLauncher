@@ -722,9 +722,6 @@ console.error("Developer permission check failed:", errorMessage);
       return;
     }
 
-  const handlePlay = async () => {
-    if (isLaunching || isUpdatingClient) return;
-
     setIsLaunching(true);
     setLaunchError(null);
     setLaunchMessage(
