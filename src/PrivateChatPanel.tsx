@@ -43,6 +43,7 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDeleteChat, setConfirmDeleteChat] = useState(false);
   const messageListRef = useRef<HTMLDivElement>(null);
   const selectedFriend = friends.find(friend => friend.id === selectedFriendId) ?? null;
 
@@ -79,13 +80,12 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
 
   const deleteConversation = async () => {
     if (!selectedFriend || sending || loadingMessages) return;
-    if (!window.confirm(`Delete the chat with @${selectedFriend.username}? This removes the conversation messages.`)) return;
     setSending(true);
     setError("");
     const { error: deleteError } = await supabase.from("private_messages").delete()
       .or(`and(sender_id.eq.${userId},recipient_id.eq.${selectedFriend.id}),and(sender_id.eq.${selectedFriend.id},recipient_id.eq.${userId})`);
     if (deleteError) setError(deleteError.message);
-    else setMessages([]);
+    else { setMessages([]); setConfirmDeleteChat(false); }
     setSending(false);
   };
 
@@ -115,7 +115,7 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
       </aside>
       <div className="private-chat-conversation">
         {selectedFriend ? <>
-          <header className="private-chat-conversation-header"><span className="private-chat-avatar large">{selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" /> : selectedFriend.username.slice(0,1).toUpperCase()}<i /></span><div><strong>{selectedFriend.username}</strong><small>Private conversation</small></div><span className="private-chat-secure-label">● FRIENDS</span><button type="button" className="private-chat-delete" onClick={() => void deleteConversation()} disabled={sending || loadingMessages} title="Delete conversation" aria-label="Delete conversation">Delete chat</button></header>
+          <header className="private-chat-conversation-header"><span className="private-chat-avatar large">{selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" /> : selectedFriend.username.slice(0,1).toUpperCase()}<i /></span><div><strong>{selectedFriend.username}</strong><small>Private conversation</small></div><span className="private-chat-secure-label">● FRIENDS</span><button type="button" className="private-chat-delete" onClick={() => setConfirmDeleteChat(true)} disabled={sending || loadingMessages} title="Delete conversation" aria-label="Delete conversation">Delete chat</button></header>
           <div className="private-chat-messages" ref={messageListRef} aria-live="polite">
             {loadingMessages ? <div className="private-chat-placeholder">Loading conversation…</div> : messages.length === 0 ? <div className="private-chat-welcome"><span>✦</span><strong>Start the conversation</strong><p>Send a message to {selectedFriend.username}.</p></div> : messages.map(message => {
               const mine = message.sender_id === userId;
@@ -127,6 +127,7 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
           <div className="private-chat-footnote">Messages are visible only to the two participants.</div>
         </> : <div className="private-chat-empty-conversation"><span className="private-chat-empty-icon">✉</span><strong>Your private space</strong><p>Select a friend to open your conversation. Your friends list on the right stays visible.</p></div>}
       </div>
+      {confirmDeleteChat && selectedFriend && <div className="action-confirm-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !sending) setConfirmDeleteChat(false); }}><section className="action-confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-chat-title" aria-describedby="delete-chat-description"><div className="action-confirm-icon danger">!</div><h2 id="delete-chat-title">Delete chat?</h2><p id="delete-chat-description">This will permanently delete the messages in your conversation with <strong>@{selectedFriend.username}</strong>. This cannot be undone.</p><div className="action-confirm-actions"><button type="button" className="friends-secondary" disabled={sending} onClick={() => setConfirmDeleteChat(false)}>Cancel</button><button type="button" className="friends-danger" disabled={sending} onClick={() => void deleteConversation()}>{sending ? "Deleting…" : "Delete chat"}</button></div></section></div>}
     </div>
   </section>;
 }
