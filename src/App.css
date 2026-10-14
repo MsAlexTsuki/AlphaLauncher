@@ -7260,3 +7260,32 @@ button:not(:disabled):active {
     min-height: 540px;
   }
 }
+
+
+/* Force the inner workspace to occupy the full remaining height of the outer card. */
+.chats-page .private-chat-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  box-sizing: border-box;
+}
+.chats-page .private-chat-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.42fr) minmax(0, 1fr);
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  align-self: stretch;
+  margin: 0;
+  box-sizing: border-box;
+}
+.chats-page .private-chat-contacts,
+.chats-page .private-chat-conversation {
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 760px) {
+  .chats-page .private-chat-layout {
+    grid-template-columns: minmax(110px, 0.62fr) minmax(0, 1fr);
+  }
+}
