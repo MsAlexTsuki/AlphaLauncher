@@ -9,8 +9,13 @@ function formatRank(rankKey: string | null | undefined, isFounder?: boolean) {
   const key = (rankKey || (isFounder ? "founder" : "member")).toLowerCase();
   const labels: Record<string, string> = {
     member: "Member",
-    donator: "Donator",
-    donor: "Donator",
+    donator: "Alpha",
+    donor: "Alpha",
+    alpha: "Alpha",
+    alpha_plus: "Alpha+",
+    beta_tester: "Beta",
+    beta_testers: "Beta",
+    beta: "Beta",
     trial_moderator: "T-Mod",
     t_mod: "T-Mod",
     moderator: "Mod",
