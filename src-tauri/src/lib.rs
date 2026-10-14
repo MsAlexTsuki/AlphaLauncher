@@ -4893,9 +4893,15 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                     })
                     .collect::<Vec<_>>();
 
-            // Partner Server auto-connect is handled by AlphaClient after
-            // the Minecraft main menu is ready. Passing --server/--port to
-            // Minecraft during startup can leave the initial screen blank.
+            // Optional direct-connect target used only by the Partner Server button.
+            let mut game_arguments = game_arguments;
+            if let Some(server_address) = server.as_deref() {
+                game_arguments.push("--server".to_string());
+                game_arguments.push(server_address.to_string());
+                game_arguments.push("--port".to_string());
+                game_arguments.push("25565".to_string());
+            }
+
             let mut command =
                 Command::new(
                     &java
@@ -4910,16 +4916,7 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                         "-Djava.library.path={}",
                         natives_path
                     )
-                );
-
-            if let Some(server_address) = server.as_deref() {
-                command.arg(format!(
-                    "-Dalphaclient.partnerServer={}",
-                    server_address
-                ));
-            }
-
-            command
+                )
                 .arg("-cp")
                 .arg(classpath)
                 .arg(main_class)
