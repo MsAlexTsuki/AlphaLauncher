@@ -7325,3 +7325,17 @@ button:not(:disabled):active {
   opacity: 0.55;
   cursor: wait;
 }
+
+
+/* AlphaClient mod permissions manager */
+.client-mod-manager { display: grid; gap: 16px; min-width: 0; }
+.client-mod-manager .developer-card { min-width: 0; }
+.client-mod-manager h4 { margin: 20px 0 8px; color: var(--text); font-size: 12px; }
+.client-mod-group { margin-top: 8px; }
+.client-mod-search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.client-mod-grant-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.client-mod-rule { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
+.client-mod-rule > span { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.client-mod-rule strong { font-size: 11px; overflow-wrap: anywhere; }
+.client-mod-rule small { color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .client-mod-grant-grid { grid-template-columns: 1fr; } }
