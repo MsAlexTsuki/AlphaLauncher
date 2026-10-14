@@ -2131,21 +2131,28 @@ function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => v
         return;
       }
       setUserId(user.id);
-      const { data: profile, error: profileError } = await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url, bio, created_at").eq("id", user.id).maybeSingle();
+
+      // Load independent profile and relationship data together so the Friends
+      // page does not wait for the profile request before starting the others.
+      const [profileResult, friendshipResult, requestResult] = await Promise.all([
+        supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url, bio, created_at").eq("id", user.id).maybeSingle(),
+        supabase.from("friendships").select("user_a, user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
+        supabase.from("friend_requests").select("id, sender_id, recipient_id, status, created_at").or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).eq("status", "pending").order("created_at", { ascending: false }),
+      ]);
+      const { data: profile, error: profileError } = profileResult;
+      const { data: friendshipRows, error: friendshipError } = friendshipResult;
+      const { data: requestRows, error: requestError } = requestResult;
       if (profileError) throw profileError;
+      if (friendshipError) throw friendshipError;
+      if (requestError) throw requestError;
+
       const loadedProfile = profile as CommunityProfile | null;
       setMyProfile(loadedProfile);
       const needsSetup = Boolean(loadedProfile && loadedProfile.username.startsWith("alpha_"));
       setProfileSetupRequired(needsSetup);
       if (loadedProfile && needsSetup) {
-        setSetupUsername(loadedProfile.username.startsWith("alpha_") ? "" : loadedProfile.username);
+        setSetupUsername("");
       }
-      const [{ data: friendshipRows, error: friendshipError }, { data: requestRows, error: requestError }] = await Promise.all([
-        supabase.from("friendships").select("user_a, user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
-        supabase.from("friend_requests").select("id, sender_id, recipient_id, status, created_at").or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).eq("status", "pending").order("created_at", { ascending: false }),
-      ]);
-      if (friendshipError) throw friendshipError;
-      if (requestError) throw requestError;
       const friendIds = (friendshipRows ?? []).map((row: { user_a: string; user_b: string }) => row.user_a === user.id ? row.user_b : row.user_a);
       const requests = (requestRows ?? []) as CommunityFriendRequest[];
       const otherIds = [...new Set([...friendIds, ...requests.map(r => r.sender_id === user.id ? r.recipient_id : r.sender_id)])];
