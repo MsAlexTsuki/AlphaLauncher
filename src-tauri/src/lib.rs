@@ -4678,8 +4678,7 @@ async fn launch_alphaclient() -> Result<String, String> {
 
 #[tauri::command]
 async fn launch_partner_server() -> Result<String, String> {
-    // Connect directly to the Minecraft host instead of relying on the apex-domain SRV lookup.
-    launch_alphaclient_for_server(Some("mc.alpha.rip".to_string())).await
+    launch_alphaclient_for_server(Some("Alpha.Rip".to_string())).await
 }
 
 async fn launch_alphaclient_for_server(server: Option<String>)
