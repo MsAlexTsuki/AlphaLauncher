@@ -7235,3 +7235,28 @@ button:not(:disabled):active {
     padding: 14px 10px;
   }
 }
+
+
+/* Fill the unused lower space: the chat workspace stretches to the frame bottom. */
+.chats-page .private-chat-card {
+  height: min(860px, calc(100vh - 90px));
+  min-height: 620px;
+  padding-bottom: 18px;
+}
+.chats-page .private-chat-layout {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  margin-bottom: 0;
+}
+.chats-page .private-chat-contacts,
+.chats-page .private-chat-conversation {
+  height: auto;
+  min-height: 0;
+}
+@media (max-width: 760px) {
+  .chats-page .private-chat-card {
+    height: calc(100vh - 110px);
+    min-height: 540px;
+  }
+}
