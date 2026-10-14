@@ -28,7 +28,8 @@ export default function ClientModPermissionsManager() {
   const [overrides, setOverrides] = useState<OverrideRecord[]>([]);
   const [search, setSearch] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("alpha_plus");
+  const [selectedRank, setSelectedRank] = useState("member");
+  const [selectedCategory, setSelectedCategory] = useState("general");
   const [selectedMod, setSelectedMod] = useState("");
   const [effect, setEffect] = useState<"allow" | "deny">("allow");
   const [duration, setDuration] = useState("permanent");
@@ -68,10 +69,10 @@ export default function ClientModPermissionsManager() {
     setBusy(true); setError(""); setMessage("");
     try {
       const { error: rpcError } = await supabase.rpc("save_client_mod_rank_permissions", {
-        p_rank_key: selectedCategory,
+        p_rank_key: selectedRank,
         p_permissions: mods.map(mod => ({
           mod_id: mod.mod_id,
-          enabled: permissions.find(p => p.rank_key === selectedCategory && p.mod_id === mod.mod_id)?.enabled ?? false,
+          enabled: permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false,
         })),
       });
       if (rpcError) throw rpcError;
@@ -123,7 +124,7 @@ export default function ClientModPermissionsManager() {
       <div className="section-header"><div><span className="card-label">ALPHACLIENT</span><h3>Mod permission defaults</h3></div><button className="small-button" onClick={() => void load()} disabled={loading || busy}>Refresh</button></div>
       <p className="subtitle">Configure each rank's default access per mod. Individual player grants can override these defaults without changing their community rank.</p>
       <label className="developer-input-label">Rank defaults</label>
-      <select className="developer-text-input" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+      <select className="developer-text-input" value={selectedRank} onChange={e => setSelectedRank(e.target.value)}>
         {RANKS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
       </select>
       {loading ? <p className="subtitle">Loading mod permissions…</p> : groupedMods.map(group => <div className="client-mod-group" key={group.key}>
@@ -132,8 +133,8 @@ export default function ClientModPermissionsManager() {
           <span><strong>{mod.display_name}</strong><small>{mod.description} · {mod.mod_id}</small></span>
           <input type="checkbox" checked={permissions.find(p => p.rank_key === selectedCategory && p.mod_id === mod.mod_id)?.enabled ?? false}
             onChange={e => setPermissions(old => {
-              const rest = old.filter(p => !(p.rank_key === selectedCategory && p.mod_id === mod.mod_id));
-              return [...rest, { rank_key: selectedCategory, mod_id: mod.mod_id, enabled: e.target.checked }];
+              const rest = old.filter(p => !(p.rank_key === selectedRank && p.mod_id === mod.mod_id));
+              return [...rest, { rank_key: selectedRank, mod_id: mod.mod_id, enabled: e.target.checked }];
             })} />
         </label>)}
       </div>)}
