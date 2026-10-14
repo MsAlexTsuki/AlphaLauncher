@@ -56,7 +56,7 @@ use zip::ZipArchive;
 // ALPHACLIENT
 // ============================================================
 
-const ALPHACLIENT_VERSION: &str = "0.3.79";
+const ALPHACLIENT_VERSION: &str = "0.3.81";
 
 // Set this environment variable on the machine/build that distributes the launcher
 // to enable the live AlphaClient release manifest. If it is not configured,
@@ -4124,65 +4124,86 @@ fn fetch_alpha_client_manifest()
         .json::<Vec<Value>>()
         .map_err(|error| format!("Could not parse GitHub Releases response: {}", error))?;
 
-    for release in releases {
+    // GitHub orders releases by publication date, which may not match semantic
+    // version order. Pick the highest AlphaClient JAR version, not the first asset.
+    let mut latest: Option<(Vec<u64>, String, String, String, String)> = None;
+
+    for release in &releases {
         let assets = match release.get("assets").and_then(Value::as_array) {
             Some(assets) => assets,
             None => continue,
         };
-
-        let jar_asset = assets.iter().find(|asset| {
-            let name = asset.get("name").and_then(Value::as_str).unwrap_or("");
-            let lower = name.to_ascii_lowercase();
-            lower.starts_with("alphaclient-") && lower.ends_with(".jar")
-        });
-        let jar_asset = match jar_asset {
-            Some(asset) => asset,
-            None => continue,
-        };
-
-        let asset_name = jar_asset.get("name").and_then(Value::as_str).unwrap_or("");
-        let version = asset_name
-            .strip_prefix("AlphaClient-")
-            .and_then(|name| name.strip_suffix(".jar"))
-            .or_else(|| asset_name.strip_prefix("alphaclient-").and_then(|name| name.strip_suffix(".jar")))
-            .ok_or_else(|| format!("Could not determine version from GitHub asset {}.", asset_name))?;
-        if parse_version_parts(version).is_empty() || !version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
-            continue;
-        }
-
-        let download_url = jar_asset.get("browser_download_url").and_then(Value::as_str)
-            .ok_or_else(|| format!("GitHub asset {} has no download URL.", asset_name))?
-            .to_string();
-
-        let mut sha256 = jar_asset.get("digest").and_then(Value::as_str)
-            .and_then(|digest| digest.strip_prefix("sha256:"))
-            .unwrap_or("")
-            .to_string();
-
-        // GitHub's asset digest is not populated for every older release.
-        // Retain the verified checksum for the currently published 0.3.81 asset.
-        if sha256.is_empty() && version == "0.3.81" {
-            sha256 = ALPHACLIENT_0_3_81_SHA256.to_string();
-        }
-        if sha256.is_empty() {
-            return Err(format!(
-                "GitHub release asset {} has no SHA-256 digest. Add a SHA-256 digest/checksum to the release before publishing updates.",
-                asset_name
-            ));
-        }
-
         let changelog = release.get("body").and_then(Value::as_str).unwrap_or("").to_string();
-        return Ok(AlphaClientReleaseManifest {
-            version: version.to_string(),
-            download_url,
-            sha256,
-            changelog,
-        });
+
+        for asset in assets {
+            let asset_name = asset.get("name").and_then(Value::as_str).unwrap_or("");
+            let lower = asset_name.to_ascii_lowercase();
+            if !lower.starts_with("alphaclient-") || !lower.ends_with(".jar") {
+                continue;
+            }
+
+            let version = asset_name
+                .strip_prefix("AlphaClient-")
+                .and_then(|name| name.strip_suffix(".jar"))
+                .or_else(|| asset_name.strip_prefix("alphaclient-").and_then(|name| name.strip_suffix(".jar")));
+            let version = match version {
+                Some(version) if version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) => version,
+                _ => continue,
+            };
+            let parts = parse_version_parts(version);
+            if parts.is_empty() {
+                continue;
+            }
+
+            let download_url = match asset.get("browser_download_url").and_then(Value::as_str) {
+                Some(url) => url.to_string(),
+                None => continue,
+            };
+
+            let mut sha256 = asset.get("digest").and_then(Value::as_str)
+                .and_then(|digest| digest.strip_prefix("sha256:"))
+                .unwrap_or("")
+                .to_string();
+
+            // GitHub does not populate asset digests for every existing release.
+            if sha256.is_empty() && version == "0.3.81" {
+                sha256 = ALPHACLIENT_0_3_81_SHA256.to_string();
+            }
+
+            let should_replace = latest.as_ref()
+                .map(|(latest_parts, _, _, _, _)| {
+                    let length = parts.len().max(latest_parts.len());
+                    (0..length).find_map(|index| {
+                        let candidate = *parts.get(index).unwrap_or(&0);
+                        let current = *latest_parts.get(index).unwrap_or(&0);
+                        if candidate != current { Some(candidate > current) } else { None }
+                    }).unwrap_or(false)
+                })
+                .unwrap_or(true);
+
+            if should_replace {
+                latest = Some((parts, version.to_string(), download_url, sha256, changelog.clone()));
+            }
+        }
     }
 
-    Err("No GitHub release containing an AlphaClient-<version>.jar asset was found.".to_string())
-}
+    let (_, version, download_url, sha256, changelog) = latest
+        .ok_or_else(|| "No GitHub release containing an AlphaClient-<version>.jar asset was found.".to_string())?;
 
+    if sha256.trim().len() != 64 || !sha256.trim().chars().all(|character| character.is_ascii_hexdigit()) {
+        return Err(format!(
+            "GitHub release asset AlphaClient-{}.jar has no valid SHA-256 digest. Add a SHA-256 digest/checksum to the release before publishing updates.",
+            version
+        ));
+    }
+
+    Ok(AlphaClientReleaseManifest {
+        version,
+        download_url,
+        sha256,
+        changelog,
+    })
+}
 
 fn check_alphaclient_update_internal()
     -> Result<AlphaClientUpdateInfo, String>
