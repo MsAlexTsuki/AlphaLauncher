@@ -7345,3 +7345,79 @@ button:not(:disabled):active {
   min-height: 0 !important;
   height: 100% !important;
 }
+
+
+/* Definitive sizing: anchor the inner chat frame to the outer card's bottom edge. */
+.chats-page .private-chat-card.section-card {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: calc(100vh - 120px) !important;
+  min-height: 620px !important;
+  max-height: none !important;
+  padding: 24px !important;
+  box-sizing: border-box !important;
+}
+.chats-page .private-chat-card.section-card > .private-chat-heading {
+  position: absolute !important;
+  top: 24px !important;
+  left: 24px !important;
+  right: 24px !important;
+  margin: 0 !important;
+}
+.chats-page .private-chat-card.section-card > .private-chat-layout {
+  position: absolute !important;
+  top: 86px !important;
+  right: 24px !important;
+  bottom: 24px !important;
+  left: 24px !important;
+  display: grid !important;
+  grid-template-columns: minmax(220px, 0.42fr) minmax(0, 1fr) !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  flex: none !important;
+  overflow: hidden !important;
+  border-radius: 14px !important;
+}
+.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-contacts,
+.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-conversation {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-contacts {
+  overflow-y: auto !important;
+  border-radius: 13px 0 0 13px !important;
+}
+.chats-page .private-chat-card.section-card > .private-chat-layout > .private-chat-conversation {
+  display: flex !important;
+  flex-direction: column !important;
+  border-radius: 0 13px 13px 0 !important;
+}
+.chats-page .private-chat-card.section-card .private-chat-messages {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+}
+@media (max-width: 760px) {
+  .chats-page .private-chat-card.section-card {
+    height: calc(100vh - 100px) !important;
+    min-height: 540px !important;
+    padding: 16px !important;
+  }
+  .chats-page .private-chat-card.section-card > .private-chat-heading {
+    top: 16px !important;
+    left: 16px !important;
+    right: 16px !important;
+  }
+  .chats-page .private-chat-card.section-card > .private-chat-layout {
+    top: 78px !important;
+    right: 16px !important;
+    bottom: 16px !important;
+    left: 16px !important;
+    grid-template-columns: minmax(110px, 0.62fr) minmax(0, 1fr) !important;
+  }
+}
