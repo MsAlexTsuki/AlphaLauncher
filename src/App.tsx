@@ -2080,7 +2080,7 @@ function ChatsPage({ onOpenAlphaAuth, initialFriendId, onInitialFriendHandled }:
     onInitialFriendHandled();
   }, [initialFriendId, loading, friends, onInitialFriendHandled]);
 
-  return <div className="page">
+  return <div className="page chats-page">
     <div className="page-header"><div><div className="eyebrow">ALPHA COMMUNITY</div><h1>Chats</h1><p>Your private conversations with Alpha friends.</p></div></div>
     {!loading && !userId && <section className="section-card friends-signin"><div className="friends-empty-icon">✉</div><h2>Sign in to Alpha Community</h2><p>Sign in to your Alpha Account to open private chats with your friends.</p><button className="friends-primary" onClick={onOpenAlphaAuth}>Sign in to Alpha Account</button></section>}
     {loading && <section className="section-card"><div className="friends-loading">Loading your chats…</div></section>}
