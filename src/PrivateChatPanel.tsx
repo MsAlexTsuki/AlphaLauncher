@@ -77,6 +77,18 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
 
   useEffect(() => { const list = messageListRef.current; if (list) list.scrollTop = list.scrollHeight; }, [messages, loadingMessages]);
 
+  const deleteConversation = async () => {
+    if (!selectedFriend || sending || loadingMessages) return;
+    if (!window.confirm(`Delete the chat with @${selectedFriend.username}? This removes the conversation messages.`)) return;
+    setSending(true);
+    setError("");
+    const { error: deleteError } = await supabase.from("private_messages").delete()
+      .or(`and(sender_id.eq.${userId},recipient_id.eq.${selectedFriend.id}),and(sender_id.eq.${selectedFriend.id},recipient_id.eq.${userId})`);
+    if (deleteError) setError(deleteError.message);
+    else setMessages([]);
+    setSending(false);
+  };
+
   const sendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const body = draft.trim();
@@ -103,7 +115,7 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
       </aside>
       <div className="private-chat-conversation">
         {selectedFriend ? <>
-          <header className="private-chat-conversation-header"><span className="private-chat-avatar large">{selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" /> : selectedFriend.username.slice(0,1).toUpperCase()}<i /></span><div><strong>{selectedFriend.username}</strong><small>Private conversation</small></div><span className="private-chat-secure-label">● FRIENDS</span></header>
+          <header className="private-chat-conversation-header"><span className="private-chat-avatar large">{selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" /> : selectedFriend.username.slice(0,1).toUpperCase()}<i /></span><div><strong>{selectedFriend.username}</strong><small>Private conversation</small></div><span className="private-chat-secure-label">● FRIENDS</span><button type="button" className="private-chat-delete" onClick={() => void deleteConversation()} disabled={sending || loadingMessages} title="Delete conversation" aria-label="Delete conversation">Delete chat</button></header>
           <div className="private-chat-messages" ref={messageListRef} aria-live="polite">
             {loadingMessages ? <div className="private-chat-placeholder">Loading conversation…</div> : messages.length === 0 ? <div className="private-chat-welcome"><span>✦</span><strong>Start the conversation</strong><p>Send a message to {selectedFriend.username}.</p></div> : messages.map(message => {
               const mine = message.sender_id === userId;
