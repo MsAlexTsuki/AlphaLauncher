@@ -4375,10 +4375,19 @@ fn update_alphaclient_internal()
     fs::create_dir_all(&mods_dir).map_err(|error| format!("Could not create mods directory: {}", error))?;
     let destination = mods_dir.join(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME);
 
-    // Repair a missing/corrupt install even when the version marker claims it is current.
+    // Trust the actual mod JAR, not only the bookkeeping marker. A stale JAR can
+    // still report an older mcmod.info version even when the version file says current.
     let jar_missing = !destination.is_file();
-    if !jar_missing && !version_is_newer(&manifest.version, &current_version) {
-        return Ok(format!("AlphaClient {} is already up to date.", current_version));
+    let installed_jar_version = if jar_missing {
+        None
+    } else {
+        alphastaffmod_version_from_jar(&destination)
+    };
+    let jar_version_mismatch = installed_jar_version.as_deref() != Some(manifest.version.as_str());
+    let manifest_is_newer = version_is_newer(&manifest.version, &current_version);
+
+    if !jar_missing && !jar_version_mismatch && !manifest_is_newer {
+        return Ok(format!("AlphaClient {} is already up to date.", installed_jar_version.as_deref().unwrap_or(&current_version)));
     }
 
     let download_path = root.join("downloads").join(ALPHACLIENT_UPDATE_ZIP_NAME);
