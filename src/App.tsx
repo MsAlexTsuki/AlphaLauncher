@@ -715,28 +715,21 @@ console.error("Developer permission check failed:", errorMessage);
     }
   };
 
-  const handleLaunchPartnerServer = async () => {
-    if (isMinecraftRunning) {
+  const handlePlay = async (partnerServer = false) => {
+    if (isLaunching || isUpdatingClient) return;
+    if (partnerServer && isMinecraftRunning) {
       setLaunchError("Minecraft is already running. Close it before joining the partner server.");
       return;
     }
-    setLaunchError(null);
-    setLaunchMessage("Starting AlphaClient and connecting to alpha.rip…");
-    try {
-      const message = await invoke<string>("launch_partner_server");
-      setLaunchMessage(message);
-    } catch (error) {
-      setLaunchMessage(null);
-      setLaunchError(errorText(error));
-    }
-  };
 
   const handlePlay = async () => {
     if (isLaunching || isUpdatingClient) return;
 
     setIsLaunching(true);
     setLaunchError(null);
-    setLaunchMessage(null);
+    setLaunchMessage(
+      partnerServer ? "Starting AlphaClient and connecting to alpha.rip…" : null,
+    );
 
     try {
       try {
@@ -761,7 +754,9 @@ console.error("Developer permission check failed:", errorMessage);
         setIsUpdatingClient(false);
       }
 
-      const message = await invoke<string>("launch_alphaclient");
+      const message = await invoke<string>(
+        partnerServer ? "launch_partner_server" : "launch_alphaclient",
+      );
       const launchedVersion = updateInfo?.update_available
         ? updateInfo.latest_version
         : clientVersion;
@@ -1029,7 +1024,7 @@ console.error("Developer permission check failed:", errorMessage);
                 <button
                   type="button"
                   className="partner-nav-item"
-                  onClick={() => void handleLaunchPartnerServer()}
+                  onClick={() => void handlePlay(true)}
                 >
                   <span className="nav-icon">◈</span>
                   <span className="partner-nav-content">
