@@ -150,7 +150,7 @@ export default function ClientModPermissionsManager() {
       </select>
       {chosenPlayer && <p className="subtitle">Selected rank: {chosenPlayer.rank_key}. Grants below do not alter this rank.</p>}
       <div className="client-mod-grant-grid">
-        <div><label className="developer-input-label">Grant scope</label><select className="developer-text-input" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}><option value="general">General category</option>{CATEGORIES.filter(([k]) => k !== "general").map(([k,l]) => <option key={k} value={k}>{l} category</option>}</select></div>
+        <div><label className="developer-input-label">Grant scope</label><select className="developer-text-input" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}><option value="general">General category</option>{CATEGORIES.filter(([k]) => k !== "general").map(([k,l]) => <option key={k} value={k}>{l} category</option>)}</select></div>
         <div><label className="developer-input-label">Individual mod (optional)</label><select className="developer-text-input" value={selectedMod} onChange={e => setSelectedMod(e.target.value)}><option value="">Entire selected category</option>{mods.map(m => <option key={m.mod_id} value={m.mod_id}>{m.display_name}</option>)}</select></div>
       </div>
       <div className="client-mod-grant-grid">
