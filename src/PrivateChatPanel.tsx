@@ -90,9 +90,45 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
     setSending(false);
   };
 
-  return <section className="section-card private-chat-card" aria-label="Private chat">
-    <div className="friends-section-heading private-chat-heading"><div><h2>Private chat</h2><p>Private conversations with your friends.</p></div><span className="private-chat-lock">● PRIVATE</span></div>
-    <div className="private-chat-layout">
+  return <section
+    className="section-card private-chat-card"
+    aria-label="Private chat"
+    style={{
+      position: "relative",
+      display: "block",
+      width: "100%",
+      maxWidth: "none",
+      height: "calc(100vh - 120px)",
+      minHeight: 620,
+      maxHeight: "none",
+      padding: 24,
+      boxSizing: "border-box",
+      overflow: "hidden",
+    }}
+  >
+    <div
+      className="friends-section-heading private-chat-heading"
+      style={{ position: "absolute", top: 24, left: 24, right: 24, margin: 0 }}
+    ><div><h2>Private chat</h2><p>Private conversations with your friends.</p></div><span className="private-chat-lock">● PRIVATE</span></div>
+    <div
+      className="private-chat-layout"
+      style={{
+        position: "absolute",
+        top: 86,
+        right: 24,
+        bottom: 24,
+        left: 24,
+        display: "grid",
+        gridTemplateColumns: "minmax(220px, 0.42fr) minmax(0, 1fr)",
+        width: "auto",
+        height: "auto",
+        minHeight: 0,
+        margin: 0,
+        overflow: "hidden",
+        borderRadius: 14,
+        boxSizing: "border-box",
+      }}
+    >
       <aside className="private-chat-contacts" aria-label="Chat contacts">
         <div className="private-chat-subheading">MESSAGES <span>{friends.length}</span></div>
         {friends.length === 0 ? <div className="private-chat-no-contacts">Add friends to start a private conversation.</div> : friends.map(friend =>
