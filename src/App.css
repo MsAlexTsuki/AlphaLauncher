@@ -7167,3 +7167,71 @@ button:not(:disabled):active {
   .chats-page .private-chat-contacts { border-radius: 10px 0 0 10px; }
   .chats-page .private-chat-conversation { border-radius: 0 10px 10px 0; }
 }
+
+
+/* Give the chat frame more breathing room and extend the inner panel to the bottom. */
+.chats-page .private-chat-card {
+  width: min(100%, 1040px);
+  height: min(760px, calc(100vh - 150px));
+  min-height: 520px;
+  padding: 24px;
+  margin-bottom: 18px;
+}
+
+.chats-page .private-chat-heading {
+  margin-bottom: 20px;
+}
+
+.chats-page .private-chat-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  border-radius: 14px;
+}
+
+.chats-page .private-chat-contacts {
+  align-self: stretch;
+  height: 100%;
+  padding: 16px 12px;
+  border-radius: 13px 0 0 13px;
+}
+
+.chats-page .private-chat-conversation {
+  align-self: stretch;
+  height: 100%;
+  border-radius: 0 13px 13px 0;
+}
+
+.chats-page .private-chat-contact {
+  margin: 4px 0;
+  padding: 11px 10px;
+  border-radius: 10px;
+}
+
+.chats-page .private-chat-messages {
+  padding: 22px;
+}
+
+.chats-page .private-chat-composer {
+  padding: 14px 16px 8px;
+}
+
+.chats-page .private-chat-footnote {
+  padding-bottom: 14px;
+}
+
+@media (max-width: 760px) {
+  .chats-page .private-chat-card {
+    height: calc(100vh - 170px);
+    min-height: 460px;
+    padding: 14px;
+  }
+
+  .chats-page .private-chat-contacts {
+    padding: 12px 6px;
+  }
+
+  .chats-page .private-chat-messages {
+    padding: 14px 10px;
+  }
+}
