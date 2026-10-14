@@ -6771,7 +6771,7 @@ button:not(:disabled):active {
 
 .chats-page .page-header {
   width: 100%;
-  max-width: 920px;
+  max-width: 960px;
   margin: 0 auto 22px;
 }
 
@@ -6780,7 +6780,7 @@ button:not(:disabled):active {
   flex-direction: column;
   width: 100%;
   max-width: 920px;
-  height: min(560px, calc(100vh - 270px));
+  height: min(600px, calc(100vh - 240px));
   min-height: 360px;
   margin: 0 auto;
   padding: 20px;
