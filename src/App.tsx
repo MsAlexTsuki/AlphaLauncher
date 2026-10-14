@@ -930,7 +930,7 @@ console.error("Developer permission check failed:", errorMessage);
         </div>
 
         <div className="titlebar-actions" data-tauri-drag-region="false">
-          <InboxButton onOpenFriends={() => void handleNavigation("Friends")} />
+          <InboxButton onOpenFriends={() => void handleNavigation("Friends")} onOpenChats={(friendId) => { setChatTargetFriendId(friendId ?? null); void handleNavigation("Chats"); }} />
         </div>
 
         <div className="window-controls">
