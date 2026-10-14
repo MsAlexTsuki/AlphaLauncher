@@ -14,14 +14,16 @@ type InboxRequest = {
 
 type InboxButtonProps = {
   onOpenFriends: () => void;
+  onOpenChats: (friendId?: string) => void;
 };
 
-export default function InboxButton({ onOpenFriends }: InboxButtonProps) {
+export default function InboxButton({ onOpenFriends, onOpenChats }: InboxButtonProps) {
   const [open, setOpen] = useState(false);
   const [requests, setRequests] = useState<InboxRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [latestMessage, setLatestMessage] = useState<{ senderId: string; username: string; body: string } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const loadRequests = useCallback(async () => {
@@ -81,10 +83,21 @@ export default function InboxButton({ onOpenFriends }: InboxButtonProps) {
     setLoading(true);
     void loadRequests().finally(() => setLoading(false));
 
+    let currentUserId: string | null = null;
+    void supabase.auth.getUser().then(({ data }) => { currentUserId = data.user?.id ?? null; });
     const channel = supabase
       .channel("launcher-inbox-friend-requests")
       .on("postgres_changes", { event: "*", schema: "public", table: "friend_requests" }, () => {
         void loadRequests();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "private_messages" }, async (payload) => {
+        const message = payload.new as { sender_id: string; recipient_id: string; body: string };
+        if (message.recipient_id !== currentUserId) return;
+        const { data: profile } = await supabase.from("profiles").select("username").eq("id", message.sender_id).maybeSingle();
+        setLatestMessage({ senderId: message.sender_id, username: profile?.username || "A friend", body: message.body });
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("New AlphaClient message", { body: `${profile?.username || "A friend"}: ${message.body.slice(0, 120)}` });
+        }
       })
       .subscribe();
 
@@ -132,6 +145,13 @@ export default function InboxButton({ onOpenFriends }: InboxButtonProps) {
         {unreadCount > 0 && <span className="inbox-unread-dot" aria-label={`${unreadCount} pending`} />}
       </button>
 
+      {latestMessage && (
+        <button type="button" className="inbox-message-toast" onClick={() => { setLatestMessage(null); onOpenChats(latestMessage.senderId); }} title="Open conversation">
+          <span className="inbox-message-toast-icon">✉</span>
+          <span><strong>New message from {latestMessage.username}</strong><small>{latestMessage.body}</small></span>
+          <span aria-hidden="true">›</span>
+        </button>
+      )}
       {open && (
         <section className="inbox-popover" role="dialog" aria-label="Inbox notifications">
           <div className="inbox-popover-header">
