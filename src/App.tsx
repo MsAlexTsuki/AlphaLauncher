@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { supabase } from "./lib/supabase";
 import "./App.css";
 
@@ -580,7 +579,7 @@ function LauncherApp() {
     }
   };
 
-  const handlePlay = async () => {
+  const handleLaunch = async (serverAddress?: string) => {
     if (isLaunching || isUpdatingClient) return;
 
     setIsLaunching(true);
@@ -610,7 +609,9 @@ function LauncherApp() {
         setIsUpdatingClient(false);
       }
 
-      const message = await invoke<string>("launch_alphaclient");
+      const message = serverAddress
+        ? await invoke<string>("launch_alphaclient", { serverAddress })
+        : await invoke<string>("launch_alphaclient");
       recordLaunch(
         updateInfo?.update_available
           ? updateInfo.latest_version
@@ -624,6 +625,8 @@ function LauncherApp() {
       setIsLaunching(false);
     }
   };
+
+  const handlePlay = () => handleLaunch();
 
   const handleUpdateClient = async () => {
     if (isUpdatingClient || isLaunching) return;
@@ -818,12 +821,12 @@ function LauncherApp() {
                 <button
                   type="button"
                   className="partner-nav-item"
-                  onClick={() => void openUrl("https://alpha.rip")}
+                  onClick={() => void handleLaunch("alpha.rip")}
                 >
                   <span className="nav-icon">◈</span>
                   <span className="partner-nav-content">
                     <strong>Alpha.rip</strong>
-                    <small>Partner Server · Open website</small>
+                    <small>Partner Server · Join server</small>
                   </span>
                 </button>
               </div>
