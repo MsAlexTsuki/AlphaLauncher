@@ -6710,3 +6710,50 @@ button:not(:disabled):active {
 .private-chat-contact-copy .private-chat-rank.is-founder {
   color: #ffd866;
 }
+
+
+.inbox-message-toast {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 216, 102, 0.28);
+  border-radius: 12px;
+  background: #1b1d24;
+  color: var(--text);
+  text-align: left;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.38);
+  cursor: pointer;
+}
+.inbox-message-toast-icon {
+  display: grid;
+  flex: 0 0 34px;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--yellow-light);
+  background: rgba(255, 216, 102, 0.1);
+}
+.inbox-message-toast > span:nth-child(2) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.inbox-message-toast strong {
+  font-size: 12px;
+}
+.inbox-message-toast small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
