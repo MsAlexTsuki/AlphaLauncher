@@ -4678,7 +4678,7 @@ async fn launch_alphaclient() -> Result<String, String> {
 
 #[tauri::command]
 async fn launch_partner_server() -> Result<String, String> {
-    launch_alphaclient_for_server(Some("Alpha.Rip".to_string())).await
+    launch_alphaclient_for_server(Some("alpha.rip".to_string())).await
 }
 
 async fn launch_alphaclient_for_server(server: Option<String>)
