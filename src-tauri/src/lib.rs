@@ -39,7 +39,7 @@ use std::{
         Path,
         PathBuf,
     },
-    process::Command,
+    process::{Child, Command},
     sync::{
         Mutex,
         OnceLock,
@@ -56,7 +56,7 @@ use zip::ZipArchive;
 // ALPHACLIENT
 // ============================================================
 
-const ALPHACLIENT_VERSION: &str = "0.3.79";
+const ALPHACLIENT_VERSION: &str = "0.3.81";
 
 // Set this environment variable on the machine/build that distributes the launcher
 // to enable the live AlphaClient release manifest. If it is not configured,
@@ -203,6 +203,81 @@ static MINECRAFT_ACCESS_TOKEN: OnceLock<
 static MINECRAFT_UUID: OnceLock<
     Mutex<Option<String>>
 > = OnceLock::new();
+
+// Keep the child handles for Minecraft processes started by this launcher.
+// Polling Child::try_wait lets us release the account lock when the game exits.
+static MINECRAFT_PROCESSES: OnceLock<
+    Mutex<Vec<Child>>
+> = OnceLock::new();
+
+
+fn minecraft_processes_state()
+    -> &'static Mutex<Vec<Child>>
+{
+    MINECRAFT_PROCESSES.get_or_init(|| {
+        Mutex::new(Vec::new())
+    })
+}
+
+
+fn track_minecraft_process(
+    child: Child
+) -> Result<(), String>
+{
+    minecraft_processes_state()
+        .lock()
+        .map_err(|_| {
+            "Could not access Minecraft process state.".to_string()
+        })?
+        .push(child);
+
+    Ok(())
+}
+
+
+fn minecraft_process_is_running()
+    -> bool
+{
+    let mut processes =
+        match minecraft_processes_state().lock() {
+            Ok(processes) => processes,
+            Err(_) => {
+                // Fail closed: if state cannot be checked, don't allow logout.
+                return true;
+            }
+        };
+
+    let mut index = 0;
+    let mut running = false;
+
+    while index < processes.len() {
+        // End the mutable Child borrow before removing an exited process.
+        let status = processes[index].try_wait();
+
+        match status {
+            Ok(Some(_)) => {
+                processes.swap_remove(index);
+            }
+            Ok(None) => {
+                running = true;
+                index += 1;
+            }
+            Err(_) => {
+                // Treat an uncheckable process as active to protect the session.
+                running = true;
+                index += 1;
+            }
+        }
+    }
+
+    running
+}
+
+
+fn minecraft_running_error() -> String
+{
+    "Je kunt niet uitloggen of van account wisselen zolang Minecraft actief is. Sluit Minecraft eerst af.".to_string()
+}
 
 
 fn microsoft_account_state()
@@ -457,6 +532,10 @@ fn clear_microsoft_auth_state() {
 async fn start_microsoft_login()
     -> Result<MicrosoftAccount, String>
 {
+    if minecraft_process_is_running() {
+        return Err(minecraft_running_error());
+    }
+
     tauri::async_runtime::spawn_blocking(
         perform_microsoft_login
     )
@@ -474,8 +553,20 @@ async fn start_microsoft_login()
 fn logout_microsoft()
     -> Result<(), String>
 {
+    if minecraft_process_is_running() {
+        return Err(minecraft_running_error());
+    }
+
     clear_microsoft_auth_state();
     Ok(())
+}
+
+
+#[tauri::command]
+fn get_minecraft_process_status()
+    -> bool
+{
+    minecraft_process_is_running()
 }
 
 
@@ -499,6 +590,10 @@ fn get_microsoft_account()
 fn perform_microsoft_login()
     -> Result<MicrosoftAccount, String>
 {
+    if minecraft_process_is_running() {
+        return Err(minecraft_running_error());
+    }
+
     clear_microsoft_auth_state();
 
     // --------------------------------------------------------
@@ -4029,65 +4124,86 @@ fn fetch_alpha_client_manifest()
         .json::<Vec<Value>>()
         .map_err(|error| format!("Could not parse GitHub Releases response: {}", error))?;
 
-    for release in releases {
+    // GitHub orders releases by publication date, which may not match semantic
+    // version order. Pick the highest AlphaClient JAR version, not the first asset.
+    let mut latest: Option<(Vec<u64>, String, String, String, String)> = None;
+
+    for release in &releases {
         let assets = match release.get("assets").and_then(Value::as_array) {
             Some(assets) => assets,
             None => continue,
         };
-
-        let jar_asset = assets.iter().find(|asset| {
-            let name = asset.get("name").and_then(Value::as_str).unwrap_or("");
-            let lower = name.to_ascii_lowercase();
-            lower.starts_with("alphaclient-") && lower.ends_with(".jar")
-        });
-        let jar_asset = match jar_asset {
-            Some(asset) => asset,
-            None => continue,
-        };
-
-        let asset_name = jar_asset.get("name").and_then(Value::as_str).unwrap_or("");
-        let version = asset_name
-            .strip_prefix("AlphaClient-")
-            .and_then(|name| name.strip_suffix(".jar"))
-            .or_else(|| asset_name.strip_prefix("alphaclient-").and_then(|name| name.strip_suffix(".jar")))
-            .ok_or_else(|| format!("Could not determine version from GitHub asset {}.", asset_name))?;
-        if parse_version_parts(version).is_empty() || !version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
-            continue;
-        }
-
-        let download_url = jar_asset.get("browser_download_url").and_then(Value::as_str)
-            .ok_or_else(|| format!("GitHub asset {} has no download URL.", asset_name))?
-            .to_string();
-
-        let mut sha256 = jar_asset.get("digest").and_then(Value::as_str)
-            .and_then(|digest| digest.strip_prefix("sha256:"))
-            .unwrap_or("")
-            .to_string();
-
-        // GitHub's asset digest is not populated for every older release.
-        // Retain the verified checksum for the currently published 0.3.81 asset.
-        if sha256.is_empty() && version == "0.3.81" {
-            sha256 = ALPHACLIENT_0_3_81_SHA256.to_string();
-        }
-        if sha256.is_empty() {
-            return Err(format!(
-                "GitHub release asset {} has no SHA-256 digest. Add a SHA-256 digest/checksum to the release before publishing updates.",
-                asset_name
-            ));
-        }
-
         let changelog = release.get("body").and_then(Value::as_str).unwrap_or("").to_string();
-        return Ok(AlphaClientReleaseManifest {
-            version: version.to_string(),
-            download_url,
-            sha256,
-            changelog,
-        });
+
+        for asset in assets {
+            let asset_name = asset.get("name").and_then(Value::as_str).unwrap_or("");
+            let lower = asset_name.to_ascii_lowercase();
+            if !lower.starts_with("alphaclient-") || !lower.ends_with(".jar") {
+                continue;
+            }
+
+            let version = asset_name
+                .strip_prefix("AlphaClient-")
+                .and_then(|name| name.strip_suffix(".jar"))
+                .or_else(|| asset_name.strip_prefix("alphaclient-").and_then(|name| name.strip_suffix(".jar")));
+            let version = match version {
+                Some(version) if version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) => version,
+                _ => continue,
+            };
+            let parts = parse_version_parts(version);
+            if parts.is_empty() {
+                continue;
+            }
+
+            let download_url = match asset.get("browser_download_url").and_then(Value::as_str) {
+                Some(url) => url.to_string(),
+                None => continue,
+            };
+
+            let mut sha256 = asset.get("digest").and_then(Value::as_str)
+                .and_then(|digest| digest.strip_prefix("sha256:"))
+                .unwrap_or("")
+                .to_string();
+
+            // GitHub does not populate asset digests for every existing release.
+            if sha256.is_empty() && version == "0.3.81" {
+                sha256 = ALPHACLIENT_0_3_81_SHA256.to_string();
+            }
+
+            let should_replace = latest.as_ref()
+                .map(|(latest_parts, _, _, _, _)| {
+                    let length = parts.len().max(latest_parts.len());
+                    (0..length).find_map(|index| {
+                        let candidate = *parts.get(index).unwrap_or(&0);
+                        let current = *latest_parts.get(index).unwrap_or(&0);
+                        if candidate != current { Some(candidate > current) } else { None }
+                    }).unwrap_or(false)
+                })
+                .unwrap_or(true);
+
+            if should_replace {
+                latest = Some((parts, version.to_string(), download_url, sha256, changelog.clone()));
+            }
+        }
     }
 
-    Err("No GitHub release containing an AlphaClient-<version>.jar asset was found.".to_string())
-}
+    let (_, version, download_url, sha256, changelog) = latest
+        .ok_or_else(|| "No GitHub release containing an AlphaClient-<version>.jar asset was found.".to_string())?;
 
+    if sha256.trim().len() != 64 || !sha256.trim().chars().all(|character| character.is_ascii_hexdigit()) {
+        return Err(format!(
+            "GitHub release asset AlphaClient-{}.jar has no valid SHA-256 digest. Add a SHA-256 digest/checksum to the release before publishing updates.",
+            version
+        ));
+    }
+
+    Ok(AlphaClientReleaseManifest {
+        version,
+        download_url,
+        sha256,
+        changelog,
+    })
+}
 
 fn check_alphaclient_update_internal()
     -> Result<AlphaClientUpdateInfo, String>
@@ -4259,10 +4375,78 @@ fn update_alphaclient_internal()
     fs::create_dir_all(&mods_dir).map_err(|error| format!("Could not create mods directory: {}", error))?;
     let destination = mods_dir.join(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME);
 
-    // Repair a missing/corrupt install even when the version marker claims it is current.
+    // Prefer a locally built Alpha Staff Mod when its version is at least as
+    // recent as the official release. The launch path calls the updater every
+    // time, so without this check a fresh local build would be overwritten by
+    // the GitHub release before Minecraft starts.
+    let installed_jar_version = if destination.is_file() {
+        alphastaffmod_version_from_jar(&destination)
+    } else {
+        None
+    };
+
+    if let Ok(local_jar) = find_built_alphastaffmod_jar() {
+        if let Some(local_version) = alphastaffmod_version_from_jar(&local_jar) {
+            if !version_is_newer(&manifest.version, &local_version) {
+                let local_is_already_installed = installed_jar_version
+                    .as_deref()
+                    .map(|version| parse_version_parts(version) == parse_version_parts(&local_version))
+                    .unwrap_or(false);
+
+                if !local_is_already_installed {
+                    let temporary_destination = mods_dir.join("AlphaClient.jar.new");
+                    fs::copy(&local_jar, &temporary_destination)
+                        .map_err(|error| format!(
+                            "Could not stage local AlphaClient build from {}: {}",
+                            local_jar.display(),
+                            error
+                        ))?;
+                    if destination.exists() {
+                        fs::remove_file(&destination)
+                            .map_err(|error| format!("Could not replace existing AlphaClient JAR: {}", error))?;
+                    }
+                    fs::rename(&temporary_destination, &destination)
+                        .map_err(|error| format!("Could not install local AlphaClient build: {}", error))?;
+                }
+
+                // Remove legacy copies so Forge cannot load an older build alongside AlphaClient.jar.
+                if let Ok(entries) = fs::read_dir(&mods_dir) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path == destination
+                            || path.extension().and_then(|ext| ext.to_str())
+                                .map(|ext| !ext.eq_ignore_ascii_case("jar"))
+                                .unwrap_or(true)
+                        {
+                            continue;
+                        }
+                        if jar_is_alphastaffmod(&path) {
+                            let _ = fs::remove_file(path);
+                        }
+                    }
+                }
+
+                write_installed_alphaclient_version(&root, &local_version)?;
+                return Ok(format!(
+                    "Using local AlphaClient build {} from {}.",
+                    local_version,
+                    local_jar.display()
+                ));
+            }
+        }
+    }
+
+    // Trust the actual mod JAR, not only the bookkeeping marker. Repair missing,
+    // invalid, or outdated installations even when the marker claims they're current.
     let jar_missing = !destination.is_file();
-    if !jar_missing && !version_is_newer(&manifest.version, &current_version) {
-        return Ok(format!("AlphaClient {} is already up to date.", current_version));
+    let jar_version_mismatch = installed_jar_version
+        .as_deref()
+        .map(|version| parse_version_parts(version) != parse_version_parts(&manifest.version))
+        .unwrap_or(true);
+    let manifest_is_newer = version_is_newer(&manifest.version, &current_version);
+
+    if !jar_missing && !jar_version_mismatch && !manifest_is_newer {
+        return Ok(format!("AlphaClient {} is already up to date.", installed_jar_version.as_deref().unwrap_or(&current_version)));
     }
 
     let download_path = root.join("downloads").join(ALPHACLIENT_UPDATE_ZIP_NAME);
@@ -4488,11 +4672,20 @@ fn greet(
 
 
 #[tauri::command]
-async fn launch_alphaclient()
+async fn launch_alphaclient() -> Result<String, String> {
+    launch_alphaclient_for_server(None).await
+}
+
+#[tauri::command]
+async fn launch_partner_server() -> Result<String, String> {
+    launch_alphaclient_for_server(Some("Alpha.Rip".to_string())).await
+}
+
+async fn launch_alphaclient_for_server(server: Option<String>)
     -> Result<String, String>
 {
     tauri::async_runtime::spawn_blocking(
-        || {
+        move || {
             let account =
                 microsoft_account_state()
                     .lock()
@@ -4704,6 +4897,15 @@ async fn launch_alphaclient()
                     })
                     .collect::<Vec<_>>();
 
+            // Optional direct-connect target used only by the Partner Server button.
+            let mut game_arguments = game_arguments;
+            if let Some(server_address) = server.as_deref() {
+                game_arguments.push("--server".to_string());
+                game_arguments.push(server_address.to_string());
+                game_arguments.push("--port".to_string());
+                game_arguments.push("25565".to_string());
+            }
+
             let mut command =
                 Command::new(
                     &java
@@ -4724,15 +4926,18 @@ async fn launch_alphaclient()
                 .arg(main_class)
                 .args(game_arguments);
 
-            command
-                .spawn()
-                .map_err(|e| {
-                    format!(
-                        "Minecraft kon niet worden gestart met Java {}: {}",
-                        java.display(),
-                        e
-                    )
-                })?;
+            let child =
+                command
+                    .spawn()
+                    .map_err(|e| {
+                        format!(
+                            "Minecraft kon niet worden gestart met Java {}: {}",
+                            java.display(),
+                            e
+                        )
+                    })?;
+
+            track_minecraft_process(child)?;
 
             Ok(
                 format!(
@@ -4988,15 +5193,18 @@ fn start_offline_test_internal(
         .arg(main_class)
         .args(game_arguments);
 
-    command
-        .spawn()
-        .map_err(|error| {
-            format!(
-                "Minecraft kon niet worden gestart met Java {}: {}",
-                java.display(),
-                error
-            )
-        })?;
+    let child =
+        command
+            .spawn()
+            .map_err(|error| {
+                format!(
+                    "Minecraft kon niet worden gestart met Java {}: {}",
+                    java.display(),
+                    error
+                )
+            })?;
+
+    track_minecraft_process(child)?;
 
     Ok(
         format!(
@@ -5127,8 +5335,24 @@ fn finish_startup(app: tauri::AppHandle) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run()
 {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(
+            tauri_plugin_single_instance::init(|_app, _argv, _cwd| {})
+        );
+    }
+
+    builder = builder
+        .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
+            #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                app.deep_link().register_all()?;
+            }
+
             // Open the launcher at a comfortable, centered size by default.
             // This avoids requiring the user to maximize the window every time.
             if let Some(window) = app.get_webview_window("main") {
@@ -5158,12 +5382,15 @@ pub fn run()
         })
         .plugin(
             tauri_plugin_opener::init()
-        )
+        );
+
+    builder
         .invoke_handler(
             tauri::generate_handler![
                 greet,
                 finish_startup,
                 launch_alphaclient,
+                launch_partner_server,
                 start_offline_test,
                 get_alphaclient_version,
                 check_alphaclient_update,
@@ -5172,7 +5399,8 @@ pub fn run()
                 get_alphaclient_directory_path,
                 start_microsoft_login,
                 logout_microsoft,
-                get_microsoft_account
+                get_microsoft_account,
+                get_minecraft_process_status
             ]
         )
         .run(

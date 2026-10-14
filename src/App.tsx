@@ -3,6 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { supabase } from "./lib/supabase";
+import PrivateChatPanel from "./PrivateChatPanel";
+import InboxButton from "./InboxButton";
+import RankPermissionsManager from "./RankPermissionsManager";
 import "./App.css";
 
 type Page =
@@ -10,9 +13,10 @@ type Page =
   | "Play"
   | "Versions"
   | "Mods"
+  | "Community"
   | "Friends"
-  | "Profile"
   | "Developer"
+  | "Chats"
   | "Settings"
   | "Account";
 
@@ -125,7 +129,30 @@ function readLastPlayed(): LastPlayed[] {
 }
 
 function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    const message = typeof value.message === "string" ? value.message : "";
+    const code = typeof value.code === "string" ? value.code : "";
+    const details = typeof value.details === "string" ? value.details : "";
+    const hint = typeof value.hint === "string" ? value.hint : "";
+    const parts = [
+      message,
+      code ? `Code: ${code}` : "",
+      details ? `Details: ${details}` : "",
+      hint ? `Hint: ${hint}` : "",
+    ].filter(Boolean);
+    if (parts.length) return parts.join("\\n");
+    try {
+      return JSON.stringify(error, null, 2);
+    } catch {
+      return "An unknown error occurred.";
+    }
+  }
+
+  return String(error);
 }
 
 function mapChangelogRows(data: any[]): ChangelogEntry[] {
@@ -143,7 +170,67 @@ function mapChangelogRows(data: any[]): ChangelogEntry[] {
 }
 
 function LauncherApp() {
+  // Advertise this signed-in Alpha Account as online for the lifetime of the launcher.
+  useEffect(() => {
+    let disposed = false;
+    let presenceChannel: ReturnType<typeof supabase.channel> | null = null;
+
+    const connectPresence = async (userId: string | null) => {
+      if (presenceChannel) {
+        const oldChannel = presenceChannel;
+        presenceChannel = null;
+        await supabase.removeChannel(oldChannel);
+      }
+      if (disposed || !userId) return;
+
+      const channel = supabase.channel("alphaclient-presence", {
+        config: { presence: { key: userId } },
+      });
+      presenceChannel = channel;
+
+      // Keep all presence listeners on the one channel before it is subscribed.
+      const publishPresence = () => {
+        const state = channel.presenceState() as Record<string, Array<{ user_id?: string }>>;
+        const onlineIds = new Set<string>();
+        for (const [key, entries] of Object.entries(state)) {
+          if (entries.length > 0) onlineIds.add(entries[0]?.user_id || key);
+        }
+        window.dispatchEvent(new CustomEvent("alphaclient-presence-update", {
+          detail: Array.from(onlineIds),
+        }));
+      };
+
+      channel
+        .on("presence", { event: "sync" }, publishPresence)
+        .on("presence", { event: "join" }, publishPresence)
+        .on("presence", { event: "leave" }, publishPresence)
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED" && !disposed) {
+            void channel.track({ user_id: userId, online_at: new Date().toISOString() });
+            publishPresence();
+          }
+        });
+    };
+
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (!error && !disposed) void connectPresence(data.user?.id ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      void connectPresence(session?.user?.id ?? null);
+    });
+
+    return () => {
+      disposed = true;
+      subscription.unsubscribe();
+      if (presenceChannel) void supabase.removeChannel(presenceChannel);
+    };
+  }, []);
   const [page, setPage] = useState<Page>("Home");
+  const [chatTargetFriendId, setChatTargetFriendId] = useState<string | null>(null);
+  const [communityLoginRequested, setCommunityLoginRequested] = useState(false);
+  const [alphaAuthModalOpen, setAlphaAuthModalOpen] = useState(false);
+  const [openProfileEditor, setOpenProfileEditor] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
   const [isStartingOfflineTest, setIsStartingOfflineTest] = useState(false);
@@ -154,6 +241,7 @@ function LauncherApp() {
 
   const [account, setAccount] = useState<MicrosoftAccount | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isMinecraftRunning, setIsMinecraftRunning] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const [isInstalling, setIsInstalling] = useState(false);
@@ -170,6 +258,29 @@ function LauncherApp() {
     useState<AlphaClientUpdateInfo | null>(null);
   const [isUpdatingClient, setIsUpdatingClient] = useState(false);
   const [clientDirectory, setClientDirectory] = useState<string | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+
+    const refreshMinecraftStatus = async () => {
+      try {
+        const running = await invoke<boolean>("get_minecraft_process_status");
+        if (!disposed) setIsMinecraftRunning(running);
+      } catch (error) {
+        console.warn("Could not check Minecraft process status:", error);
+      }
+    };
+
+    void refreshMinecraftStatus();
+    const interval = window.setInterval(() => {
+      void refreshMinecraftStatus();
+    }, 1000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const [offlineMode, setOfflineMode] = useState(() => {
     try {
@@ -194,6 +305,7 @@ function LauncherApp() {
     null,
   );
   const [developerAuthorized, setDeveloperAuthorized] = useState(false);
+  const [canManageReleases, setCanManageReleases] = useState(false);
   const [developerAuthLoading, setDeveloperAuthLoading] = useState(true);
   const [developerAuthError, setDeveloperAuthError] = useState("");
   const [developerSigningIn, setDeveloperSigningIn] = useState(false);
@@ -259,6 +371,7 @@ function LauncherApp() {
       setDeveloperAuthError("");
       setDeveloperUserEmail(user?.email ?? null);
       setDeveloperAuthorized(false);
+      setCanManageReleases(false);
 
       if (!user) {
         setDeveloperAuthLoading(false);
@@ -266,28 +379,43 @@ function LauncherApp() {
       }
 
       try {
-        const { data, error } = await supabase.rpc("is_developer_admin");
+        const [
+          { data: developerToolsPermission, error: developerToolsError },
+          { data: releasePermission, error: releasePermissionError },
+        ] = await Promise.all([
+          supabase.rpc("has_rank_permission", { p_scope: "launcher", p_permission_key: "developer.tools" }),
+          supabase.rpc("has_rank_permission", { p_scope: "launcher", p_permission_key: "releases.manage" }),
+        ]);
 
         if (cancelled) return;
 
-        if (error) {
-          console.error("Developer permission check failed:", error.message);
+        if (developerToolsError || releasePermissionError) {
+         const errorMessage =
+  developerToolsError?.message ??
+  releasePermissionError?.message ??
+  "Unknown permission-check error.";
+
+console.error("Developer permission check failed:", errorMessage);
           setDeveloperAuthError(
-            "Developerrechten konden niet worden gecontroleerd. Controleer of de Supabase-functie is_developer_admin bestaat en correct is ingesteld.",
+            "Developer permissions could not be verified. Check that the Supabase function has_rank_permission exists and is configured correctly.",
           );
           setDeveloperAuthorized(false);
-        } else if (data === true) {
-          setDeveloperAuthorized(true);
-          setDeveloperAuthError("");
+          setCanManageReleases(false);
         } else {
-          setDeveloperAuthorized(false);
+          const hasDeveloperTools = developerToolsPermission === true;
+          const hasReleasePermission = releasePermission === true;
+          setDeveloperAuthorized(hasDeveloperTools);
+          setCanManageReleases(hasReleasePermission);
           setDeveloperAuthError(
-            "Dit account heeft geen developerrechten.",
+            hasDeveloperTools || hasReleasePermission
+              ? ""
+              : "This account does not have the launcher permission 'developer.tools' or 'releases.manage'.",
           );
         }
       } catch (error) {
         if (cancelled) return;
         setDeveloperAuthorized(false);
+        setCanManageReleases(false);
         setDeveloperAuthError(errorText(error));
       } finally {
         if (!cancelled) setDeveloperAuthLoading(false);
@@ -322,6 +450,12 @@ function LauncherApp() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!developerAuthLoading && !developerAuthorized && !canManageReleases && page === "Developer") {
+      setPage("Home");
+    }
+  }, [developerAuthLoading, developerAuthorized, canManageReleases, page]);
+
   // Public users only receive published entries. Verified developers receive drafts too.
   useEffect(() => {
     let cancelled = false;
@@ -331,7 +465,7 @@ function LauncherApp() {
         .from("changelogs")
         .select("id, version, title, body, created_at, product, published");
 
-      if (!developerAuthorized) {
+      if (!developerAuthorized && !canManageReleases) {
         query = query.eq("published", true);
       }
 
@@ -354,14 +488,14 @@ function LauncherApp() {
     return () => {
       cancelled = true;
     };
-  }, [developerAuthorized]);
+  }, [developerAuthorized, canManageReleases]);
 
   const refreshChangelogs = async () => {
     let query = supabase
       .from("changelogs")
       .select("id, version, title, body, created_at, product, published");
 
-    if (!developerAuthorized) {
+    if (!developerAuthorized && !canManageReleases) {
       query = query.eq("published", true);
     }
 
@@ -378,7 +512,7 @@ function LauncherApp() {
 
     const email = developerEmail.trim();
     if (!email || !developerPassword) {
-      setDeveloperAuthError("Vul je e-mailadres en wachtwoord in.");
+      setDeveloperAuthError("Enter your email address and password.");
       return;
     }
 
@@ -419,9 +553,10 @@ function LauncherApp() {
   };
 
   const handleSaveChangelog = async (draft: ChangelogDraft) => {
-    if (!developerAuthorized) {
-      setChangelogMessage("Je hebt geen toestemming om changelogs te wijzigen.");
-      return;
+    if (!developerAuthorized && !canManageReleases) {
+      const message = "You are not authorized to edit changelogs. Make sure you have the launcher permission 'releases.manage'.";
+      setChangelogMessage(message);
+      throw new Error(message);
     }
 
     const version = draft.version.trim();
@@ -429,7 +564,7 @@ function LauncherApp() {
     const body = draft.body.trim();
 
     if (!version || !title || !body) {
-      setChangelogMessage("Vul versie, titel en wijzigingen in.");
+      setChangelogMessage("Enter a version, title, and changes.");
       return;
     }
 
@@ -437,36 +572,26 @@ function LauncherApp() {
     setChangelogMessage("");
 
     try {
-      const values = {
-        version,
-        title,
-        body,
-        product: draft.product,
-      };
+      const { error } = await supabase.rpc("manage_changelog", {
+        p_action: draft.id !== undefined ? "update" : "create",
+        p_id: draft.id ?? null,
+        p_version: version,
+        p_title: title,
+        p_body: body,
+        p_product: draft.product,
+        p_published: false,
+      });
 
-      if (draft.id !== undefined) {
-        const { error } = await supabase
-          .from("changelogs")
-          .update(values)
-          .eq("id", draft.id);
+      if (error) throw error;
 
-        if (error) throw error;
-        setChangelogMessage("Changelog bijgewerkt in Supabase.");
-      } else {
-        const { error } = await supabase.from("changelogs").insert({
-          ...values,
-          published: false,
-        });
-
-        if (error) throw error;
-        setChangelogMessage(
-          "Concept opgeslagen in Supabase. Publiceer het wanneer je klaar bent.",
-        );
-      }
-
+      setChangelogMessage(
+        draft.id !== undefined
+          ? "Changelog updated and recorded in the audit log."
+          : "Draft saved and recorded in the audit log.",
+      );
       await refreshChangelogs();
     } catch (error) {
-      setChangelogMessage(`Opslaan mislukt: ${errorText(error)}`);
+      setChangelogMessage(`Save failed: ${errorText(error)}`);
       throw error;
     } finally {
       setChangelogBusy(false);
@@ -474,8 +599,8 @@ function LauncherApp() {
   };
 
   const handleDeleteChangelog = async (id: number) => {
-    if (!developerAuthorized) {
-      setChangelogMessage("Je hebt geen toestemming om changelogs te verwijderen.");
+    if (!developerAuthorized && !canManageReleases) {
+      setChangelogMessage("You are not authorized to delete changelogs.");
       return;
     }
 
@@ -483,25 +608,30 @@ function LauncherApp() {
     setChangelogMessage("");
 
     try {
-      const { error } = await supabase
-        .from("changelogs")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.rpc("manage_changelog", {
+        p_action: "delete",
+        p_id: id,
+        p_version: null,
+        p_title: null,
+        p_body: null,
+        p_product: "client",
+        p_published: false,
+      });
 
       if (error) throw error;
 
       await refreshChangelogs();
-      setChangelogMessage("Changelog verwijderd.");
+      setChangelogMessage("Changelog deleted and recorded in the audit log.");
     } catch (error) {
-      setChangelogMessage(`Verwijderen mislukt: ${errorText(error)}`);
+      setChangelogMessage(`Delete failed: ${errorText(error)}`);
     } finally {
       setChangelogBusy(false);
     }
   };
 
   const handleTogglePublish = async (entry: ChangelogEntry) => {
-    if (!developerAuthorized) {
-      setChangelogMessage("Je hebt geen toestemming om changelogs te publiceren.");
+    if (!developerAuthorized && !canManageReleases) {
+      setChangelogMessage("You are not authorized to publish changelogs.");
       return;
     }
 
@@ -509,21 +639,26 @@ function LauncherApp() {
     setChangelogMessage("");
 
     try {
-      const { error } = await supabase
-        .from("changelogs")
-        .update({ published: !entry.published })
-        .eq("id", entry.id);
+      const { error } = await supabase.rpc("manage_changelog", {
+        p_action: entry.published ? "unpublish" : "publish",
+        p_id: entry.id,
+        p_version: null,
+        p_title: null,
+        p_body: null,
+        p_product: entry.product ?? "client",
+        p_published: !entry.published,
+      });
 
       if (error) throw error;
 
       await refreshChangelogs();
       setChangelogMessage(
         entry.published
-          ? "Changelog is niet meer gepubliceerd."
-          : "Changelog gepubliceerd. Deze is nu zichtbaar voor gebruikers.",
+          ? "Changelog unpublished and the action was logged."
+          : "Changelog published and the action was logged. It is now visible to users.",
       );
     } catch (error) {
-      setChangelogMessage(`Publiceren mislukt: ${errorText(error)}`);
+      setChangelogMessage(`Publishing failed: ${errorText(error)}`);
     } finally {
       setChangelogBusy(false);
     }
@@ -580,12 +715,18 @@ function LauncherApp() {
     }
   };
 
-  const handlePlay = async () => {
+  const handlePlay = async (partnerServer = false) => {
     if (isLaunching || isUpdatingClient) return;
+    if (partnerServer && isMinecraftRunning) {
+      setLaunchError("Minecraft is already running. Close it before joining the partner server.");
+      return;
+    }
 
     setIsLaunching(true);
     setLaunchError(null);
-    setLaunchMessage(null);
+    setLaunchMessage(
+      partnerServer ? "Starting AlphaClient and connecting to alpha.rip…" : null,
+    );
 
     try {
       try {
@@ -610,12 +751,33 @@ function LauncherApp() {
         setIsUpdatingClient(false);
       }
 
-      const message = await invoke<string>("launch_alphaclient");
-      recordLaunch(
-        updateInfo?.update_available
-          ? updateInfo.latest_version
-          : clientVersion,
+      const message = await invoke<string>(
+        partnerServer ? "launch_partner_server" : "launch_alphaclient",
       );
+      const launchedVersion = updateInfo?.update_available
+        ? updateInfo.latest_version
+        : clientVersion;
+      recordLaunch(launchedVersion);
+
+      // Sync Last played separately so a database setup issue never blocks launching.
+      void (async () => {
+        try {
+          const { data: authData, error: authError } = await supabase.auth.getUser();
+          if (authError) throw authError;
+          if (!authData.user) return;
+          const { error: activityError } = await supabase
+            .from("profile_activity")
+            .upsert({
+              user_id: authData.user.id,
+              last_played_at: new Date().toISOString(),
+              last_played_version: launchedVersion,
+            }, { onConflict: "user_id" });
+          if (activityError) throw activityError;
+        } catch (activityError) {
+          console.warn("Could not sync Last played to Supabase:", activityError);
+        }
+      })();
+
       setLaunchMessage(message || "AlphaClient is starting.");
     } catch (error) {
       setIsUpdatingClient(false);
@@ -673,7 +835,7 @@ function LauncherApp() {
   };
 
   const handleMicrosoftLogin = async () => {
-    if (isLoggingIn) return;
+    if (isLoggingIn || isMinecraftRunning) return;
 
     setIsLoggingIn(true);
     setLoginError(null);
@@ -689,6 +851,11 @@ function LauncherApp() {
   };
 
   const handleMicrosoftLogout = async () => {
+    if (isMinecraftRunning) {
+      setLoginError("Je kunt niet uitloggen zolang Minecraft actief is. Sluit Minecraft eerst af.");
+      return;
+    }
+
     try {
       await invoke("logout_microsoft");
       setAccount(null);
@@ -699,9 +866,38 @@ function LauncherApp() {
   };
 
   const navigate = (next: Page) => {
+    setOpenProfileEditor(false);
     setPage(next);
     setLaunchError(null);
     setLaunchMessage(null);
+  };
+
+  const handleNavigation = async (next: Page) => {
+    if (next === "Friends") {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error || !data.user) {
+          navigate("Friends");
+          setAlphaAuthModalOpen(true);
+          return;
+        }
+      } catch {
+        navigate("Friends");
+        setAlphaAuthModalOpen(true);
+        return;
+      }
+    }
+    navigate(next);
+  };
+
+  const handleOpenAlphaAuth = async () => {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (!error && data.user) return;
+    } catch {
+      // If the session cannot be checked, keep the login option available.
+    }
+    setAlphaAuthModalOpen(true);
   };
 
   const openSettings = (section: string) => {
@@ -717,13 +913,14 @@ function LauncherApp() {
     { name: "Play", icon: "▶" },
     { name: "Versions", icon: "▣" },
     { name: "Mods", icon: "◆" },
+    { name: "Community", icon: "◉" },
     { name: "Friends", icon: "♧" },
     { name: "Developer", icon: "⌘" },
-    { name: "Account", icon: "●" },
+    { name: "Chats", icon: "✉" },
   ];
 
   const bottomNavigation: { name: Page; icon: string }[] = [
-    { name: "Profile", icon: "◎" },
+    { name: "Account", icon: "●" },
     { name: "Settings", icon: "⚙" },
   ];
 
@@ -738,6 +935,10 @@ function LauncherApp() {
             <strong>AlphaClient</strong>
             <span>Launcher</span>
           </div>
+        </div>
+
+        <div className="titlebar-actions" data-tauri-drag-region="false">
+          <InboxButton onOpenFriends={() => void handleNavigation("Friends")} onOpenChats={(friendId) => { setChatTargetFriendId(friendId ?? null); void handleNavigation("Chats"); }} />
         </div>
 
         <div className="window-controls">
@@ -797,14 +998,16 @@ function LauncherApp() {
           </button>
 
           <nav className="navigation">
-            {navigation.map((item) => (
+            {navigation
+              .filter((item) => item.name !== "Developer" || developerAuthorized || canManageReleases)
+              .map((item) => (
               <span key={item.name}>
                 {item.name === "Developer" && <div className="nav-separator" />}
                 <button
                   type="button"
                   title={!sidebarExpanded ? item.name : undefined}
                   className={`nav-item ${page === item.name ? "active" : ""}`}
-                  onClick={() => navigate(item.name)}
+                  onClick={() => void handleNavigation(item.name)}
                 >
                   <span className="nav-icon">{item.icon}</span>
                   {sidebarExpanded && <span>{item.name}</span>}
@@ -818,12 +1021,12 @@ function LauncherApp() {
                 <button
                   type="button"
                   className="partner-nav-item"
-                  onClick={() => void openUrl("https://alpha.rip")}
+                  onClick={() => void handlePlay(true)}
                 >
                   <span className="nav-icon">◈</span>
                   <span className="partner-nav-content">
                     <strong>Alpha.rip</strong>
-                    <small>Partner Server · Open website</small>
+                    <small>Partner Server · Join alpha.rip</small>
                   </span>
                 </button>
               </div>
@@ -843,6 +1046,17 @@ function LauncherApp() {
                 {sidebarExpanded && <span>{item.name}</span>}
               </button>
             ))}
+            {developerUserEmail ? (
+              <button
+                type="button"
+                title={!sidebarExpanded ? "Log out" : undefined}
+                className="nav-item sidebar-logout-item"
+                onClick={() => void handleDeveloperLogout()}
+              >
+                <span className="nav-icon">↪</span>
+                {sidebarExpanded && <span>Log out</span>}
+              </button>
+            ) : null}
           </div>
 
           {sidebarExpanded && (
@@ -867,6 +1081,7 @@ function LauncherApp() {
               launchError={launchError}
               launchMessage={launchMessage}
               onAccount={() => navigate("Account")}
+              onOpenAlphaAuth={() => void handleOpenAlphaAuth()}
               onChangelog={() => {
                 setActiveChangelogTab("client");
                 setModal({
@@ -933,9 +1148,12 @@ function LauncherApp() {
             />
           )}
 
-          {page === "Friends" && <FriendsPage />}
+          {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
-          {page === "Profile" && <ProfilePage />}
+          {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} onOpenChat={(friendId) => { setChatTargetFriendId(friendId); navigate("Chats"); }} />}
+
+          {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} initialFriendId={chatTargetFriendId} onInitialFriendHandled={() => setChatTargetFriendId(null)} />}
+
 
           {page === "Developer" && (
             <DeveloperPage
@@ -965,6 +1183,7 @@ function LauncherApp() {
               setDeveloperPassword={setDeveloperPassword}
               developerUserEmail={developerUserEmail}
               developerAuthorized={developerAuthorized}
+              canManageReleases={canManageReleases}
               developerAuthLoading={developerAuthLoading}
               developerAuthError={developerAuthError}
               developerSigningIn={developerSigningIn}
@@ -983,16 +1202,24 @@ function LauncherApp() {
           )}
 
           {page === "Account" && (
-            <AccountPage
-              account={account}
-              isLoggingIn={isLoggingIn}
-              loginError={loginError}
-              onLogin={handleMicrosoftLogin}
-              onLogout={handleMicrosoftLogout}
-            />
+            <div className="account-profile-layout">
+              <AccountPage
+                account={account}
+                isLoggingIn={isLoggingIn}
+                isMinecraftRunning={isMinecraftRunning}
+                loginError={loginError}
+                onLogin={handleMicrosoftLogin}
+                onLogout={handleMicrosoftLogout}
+              />
+              <ProfilePage startEditing={openProfileEditor} />
+            </div>
           )}
         </main>
       </div>
+
+      {alphaAuthModalOpen && (
+        <AlphaAccountAuthModal onClose={() => setAlphaAuthModalOpen(false)} />
+      )}
 
       {modal && (
         <div
@@ -1025,7 +1252,7 @@ function LauncherApp() {
                 <div
                   className="changelog-tabs"
                   role="tablist"
-                  aria-label="Kies product"
+                  aria-label="Choose product"
                 >
                   <button
                     type="button"
@@ -1058,13 +1285,14 @@ function LauncherApp() {
                 <div className="changelog-tab-panel" role="tabpanel">
                   {(() => {
                     const entries = changelogs.filter(
-                      (entry) => entry.product === activeChangelogTab,
+                      (entry) =>
+                        entry.published && entry.product === activeChangelogTab,
                     );
 
                     if (entries.length === 0) {
                       return (
                         <p className="modal-body-text">
-                          Nog geen gepubliceerde changelogs voor{" "}
+                          No published changelogs yet for{" "}
                           {activeChangelogTab === "launcher"
                             ? "Alpha Launcher"
                             : "Alpha Client"}
@@ -1269,9 +1497,355 @@ type EditableCommunityProfile = {
   bio: string | null;
   avatar_url: string | null;
   is_founder: boolean;
+  rank_key?: string | null;
 };
 
-function ProfilePage() {
+const COMMUNITY_RANK_ORDER = [
+  "founder",
+  "owner",
+  "management",
+  "senior_admin",
+  "admin",
+  "senior_moderator",
+  "moderator",
+  "trial_moderator",
+  "beta",
+  "alpha_plus",
+  "alpha",
+  "member",
+] as const;
+
+const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
+  founder: { label: "FOUNDER", color: "#FFD866" },
+  owner: { label: "OWNER", color: "#FF2D00" },
+  management: { label: "MANAGEMENT", color: "#5C0303" },
+  senior_admin: { label: "SENIOR ADMIN", color: "#D67020" },
+  admin: { label: "ADMIN", color: "#E08D16" },
+  senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" },
+  moderator: { label: "MODERATOR", color: "#29AFCC" },
+  trial_moderator: { label: "TRIAL MODERATOR", color: "#166534" },
+  beta: { label: "BETA", color: "#00FF52" },
+  alpha_plus: { label: "ALPHA+", color: "#FFF300" },
+  alpha: { label: "ALPHA", color: "#F300FF" },
+  member: { label: "MEMBER", color: "#C3BFE0" },
+};
+
+const COMMUNITY_RANK_ICONS: Record<string, string> = {
+  founder: "🌸", owner: "♛", management: "◆", senior_admin: "⬟", admin: "✦",
+  senior_moderator: "✚", moderator: "✧", trial_moderator: "◇", beta: "β",
+  alpha_plus: "A+", alpha: "A", member: "●",
+};
+
+function CommunityRankBadge({ rankKey }: { rankKey: string | null | undefined }) {
+  const key = rankKey || "member";
+  const rank = COMMUNITY_RANKS[key] || COMMUNITY_RANKS.member;
+  const icon = COMMUNITY_RANK_ICONS[key] || COMMUNITY_RANK_ICONS.member;
+  if (key === "founder") return <span className="community-rank-badge community-rank-founder"><span className="community-rank-icon community-rank-icon-founder" aria-hidden="true">🌸</span>{rank.label}</span>;
+  return <span className="community-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="community-rank-icon" aria-hidden="true">{icon}</span>{rank.label}</span>;
+}
+
+
+function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, openLoginRequested, onLoginRequestHandled }: { isMinecraftRunning: boolean; onOpenProfile: () => void; onOpenAlphaAuth: () => void; openLoginRequested: boolean; onLoginRequestHandled: () => void }) {
+  useEffect(() => {
+    const updatePresence = (event: Event) => {
+      const ids = (event as CustomEvent<string[]>).detail;
+      setCommunityOnlineIds(new Set(Array.isArray(ids) ? ids : []));
+    };
+    window.addEventListener("alphaclient-presence-update", updatePresence);
+    return () => window.removeEventListener("alphaclient-presence-update", updatePresence);
+  }, []);
+  const [displayName, setDisplayName] = useState("Community member");
+  const [communityRank, setCommunityRank] = useState("member");
+  const [communityAvatarUrl, setCommunityAvatarUrl] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [signedIn, setSignedIn] = useState(false);
+  const [identityLoading, setIdentityLoading] = useState(true);
+  const [communityFriends, setCommunityFriends] = useState<CommunityProfile[]>([]);
+  const [communityOnlineIds, setCommunityOnlineIds] = useState<Set<string>>(new Set());
+  const [friendsLoading, setFriendsLoading] = useState(true);
+  const [friendsError, setFriendsError] = useState("");
+  const [communityLogoutLoading, setCommunityLogoutLoading] = useState(false);
+  const [communityLogoutError, setCommunityLogoutError] = useState("");
+  const [authPanelOpen, setAuthPanelOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authUsername, setAuthUsername] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+
+  useEffect(() => {
+    if (!openLoginRequested) return;
+    setAuthPanelOpen(true);
+    setAuthMode("login");
+    setAuthError("");
+    setAuthMessage("");
+    onLoginRequestHandled();
+  }, [openLoginRequested, onLoginRequestHandled]);
+
+  const handleCommunityAuth = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (authBusy) return;
+    const cleanEmail = authEmail.trim();
+    const cleanUsername = authUsername.trim();
+    if (!cleanEmail || !authPassword) {
+      setAuthError("Enter your email address and password.");
+      return;
+    }
+    if (authMode === "signup" && !cleanUsername) {
+      setAuthError("Choose a community username.");
+      return;
+    }
+    if (authMode === "signup" && authPassword.length < 6) {
+      setAuthError("Your password must contain at least 6 characters.");
+      return;
+    }
+
+    setAuthBusy(true);
+    setAuthError("");
+    setAuthMessage("");
+    try {
+      if (authMode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+        window.location.reload();
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: authPassword,
+          options: {
+            emailRedirectTo: "alphaclient://auth/callback",
+            data: { username: cleanUsername, display_name: cleanUsername },
+          },
+        });
+        if (error) throw error;
+        if (data.session) {
+          window.location.reload();
+        } else {
+          setAuthMessage("Account created. Check your email to confirm the account, then sign in here.");
+          setAuthMode("login");
+          setAuthPassword("");
+        }
+      }
+    } catch (error) {
+      setAuthError(errorText(error));
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleCommunityLogout = async () => {
+    if (communityLogoutLoading) return;
+    if (isMinecraftRunning) {
+      setCommunityLogoutError("Close Minecraft before logging out of your Alpha Community account.");
+      return;
+    }
+    setCommunityLogoutLoading(true);
+    setCommunityLogoutError("");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setSignedIn(false);
+      setEmail("");
+      setDisplayName("Community member");
+      setCommunityRank("member");
+      setCommunityAvatarUrl(null);
+      setCommunityFriends([]);
+    } catch (error) {
+      setCommunityLogoutError(errorText(error));
+    } finally {
+      setCommunityLogoutLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCommunityIdentity = async () => {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (authError || !authData.user) {
+        setIdentityLoading(false);
+        return;
+      }
+
+      const user = authData.user;
+      setEmail(user.email ?? "");
+
+      // The editable community profile is the source of truth for the displayed profile name.
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("username, display_name, rank_key, is_founder, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (profileError) {
+        console.warn("Could not load community profile name:", profileError.message);
+      }
+
+      const metadata = user.user_metadata ?? {};
+      const candidates = [profile?.username, profile?.display_name, metadata.username, metadata.display_name, metadata.full_name];
+      const name = candidates.find(
+        (candidate): candidate is string =>
+          typeof candidate === "string" &&
+          candidate.trim().length > 0 &&
+          candidate.trim().toLowerCase() !== (user.email ?? "").trim().toLowerCase(),
+      );
+      setDisplayName(name?.trim() ?? "Community member");
+      setCommunityRank(profile?.rank_key || (profile?.is_founder ? "founder" : "member"));
+      setCommunityAvatarUrl(typeof profile?.avatar_url === "string" && profile.avatar_url.trim() ? profile.avatar_url : null);
+      setSignedIn(true);
+      setIdentityLoading(false);
+    };
+
+    void loadCommunityIdentity().catch((error) => {
+      console.warn("Could not load community identity:", error);
+      if (!cancelled) setIdentityLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const forumSections = [
+    { icon: "⌘", title: "Help & support", description: "Ask questions and help other AlphaClient players." },
+    { icon: "✦", title: "Announcements", description: "Official AlphaClient news and community updates." },
+    { icon: "✎", title: "Ideas & feedback", description: "Share suggestions and discuss future improvements." },
+    { icon: "☷", title: "Chatroom", description: "Join community conversations and meet other players." },
+  ];
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadCommunityFriends = async () => {
+      setFriendsLoading(true);
+      setFriendsError("");
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        const user = authData.user;
+        if (!user) { setCommunityFriends([]); return; }
+        const { data: friendshipRows, error: friendshipError } = await supabase
+          .from("friendships")
+          .select("user_a, user_b")
+          .or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
+        if (friendshipError) throw friendshipError;
+        const friendIds = (friendshipRows ?? []).map((row: { user_a: string; user_b: string }) => row.user_a === user.id ? row.user_b : row.user_a);
+        if (!friendIds.length) { setCommunityFriends([]); return; }
+        const { data: people, error: peopleError } = await supabase
+          .from("profiles")
+          .select("id, username, display_name, is_founder, rank_key, avatar_url, bio")
+          .in("id", friendIds);
+        if (peopleError) throw peopleError;
+        if (!cancelled) setCommunityFriends(((people ?? []) as CommunityProfile[]).sort((a, b) => a.username.localeCompare(b.username)));
+      } catch (e) {
+        if (!cancelled) setFriendsError(errorText(e));
+      } finally {
+        if (!cancelled) setFriendsLoading(false);
+      }
+    };
+    void loadCommunityFriends();
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <div className="page community-page">
+      <header className="page-header">
+        <p className="eyebrow">ALPHACLIENT COMMUNITY</p>
+        <h1>Community</h1>
+        <p className="subtitle">Your place for profiles, conversations and everything around AlphaClient.</p>
+      </header>
+
+      <section className="community-welcome-card">
+        <div className="community-avatar" aria-hidden="true">{communityAvatarUrl ? <img src={communityAvatarUrl} alt="" onError={() => setCommunityAvatarUrl(null)} /> : (identityLoading ? "…" : displayName.trim().charAt(0).toUpperCase() || "A")}</div>
+        <div className="community-welcome-copy">
+          <span className="community-kicker">{signedIn ? "YOUR ALPHA ACCOUNT" : "ALPHA ACCOUNT"}</span>
+          <div className="community-name-rank"><h2>{identityLoading ? "Loading profile…" : signedIn ? displayName : "Welcome to the community"}</h2>{signedIn && !identityLoading && <span className={`community-menu-rank ${communityRank === "founder" ? "is-founder" : ""}`} style={{ "--rank-color": COMMUNITY_RANKS[communityRank]?.color ?? COMMUNITY_RANKS.member.color } as React.CSSProperties}>{COMMUNITY_RANKS[communityRank]?.label ?? "MEMBER"}</span>}</div>
+          <p>{identityLoading ? "Loading your community account…" : signedIn ? (email || "Your AlphaClient profile") : "Sign in to your community account to use your profile and display name."}</p>
+        </div>
+        <div className="community-account-actions">
+          {signedIn ? (
+            <>
+              <button type="button" className="friends-primary community-profile-button" onClick={onOpenProfile}>Edit profile <span aria-hidden="true">↗</span></button>
+              <button type="button" className="secondary-button community-logout-button" onClick={() => void handleCommunityLogout()} disabled={communityLogoutLoading || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before logging out." : undefined}>{isMinecraftRunning ? "MINECRAFT IS RUNNING" : communityLogoutLoading ? "SIGNING OUT..." : "LOG OUT"}</button>
+            </>
+          ) : (
+            <button type="button" className="friends-primary community-profile-button" onClick={onOpenAlphaAuth}>
+              Log in / Sign up <span aria-hidden="true">↗</span>
+            </button>
+          )}
+        </div>
+        {communityLogoutError && <p className="community-logout-error" role="alert">{communityLogoutError}</p>}
+        {authPanelOpen && !signedIn && (
+          <form className="community-auth-panel" onSubmit={(event) => void handleCommunityAuth(event)}>
+            <div className="community-auth-heading">
+              <div>
+                <span className="community-kicker">ALPHA COMMUNITY ACCOUNT</span>
+                <h3>{authMode === "login" ? "Welcome back" : "Create your account"}</h3>
+                <p>{authMode === "login" ? "Sign in with your email and password." : "Create a test account with a unique email address."}</p>
+              </div>
+              <div className="community-auth-mode">
+                <button type="button" className={authMode === "login" ? "is-active" : ""} onClick={() => { setAuthMode("login"); setAuthError(""); setAuthMessage(""); }}>Log in</button>
+                <button type="button" className={authMode === "signup" ? "is-active" : ""} onClick={() => { setAuthMode("signup"); setAuthError(""); setAuthMessage(""); }}>Sign up</button>
+              </div>
+            </div>
+            {authMode === "signup" && <label className="community-auth-field"><span>Username</span><input value={authUsername} onChange={(event) => setAuthUsername(event.target.value)} autoComplete="username" maxLength={24} placeholder="Choose a username" required /></label>}
+            <label className="community-auth-field"><span>Email address</span><input type="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} autoComplete="email" placeholder="you@example.com" required /></label>
+            <label className="community-auth-field"><span>Password</span><input type="password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} autoComplete={authMode === "login" ? "current-password" : "new-password"} minLength={6} placeholder="At least 6 characters" required /></label>
+            {authError && <p className="community-auth-feedback is-error" role="alert">{authError}</p>}
+            {authMessage && <p className="community-auth-feedback is-success" role="status">{authMessage}</p>}
+            <button type="submit" className="friends-primary community-auth-submit" disabled={authBusy}>{authBusy ? "PLEASE WAIT..." : authMode === "login" ? "LOG IN TO COMMUNITY" : "CREATE COMMUNITY ACCOUNT"}</button>
+            <p className="community-auth-note">Registration depends on the email sign-up settings in Supabase. If confirmation is enabled, confirm your email before signing in.</p>
+          </form>
+        )}
+      </section>
+
+      <div className="community-main-layout">
+        <section className="community-sections-column">
+          <div className="community-section-heading">
+            <div><p className="eyebrow">MEET. SHARE. PLAY.</p><h2>Community</h2></div>
+          </div>
+          <p className="community-intro">Choose a space to connect with the AlphaClient community.</p>
+          <div className="community-forum-list">
+            {forumSections.map((forumSection, index) => (
+              <article className="community-forum-card" key={forumSection.title}>
+                <div className="community-forum-icon" aria-hidden="true">{forumSection.icon}</div>
+                <div className="community-forum-card-copy">
+                  <span className="community-forum-number">0{index + 1} / COMMUNITY</span>
+                  <h3>{forumSection.title}</h3><p>{forumSection.description}</p>
+                </div>
+                <span className="community-forum-status">Coming soon</span>
+              </article>
+            ))}
+          </div>
+        </section>
+        <aside className="community-friends-panel">
+          <div className="community-friends-heading">
+            <div><p className="eyebrow">YOUR PEOPLE</p><h2>Friends</h2></div>
+            <span className="friends-count">{communityFriends.length}</span>
+          </div>
+          <p className="community-friends-subtitle">Your friends, right beside the community spaces.</p>
+          {friendsError && <p className="community-friends-error">{friendsError}</p>}
+          {friendsLoading ? <div className="friends-empty">Loading friends…</div> :
+            !signedIn ? <div className="friends-empty">Sign in to see your friends.</div> :
+            communityFriends.length === 0 ? <div className="friends-empty">No friends yet. Add players from the Friends page.</div> :
+            <div className="community-friends-list">{communityFriends.map(friend => (
+              <div className="community-friend-item" key={friend.id}>
+                <div className="community-friend-avatar">{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : (friend.username || "?").slice(0, 1).toUpperCase()}</div>
+                <div className="community-friend-copy"><strong>{friend.username}</strong><span>Alpha Community</span></div>
+                <span className={`community-friend-presence ${communityOnlineIds.has(friend.id) ? "is-online" : "is-offline"}`} title={communityOnlineIds.has(friend.id) ? "Online" : "Offline"} aria-label={communityOnlineIds.has(friend.id) ? "Online" : "Offline"} />
+              </div>
+            ))}</div>}
+          <p className="community-friends-footnote">Green indicates online; gray indicates offline.</p>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
   const [profile, setProfile] = useState<EditableCommunityProfile | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -1283,7 +1857,7 @@ function ProfilePage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(startEditing);
 
   const loadProfile = async () => {
     setLoading(true);
@@ -1300,7 +1874,7 @@ function ProfilePage() {
       setUserId(user.id);
       const { data, error: profileError } = await supabase
         .from("profiles")
-        .select("id, username, display_name, bio, avatar_url, is_founder")
+        .select("id, username, display_name, bio, avatar_url, is_founder, rank_key")
         .eq("id", user.id)
         .maybeSingle();
       if (profileError) throw profileError;
@@ -1363,7 +1937,7 @@ function ProfilePage() {
         .from("profiles")
         .update({ bio: cleanBio, avatar_url: nextAvatarUrl })
         .eq("id", userId)
-        .select("id, username, display_name, bio, avatar_url, is_founder")
+        .select("id, username, display_name, bio, avatar_url, is_founder, rank_key")
         .single();
       if (updateError) throw updateError;
       setProfile(data as EditableCommunityProfile);
@@ -1390,9 +1964,9 @@ function ProfilePage() {
   return <div className="page profile-page">
     <div className="page-header">
       <div>
-        <div className="eyebrow">ALPHA COMMUNITY</div>
-        <h1>{isEditing ? "Edit Profile" : "My Profile"}</h1>
-        <p>{isEditing ? "Update the profile details other AlphaClient players can see." : "Your Alpha Community profile."}</p>
+        <div className="eyebrow">ALPHA ACCOUNT</div>
+        <h1>{isEditing ? "Edit Alpha Account" : "My Alpha Account"}</h1>
+        <p>{isEditing ? "Update the profile details other AlphaClient players can see." : "Your Alpha Account and community profile in one place."}</p>
       </div>
       <div className="profile-header-actions">
         {profile && !isEditing && <button className="profile-edit-icon-button" type="button" onClick={() => { setIsEditing(true); setError(""); setMessage(""); }} aria-label="Edit profile" title="Edit profile">✎</button>}
@@ -1402,24 +1976,45 @@ function ProfilePage() {
     </div>
     {error && <div className="friends-notice error">{error}</div>}
     {message && <div className="friends-notice success">{message}</div>}
-    {!loading && !userId && <section className="section-card profile-signin"><div className="profile-avatar-large">◎</div><h2>Sign in to Alpha Community</h2><p>Your profile is connected to your Alpha Community Supabase account. Sign in to view and edit your profile.</p></section>}
-    {!loading && userId && !profile && <section className="section-card"><h2>Community profile not found</h2><p>Your account does not have an Alpha Community profile yet. Open Friends and complete the username setup, or check the profile creation trigger in Supabase.</p></section>}
+    {!loading && !userId && <section className="section-card profile-signin"><div className="profile-avatar-large">◎</div><h2>Sign in to your Alpha Account</h2><p>Your Alpha Account is also your community profile. Sign in to manage your profile and access Alpha community features.</p></section>}
+    {!loading && userId && !profile && <section className="section-card"><h2>Alpha Account profile not found</h2><p>Your Alpha Account does not have a community profile yet. Open Friends and complete the username setup, or check the profile creation trigger in Supabase.</p></section>}
     {loading && <div className="friends-loading">Loading profile…</div>}
     {profile && !isEditing && <section className="section-card profile-preview-card profile-view-card">
       <div className="profile-preview-glow" />
-      <div className="eyebrow">YOUR PROFILE</div>
+      <div className="eyebrow profile-account-label">ALPHA ACCOUNT</div>
       <div className="profile-avatar-large">{profile.avatar_url ? <img src={profile.avatar_url} alt="Your profile avatar" /> : <span>{profile.username.slice(0, 1).toUpperCase()}</span>}</div>
-      <h2 className="profile-name-row">{profile.is_founder && <span className="profile-founder-badge">FOUNDER</span>}{profile.username}</h2>
+      <h2 className="profile-name-row">{(() => { const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; return rankKey === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-rank-icon" aria-hidden="true">{COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member}</span>{rank.label}</span>; })()}{profile.username}</h2>
       <div className="profile-username">@{profile.username}</div>
       <p className="profile-bio-preview">{profile.bio?.trim() || "You haven't added a bio yet."}</p>
       <div className="profile-preview-divider" />
-      <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Community member</div>
-      {profile.is_founder && <div className="profile-founder-status"><span className="profile-founder-crown">♛</span> Founder of Alpha Client</div>}
-      <button className="friends-primary profile-edit-main-button" type="button" onClick={() => { setIsEditing(true); setError(""); setMessage(""); }}>Edit Profile</button>
+      <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>
+      {(() => {
+        const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member");
+        const rankLabels: Record<string, string> = {
+          founder: "Founder of Alpha",
+          owner: "Owner of Alpha",
+          management: "Manager of Alpha",
+          senior_admin: "Senior Admin on Alpha",
+          admin: "Admin on Alpha",
+          senior_moderator: "Senior Moderator on Alpha",
+          moderator: "Moderator on Alpha",
+          trial_moderator: "Trial Moderator on Alpha",
+          beta: "Beta Tester on Alpha",
+          alpha_plus: "Alpha+ on Alpha",
+          alpha: "Alpha on Alpha",
+          member: "Member on Alpha",
+        };
+        const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member;
+        const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member);
+        return <div className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}>
+          <span className="profile-founder-crown" aria-hidden="true">{icon}</span>
+          {rankLabels[rankKey] || rankLabels.member}
+        </div>;
+      })()}
     </section>}
     {profile && isEditing && <form className="profile-edit-page" onSubmit={saveProfile}>
       <section className="section-card profile-edit-card">
-        <div className="profile-section-heading"><div><h2>Edit your profile</h2><p>These details are saved to your Alpha Community account.</p></div></div>
+        <div className="profile-section-heading"><div><h2>Edit your profile</h2><p>These details are saved to your Alpha Account and community profile.</p></div></div>
         <div className="profile-avatar-editor">
           <div className="profile-avatar-small">{avatarUrl ? <img src={avatarUrl} alt="Selected profile avatar" /> : <span>{profile.username.slice(0, 1).toUpperCase()}</span>}</div>
           <div className="profile-avatar-controls"><strong>Profile picture</strong><span>PNG, JPG, WEBP or GIF · Max 5 MB</span><label className="friends-secondary profile-upload-button" htmlFor="profile-avatar-upload">{selectedAvatar ? "Change image" : "Upload image"}</label><input id="profile-avatar-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={event => handleAvatarSelection(event.target.files?.[0] ?? null)} /></div>
@@ -1439,19 +2034,94 @@ function ProfilePage() {
   </div>;
 }
 
-type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; avatar_url?: string | null; bio?: string | null };
+type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; avatar_url?: string | null; bio?: string | null; created_at?: string | null; last_played_at?: string | null; last_played_version?: string | null };
+
+function ChatsPage({ onOpenAlphaAuth, initialFriendId, onInitialFriendHandled }: { onOpenAlphaAuth: () => void; initialFriendId: string | null; onInitialFriendHandled: () => void }) {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [friends, setFriends] = useState<CommunityProfile[]>([]);
+  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadChats = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        const user = authData.user;
+        if (!user) {
+          if (!cancelled) { setUserId(null); setFriends([]); setSelectedFriendId(null); }
+          return;
+        }
+        if (cancelled) return;
+        setUserId(user.id);
+        const { data: friendshipRows, error: friendshipError } = await supabase
+          .from("friendships")
+          .select("user_a, user_b")
+          .or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
+        if (friendshipError) throw friendshipError;
+        const friendIds = [...new Set((friendshipRows ?? []).map((row: { user_a: string; user_b: string }) => row.user_a === user.id ? row.user_b : row.user_a))];
+        const { data: people, error: peopleError } = friendIds.length
+          ? await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url").in("id", friendIds)
+          : { data: [], error: null };
+        if (peopleError) throw peopleError;
+        if (cancelled) return;
+        const loadedFriends = ((people ?? []) as CommunityProfile[]).sort((a, b) => a.username.localeCompare(b.username));
+        setFriends(loadedFriends);
+        setSelectedFriendId(current => current && loadedFriends.some(friend => friend.id === current) ? current : null);
+      } catch (loadError) {
+        if (!cancelled) setError(errorText(loadError));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void loadChats();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!initialFriendId || loading) return;
+    if (friends.some(friend => friend.id === initialFriendId)) setSelectedFriendId(initialFriendId);
+    onInitialFriendHandled();
+  }, [initialFriendId, loading, friends, onInitialFriendHandled]);
+
+  return <div className="page chats-page">
+    <div className="page-header"><div><div className="eyebrow">ALPHA COMMUNITY</div><h1>Chats</h1><p>Your private conversations with Alpha friends.</p></div></div>
+    {!loading && !userId && <section className="section-card friends-signin"><div className="friends-empty-icon">✉</div><h2>Sign in to Alpha Community</h2><p>Sign in to your Alpha Account to open private chats with your friends.</p><button className="friends-primary" onClick={onOpenAlphaAuth}>Sign in to Alpha Account</button></section>}
+    {loading && <section className="section-card"><div className="friends-loading">Loading your chats…</div></section>}
+    {error && <section className="section-card"><p className="friends-notice error" role="alert">{error}</p></section>}
+    {userId && !loading && !error && <PrivateChatPanel userId={userId} friends={friends} selectedFriendId={selectedFriendId} onSelectFriend={setSelectedFriendId} />}
+  </div>;
+}
+
 type CommunityFriendRequest = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string };
 
-function FriendsPage() {
+function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => void; onOpenChat: (friendId: string) => void }) {
+  const [onlineFriendIds, setOnlineFriendIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const updatePresence = (event: Event) => {
+      const ids = (event as CustomEvent<string[]>).detail;
+      setOnlineFriendIds(new Set(Array.isArray(ids) ? ids : []));
+    };
+    window.addEventListener("alphaclient-presence-update", updatePresence);
+    return () => window.removeEventListener("alphaclient-presence-update", updatePresence);
+  }, []);
   const [userId, setUserId] = useState<string | null>(null);
   const [myProfile, setMyProfile] = useState<CommunityProfile | null>(null);
   const [friends, setFriends] = useState<CommunityProfile[]>([]);
+  const [publicProfile, setPublicProfile] = useState<CommunityProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [incoming, setIncoming] = useState<Array<CommunityFriendRequest & { profile?: CommunityProfile }>>([]);
   const [outgoing, setOutgoing] = useState<Array<CommunityFriendRequest & { profile?: CommunityProfile }>>([]);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<CommunityProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [friendToRemove, setFriendToRemove] = useState<CommunityProfile | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [setupUsername, setSetupUsername] = useState("");
@@ -1459,10 +2129,14 @@ function FriendsPage() {
   const [profileSetupRequired, setProfileSetupRequired] = useState(false);
 
   const loadCommunity = async () => {
+    const startedAt = performance.now();
+    const mark = (step: string) => console.debug(`[Alpha Friends] ${step}: ${Math.round(performance.now() - startedAt)}ms`);
     setLoading(true);
     setError("");
     try {
+      const authStartedAt = performance.now();
       const { data: authData, error: authError } = await supabase.auth.getUser();
+      mark(`auth.getUser (${Math.round(performance.now() - authStartedAt)}ms)`);
       if (authError) throw authError;
       const user = authData.user;
       if (!user) {
@@ -1470,33 +2144,59 @@ function FriendsPage() {
         return;
       }
       setUserId(user.id);
-      const { data: profile, error: profileError } = await supabase.from("profiles").select("id, username, display_name, is_founder").eq("id", user.id).maybeSingle();
+
+      // Independent profile and relationship requests run in parallel.
+      const initialStartedAt = performance.now();
+      const [profileResult, friendshipResult, requestResult] = await Promise.all([
+        supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url, bio, created_at").eq("id", user.id).maybeSingle(),
+        supabase.from("friendships").select("user_a, user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
+        supabase.from("friend_requests").select("id, sender_id, recipient_id, status, created_at").or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).eq("status", "pending").order("created_at", { ascending: false }),
+      ]);
+      mark(`profile/friendship/request queries (${Math.round(performance.now() - initialStartedAt)}ms)`);
+      const { data: profile, error: profileError } = profileResult;
+      const { data: friendshipRows, error: friendshipError } = friendshipResult;
+      const { data: requestRows, error: requestError } = requestResult;
       if (profileError) throw profileError;
+      if (friendshipError) throw friendshipError;
+      if (requestError) throw requestError;
+
       const loadedProfile = profile as CommunityProfile | null;
       setMyProfile(loadedProfile);
       const needsSetup = Boolean(loadedProfile && loadedProfile.username.startsWith("alpha_"));
       setProfileSetupRequired(needsSetup);
-      if (loadedProfile && needsSetup) {
-        setSetupUsername(loadedProfile.username.startsWith("alpha_") ? "" : loadedProfile.username);
-      }
-      const [{ data: friendshipRows, error: friendshipError }, { data: requestRows, error: requestError }] = await Promise.all([
-        supabase.from("friendships").select("user_a, user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`),
-        supabase.from("friend_requests").select("id, sender_id, recipient_id, status, created_at").or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).eq("status", "pending").order("created_at", { ascending: false }),
-      ]);
-      if (friendshipError) throw friendshipError;
-      if (requestError) throw requestError;
+      if (loadedProfile && needsSetup) setSetupUsername("");
+
       const friendIds = (friendshipRows ?? []).map((row: { user_a: string; user_b: string }) => row.user_a === user.id ? row.user_b : row.user_a);
       const requests = (requestRows ?? []) as CommunityFriendRequest[];
       const otherIds = [...new Set([...friendIds, ...requests.map(r => r.sender_id === user.id ? r.recipient_id : r.sender_id)])];
-      const { data: people, error: peopleError } = otherIds.length ? await supabase.from("profiles").select("id, username, display_name, is_founder").in("id", otherIds) : { data: [], error: null };
+
+      if (!otherIds.length) {
+        setFriends([]);
+        setIncoming([]);
+        setOutgoing([]);
+        mark("complete (no friend profiles to fetch)");
+        return;
+      }
+
+      const peopleStartedAt = performance.now();
+      const { data: people, error: peopleError } = await supabase.from("profiles")
+        .select("id, username, display_name, is_founder, rank_key, avatar_url")
+        .in("id", otherIds);
+      mark(`friend/request profiles query (${Math.round(performance.now() - peopleStartedAt)}ms, ${otherIds.length} profiles)`);
       if (peopleError) throw peopleError;
+
       const profileMap = new Map(((people ?? []) as CommunityProfile[]).map(person => [person.id, person]));
       setFriends(friendIds.map(id => profileMap.get(id)).filter((person): person is CommunityProfile => Boolean(person)).sort((a,b) => a.username.localeCompare(b.username)));
       setIncoming(requests.filter(r => r.recipient_id === user.id).map(r => ({ ...r, profile: profileMap.get(r.sender_id) })));
       setOutgoing(requests.filter(r => r.sender_id === user.id).map(r => ({ ...r, profile: profileMap.get(r.recipient_id) })));
+      mark("complete");
     } catch (e) {
       setError(errorText(e));
-    } finally { setLoading(false); }
+      console.error("[Alpha Friends] Failed to load community data:", e);
+    } finally {
+      setLoading(false);
+      mark("loading state cleared");
+    }
   };
 
   useEffect(() => { void loadCommunity(); }, []);
@@ -1523,11 +2223,31 @@ function FriendsPage() {
     const term = search.trim().toLowerCase().replace(/^@/, "");
     if (term.length < 3) { setError("Enter at least 3 characters to search."); setResults([]); return; }
     if (!userId) { setError("Sign in to an Alpha community account before searching."); return; }
-    const { data, error: searchError } = await supabase.from("profiles").select("id, username, display_name, is_founder").ilike("username", `%${term}%`).neq("id", userId).limit(20);
+    const { data, error: searchError } = await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url").ilike("username", `%${term}%`).neq("id", userId).limit(20);
     if (searchError) { setError(errorText(searchError)); return; }
     const known = new Set([...friends.map(f => f.id), ...incoming.map(r => r.sender_id), ...outgoing.map(r => r.recipient_id)]);
     setResults(((data ?? []) as CommunityProfile[]).filter(person => !known.has(person.id)));
     if (!data?.length) setMessage("No Alpha accounts matched that username.");
+  };
+
+  const openPublicProfile = async (person: CommunityProfile) => {
+    setPublicProfile(person);
+    setProfileLoading(true);
+    const { data, error: profileError } = await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url, bio, created_at").eq("id", person.id).maybeSingle();
+    if (!profileError && data) {
+      const { data: activity, error: activityError } = await supabase
+        .from("profile_activity")
+        .select("last_played_at, last_played_version")
+        .eq("user_id", person.id)
+        .maybeSingle();
+      setPublicProfile({
+        ...(data as CommunityProfile),
+        last_played_at: activityError ? null : activity?.last_played_at ?? null,
+        last_played_version: activityError ? null : activity?.last_played_version ?? null,
+      });
+      if (activityError) console.warn("Could not load profile Last played:", activityError);
+    } else if (profileError) setError(errorText(profileError));
+    setProfileLoading(false);
   };
 
   const sendRequest = async (profile: CommunityProfile) => {
@@ -1546,34 +2266,60 @@ function FriendsPage() {
     setBusyId(null);
   };
 
+  const removeFriend = async (friend: CommunityProfile) => {
+    if (!userId || busyId) return;
+    setBusyId(friend.id); setError(""); setMessage("");
+    const { error: removeError } = await supabase.from("friendships").delete()
+      .or(`and(user_a.eq.${userId},user_b.eq.${friend.id}),and(user_a.eq.${friend.id},user_b.eq.${userId})`);
+    if (removeError) setError(errorText(removeError));
+    else {
+      setMessage(`@ ${friend.username} was removed from your friends.`.replace("@ ", "@"));
+      setPublicProfile(null);
+      setFriendToRemove(null);
+      await loadCommunity();
+    }
+    setBusyId(null);
+  };
+
+  const cancelRequest = async (request: CommunityFriendRequest) => {
+    if (!userId || request.sender_id !== userId || request.status !== "pending") return;
+    setBusyId(request.id); setError(""); setMessage("");
+    const { error: cancelError } = await supabase.rpc("cancel_friend_request", { p_request_id: request.id });
+    if (cancelError) setError(errorText(cancelError));
+    else { setMessage("Friend request cancelled."); await loadCommunity(); }
+    setBusyId(null);
+  };
+
   return <div className="page friends-page">
     <div className="page-header"><div><div className="eyebrow">ALPHA COMMUNITY</div><h1>Friends</h1><p>Find people to play AlphaClient with.</p></div><button className="friends-refresh" onClick={() => void loadCommunity()} disabled={loading} title="Refresh">↻ Refresh</button></div>
     {error && <div className="friends-notice error">{error}</div>}
     {message && <div className="friends-notice success">{message}</div>}
-    {!userId && !loading && <section className="section-card friends-signin"><div className="friends-empty-icon">♧</div><h2>Sign in to Alpha Community</h2><p>Your Microsoft Minecraft account and Alpha community account are separate. The current developer login is not intended to be the general community login, so sign in to a community account before using friends.</p><button className="friends-primary" onClick={() => setError("Community account sign-in is not connected yet. We need to add a dedicated Alpha community account flow next.")}>Community account required</button></section>}
+    {!userId && !loading && <section className="section-card friends-signin"><div className="friends-empty-icon">♧</div><h2>Sign in to Alpha Community</h2><p>Your Microsoft Minecraft account and Alpha community account are separate. The current developer login is not intended to be the general community login, so sign in to a community account before using friends.</p><button className="friends-primary" onClick={onOpenAlphaAuth}>Community account required</button></section>}
     {userId && !myProfile && !loading && <section className="section-card"><h2>Community profile not found</h2><p>Your signed-in Supabase account has no Alpha profile yet. Check that the database migration and new-account trigger ran successfully.</p></section>}
     {userId && myProfile && profileSetupRequired && <div className="friends-modal-backdrop"><section className="section-card friends-profile-setup" role="dialog" aria-modal="true" aria-labelledby="friends-profile-title"><div className="friends-empty-icon">✦</div><div className="eyebrow">WELCOME TO ALPHA COMMUNITY</div><h2 id="friends-profile-title">Choose your username</h2><p>Choose a unique username. Other players will use this name to find you and send friend requests.</p><form onSubmit={saveCommunityProfile} className="friends-profile-form"><label htmlFor="friends-username">Username</label><div className="friends-username-field"><span>@</span><input id="friends-username" value={setupUsername} onChange={event => setSetupUsername(event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0,20))} minLength={3} maxLength={20} pattern="[a-z0-9_]{3,20}" placeholder="yourname" required autoFocus /></div><small>3–20 characters: lowercase letters, numbers, and underscores.</small>{error && <div className="friends-notice error">{error}</div>}<button className="friends-primary friends-save-profile" type="submit" disabled={savingProfile}>{savingProfile ? "Saving profile…" : "Save and continue"}</button></form></section></div>}
     {userId && myProfile && !profileSetupRequired && <>
       <section className="section-card friends-search-card"><div className="friends-section-heading"><div><h2>Find players</h2><p>Search by Alpha username.</p></div><span className="friends-handle">@{myProfile.username}</span></div><form className="friends-search" onSubmit={event => { event.preventDefault(); void searchUsers(); }}><span className="friends-search-icon">⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Enter a username…" maxLength={20}/><button className="friends-primary" type="submit">Search</button></form>
-        {results.length > 0 && <div className="friends-user-list">{results.map(person => <div className="friends-user-row" key={person.id}><div className="friends-avatar">{person.username.slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{person.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{person.username}</strong><span>@{person.username}</span></div><button className="friends-secondary" disabled={busyId === person.id} onClick={() => void sendRequest(person)}>{busyId === person.id ? "Sending…" : "+ Add friend"}</button></div>)}</div>}
+        {results.length > 0 && <div className="friends-user-list">{results.map(person => <div className="friends-user-row friends-search-result-row" key={person.id}><button type="button" className="friends-avatar friends-profile-open" aria-label={`View @${person.username} profile`} onClick={() => void openPublicProfile(person)}>{person.avatar_url ? <img src={person.avatar_url} alt="" onError={event => { event.currentTarget.style.display = "none"; }} /> : person.username.slice(0,1).toUpperCase()}</button><div className="friends-user-copy"><strong className="friends-search-result-name"><button type="button" className="friends-profile-name-button" onClick={() => void openPublicProfile(person)}>{person.username}</button><CommunityRankBadge rankKey={person.rank_key || (person.is_founder ? "founder" : "member")} /></strong><span>@{person.username}</span></div><button className="friends-secondary" disabled={busyId === person.id} onClick={() => void sendRequest(person)}>{busyId === person.id ? "Sending…" : "+ Add friend"}</button></div>)}</div>}
       </section>
       <div className="friends-main-layout">
         <div className="friends-columns friends-request-columns">
         <section className="section-card friends-list-card">
           <div className="friends-section-heading"><div><h2>Incoming requests</h2><p>Players who want to add you.</p></div><span className="friends-count">{incoming.length}</span></div>
-          {incoming.length === 0 ? <div className="friends-empty">No incoming requests right now.</div> : incoming.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{(request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div><button className="friends-primary compact" disabled={busyId === request.id} onClick={() => void respond(request, true)}>{busyId === request.id ? "…" : "Accept"}</button><button className="friends-secondary compact" disabled={busyId === request.id} onClick={() => void respond(request, false)}>Decline</button></div>)}
+          {incoming.length === 0 ? <div className="friends-empty">No incoming requests right now.</div> : incoming.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{request.profile?.avatar_url ? <img src={request.profile.avatar_url} alt="" onError={event => { event.currentTarget.style.display = "none"; }} /> : (request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div>{request.profile && <CommunityRankBadge rankKey={request.profile.rank_key || (request.profile.is_founder ? "founder" : "member")} />}<button className="friends-primary compact" disabled={busyId === request.id} onClick={() => void respond(request, true)}>{busyId === request.id ? "…" : "Accept"}</button><button className="friends-secondary compact" disabled={busyId === request.id} onClick={() => void respond(request, false)}>Decline</button></div>)}
         </section>
         <section className="section-card friends-list-card">
           <div className="friends-section-heading"><div><h2>Outgoing requests</h2><p>Players you have sent a request to.</p></div><span className="friends-count">{outgoing.length}</span></div>
-          {outgoing.length === 0 ? <div className="friends-empty">You haven't sent any pending requests.</div> : outgoing.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{(request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div><span className="friends-pending"><i /> Pending</span></div>)}
+          {outgoing.length === 0 ? <div className="friends-empty">You haven't sent any pending requests.</div> : outgoing.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{request.profile?.avatar_url ? <img src={request.profile.avatar_url} alt="" onError={event => { event.currentTarget.style.display = "none"; }} /> : (request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div><span className="friends-pending"><i /> Pending</span><button className="friends-secondary compact" type="button" disabled={busyId === request.id} onClick={() => void cancelRequest(request)}>{busyId === request.id ? "Cancelling…" : "Cancel request"}</button></div>)}
         </section>
         </div>
         <section className="section-card friends-list-card friends-roster-card">
           <div className="friends-section-heading"><div><h2>Your friends</h2><p>Players connected to your account.</p></div><span className="friends-count">{friends.length}</span></div>
-          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className="friends-user-row" role="listitem" key={friend.id}><div className="friends-avatar">{friend.username.slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{friend.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{friend.username}</strong><span>@{friend.username}</span></div><span className="friends-connected"><i/> Friend</span></div>)}</div>}
+          {friends.length === 0 ? <div className="friends-empty">Your friends list is empty. Search for a player to get started.</div> : <div className="friends-scroll-list" role="list" aria-label="Your friends">{friends.map(friend => <div className="friends-user-row friends-roster-row" role="listitem" key={friend.id}><button type="button" className="friends-avatar friends-profile-open" aria-label={`View ${friend.username} profile`} onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : friend.username.slice(0,1).toUpperCase()}</button><div className="friends-user-copy"><div className="friends-roster-name-line"><button type="button" className="friends-profile-name-button" onClick={event => { event.stopPropagation(); void openPublicProfile(friend); }}>{friend.username}</button><CommunityRankBadge rankKey={friend.rank_key || (friend.is_founder ? "founder" : "member")} /><button type="button" className="friends-chat-icon-button" aria-label={`Chat with ${friend.username}`} title={`Message ${friend.username}`} onClick={() => onOpenChat(friend.id)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5 8.2 8.2 0 0 1-3.3-.7L4 20l1.7-4.2A7.5 7.5 0 1 1 20 11.5Z" /></svg></button></div><span>@{friend.username}</span></div><span className={`friends-presence ${onlineFriendIds.has(friend.id) ? "is-online" : "is-offline"}`}><i />{onlineFriendIds.has(friend.id) ? "Online" : "Offline"}</span></div>)}</div>}
         </section>
       </div>
     </>}
+    {publicProfile && <div className="public-profile-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setPublicProfile(null); }}><section className="section-card profile-preview-card profile-view-card public-profile-modal" role="dialog" aria-modal="true" aria-labelledby="public-profile-name"><button type="button" className="public-profile-close" aria-label="Close profile" onClick={() => setPublicProfile(null)}>×</button><div className="profile-preview-glow" /><div className="eyebrow profile-account-label">ALPHA ACCOUNT</div><div className="profile-avatar-large">{publicProfile.avatar_url ? <img src={publicProfile.avatar_url} alt={publicProfile.username + " avatar"} /> : <span>{publicProfile.username.slice(0, 1).toUpperCase()}</span>}</div><h2 className="profile-name-row" id="public-profile-name">{(() => { const key = publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[key] || COMMUNITY_RANKS.member; return key === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-rank-icon" aria-hidden="true">{COMMUNITY_RANK_ICONS[key] || COMMUNITY_RANK_ICONS.member}</span>{rank.label}</span>; })()}{publicProfile.username}</h2><div className="profile-username">@{publicProfile.username}</div><p className="profile-bio-preview">{publicProfile.bio?.trim() || "This player hasn't added a bio yet."}</p><div className="profile-preview-divider" /><div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>{(() => { const rankKey = publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member"); const rankLabels: Record<string, string> = { founder: "Founder of Alpha Client", owner: "Owner of Alpha", management: "Manager of Alpha", senior_admin: "Senior Admin on Alpha", admin: "Admin on Alpha", senior_moderator: "Senior Moderator on Alpha", moderator: "Moderator on Alpha", trial_moderator: "Trial Moderator on Alpha", beta: "Beta Tester on Alpha", alpha_plus: "Alpha+ on Alpha", alpha: "Alpha on Alpha", member: "Member on Alpha" }; const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member); return <div className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-founder-crown" aria-hidden="true">{icon}</span>{rankLabels[rankKey] || rankLabels.member}</div>; })()}{publicProfile.last_played_at ? <div className="public-profile-meta">Last played: {new Date(publicProfile.last_played_at).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}{publicProfile.last_played_version ? ` · ${publicProfile.last_played_version}` : ""}</div> : <div className="public-profile-meta">Last played: Not recorded yet</div>}{publicProfile.created_at && <div className="public-profile-meta">Member since {new Date(publicProfile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</div>}{profileLoading && <div className="public-profile-meta">Refreshing profile…</div>}<div className="public-profile-actions">{friends.some(friend => friend.id === publicProfile.id) ? <><span className="friends-connected"><i /> Friend</span><button className="friends-secondary" type="button" onClick={() => { setPublicProfile(null); onOpenChat(publicProfile.id); }}>Message</button><button className="friends-danger" type="button" disabled={busyId === publicProfile.id} onClick={() => setFriendToRemove(publicProfile)}>Remove friend</button></> : incoming.find(request => request.profile?.id === publicProfile.id) ? <><button className="friends-primary" type="button" disabled={busyId === incoming.find(request => request.profile?.id === publicProfile.id)?.id} onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, true); }}>Accept request</button><button className="friends-secondary" type="button" onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, false); }}>Decline</button></> : outgoing.find(request => request.profile?.id === publicProfile.id) ? <button className="friends-secondary" type="button" onClick={() => { const request = outgoing.find(item => item.profile?.id === publicProfile.id); if (request) void cancelRequest(request); }}>Request sent · Cancel</button> : <button className="friends-primary" type="button" disabled={busyId === publicProfile.id} onClick={() => void sendRequest(publicProfile)}>{busyId === publicProfile.id ? "Sending…" : "Add friend"}</button>}</div></section></div>}
+    {friendToRemove && <div className="action-confirm-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !busyId) setFriendToRemove(null); }}><section className="action-confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="remove-friend-title" aria-describedby="remove-friend-description"><div className="action-confirm-icon danger">!</div><h2 id="remove-friend-title">Remove friend?</h2><p id="remove-friend-description">Are you sure you want to remove <strong>@{friendToRemove.username}</strong> from your friends? You can send a new friend request later.</p><div className="action-confirm-actions"><button type="button" className="friends-secondary" disabled={!!busyId} onClick={() => setFriendToRemove(null)}>Cancel</button><button type="button" className="friends-danger" disabled={!!busyId} onClick={() => void removeFriend(friendToRemove)}>{busyId === friendToRemove.id ? "Removing…" : "Remove friend"}</button></div></section></div>}
     {loading && <div className="friends-loading">Loading community…</div>}
   </div>;
 }
@@ -1596,6 +2342,175 @@ function PageTitle({
   );
 }
 
+
+function AlphaAccountAuthModal({ onClose }: { onClose: () => void }) {
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const changeMode = (nextMode: "login" | "signup") => {
+    setMode(nextMode);
+    setError("");
+    setMessage("");
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busy) return;
+
+    const cleanEmail = email.trim();
+    const cleanUsername = username.trim();
+    if (!cleanEmail || !password) {
+      setError("Enter your email address and password.");
+      return;
+    }
+    if (mode === "signup" && !cleanUsername) {
+      setError("Choose an Alpha Account username.");
+      return;
+    }
+    if (mode === "signup" && password.length < 6) {
+      setError("Your password must contain at least 6 characters.");
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      if (mode === "login") {
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+        if (loginError) throw loginError;
+        window.location.reload();
+      } else {
+        const { data, error: signupError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            emailRedirectTo: "alphaclient://auth/callback",
+            data: { username: cleanUsername, display_name: cleanUsername },
+          },
+        });
+        if (signupError) throw signupError;
+        if (data.session) {
+          window.location.reload();
+        } else {
+          setMessage("Account created. Check your email to confirm your account, then sign in here.");
+          setMode("login");
+          setPassword("");
+        }
+      }
+    } catch (submitError) {
+      setError(errorText(submitError));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [busy, onClose]);
+
+  return (
+    <div
+      className="alpha-access-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose();
+      }}
+    >
+      <section
+        className="alpha-access-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="alpha-access-title"
+      >
+        <aside className="alpha-access-showcase">
+          <button
+            type="button"
+            className="alpha-access-close alpha-access-close-showcase"
+            onClick={onClose}
+            disabled={busy}
+            aria-label="Close Alpha Account login"
+          >
+            ×
+          </button>
+          <div className="alpha-access-logo" aria-hidden="true"><AlphaLogo /></div>
+          <span className="alpha-access-overline">ONE ACCOUNT. ALL OF ALPHA.</span>
+          <h2>Your Alpha journey starts here.</h2>
+          <p>Sign in to connect with the community, manage your profile, and make your Alpha experience yours.</p>
+          <div className="alpha-access-showcase-footer">
+            <span className="alpha-access-status-dot" />
+            <span>ALPHACLIENT ACCOUNT</span>
+          </div>
+        </aside>
+
+        <div className="alpha-access-form-side">
+          <button
+            type="button"
+            className="alpha-access-close alpha-access-close-form"
+            onClick={onClose}
+            disabled={busy}
+            aria-label="Close Alpha Account login"
+          >
+            ×
+          </button>
+          <div className="alpha-access-form-heading">
+            <span className="alpha-access-kicker">{mode === "login" ? "WELCOME BACK" : "JOIN THE COMMUNITY"}</span>
+            <h3 id="alpha-access-title">{mode === "login" ? "Sign in" : "Create account"}</h3>
+            <p>{mode === "login" ? "Enter your details to continue to Alpha." : "Create your Alpha Account in just a moment."}</p>
+          </div>
+
+          <div className="alpha-access-tabs" role="tablist" aria-label="Alpha Account access">
+            <button type="button" role="tab" aria-selected={mode === "login"} className={mode === "login" ? "is-active" : ""} onClick={() => changeMode("login")}>Sign in</button>
+            <button type="button" role="tab" aria-selected={mode === "signup"} className={mode === "signup" ? "is-active" : ""} onClick={() => changeMode("signup")}>Create account</button>
+          </div>
+
+          <form className="alpha-access-form" onSubmit={(event) => void handleSubmit(event)}>
+            {mode === "signup" && (
+              <div className="alpha-access-field">
+                <label htmlFor="alpha-access-username">USERNAME</label>
+                <input id="alpha-access-username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))} maxLength={20} placeholder="Choose a username" required />
+              </div>
+            )}
+            <div className="alpha-access-field">
+              <label htmlFor="alpha-access-email">EMAIL ADDRESS</label>
+              <input id="alpha-access-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required />
+            </div>
+            <div className="alpha-access-field">
+              <label htmlFor="alpha-access-password">PASSWORD</label>
+              <input id="alpha-access-password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={(event) => setPassword(event.target.value)} minLength={mode === "signup" ? 6 : undefined} placeholder={mode === "signup" ? "At least 6 characters" : "Enter your password"} required />
+            </div>
+            {error && <p className="alpha-access-feedback is-error" role="alert">{error}</p>}
+            {message && <p className="alpha-access-feedback is-success" role="status">{message}</p>}
+            <button type="submit" className="alpha-access-submit" disabled={busy}>
+              {busy ? "PLEASE WAIT..." : mode === "login" ? "SIGN IN TO ALPHA" : "CREATE ALPHA ACCOUNT"}
+              {!busy && <span aria-hidden="true">↗</span>}
+            </button>
+          </form>
+          <p className="alpha-access-switch-copy">
+            {mode === "login" ? "New to Alpha?" : "Already have an account?"}{" "}
+            <button type="button" onClick={() => changeMode(mode === "login" ? "signup" : "login")} disabled={busy}>
+              {mode === "login" ? "Create an account" : "Sign in instead"}
+            </button>
+          </p>
+          <p className="alpha-access-legal">By continuing, you agree to use your Alpha Account responsibly.</p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function HomePage(props: {
   account: MicrosoftAccount | null;
   clientVersion: string;
@@ -1608,6 +2523,7 @@ function HomePage(props: {
   launchError: string | null;
   launchMessage: string | null;
   onAccount: () => void;
+  onOpenAlphaAuth: () => void;
   onChangelog: () => void;
   onNews: () => void;
 }) {
@@ -1623,6 +2539,7 @@ function HomePage(props: {
     launchError,
     launchMessage,
     onAccount,
+    onOpenAlphaAuth,
     onChangelog,
     onNews,
   } = props;
@@ -1825,7 +2742,7 @@ function HomePage(props: {
               ))}
               {changelogs.length === 0 && (
                 <p className="subtitle">
-                  Er zijn nog geen gepubliceerde changelogs.
+                  There are no published changelogs yet.
                 </p>
               )}
             </div>
@@ -1882,6 +2799,18 @@ function HomePage(props: {
           </div>
         </div>
       </section>
+
+      <div className="home-community-account-wrap">
+        <button
+          type="button"
+          className="home-community-account-button"
+          onClick={onOpenAlphaAuth}
+        >
+          <span aria-hidden="true">✦</span>
+          Login to your Alpha Account
+          <span className="home-community-account-arrow" aria-hidden="true">›</span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -2135,6 +3064,354 @@ function ModsPage({
   );
 }
 
+type ManagedCommunityProfile = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  rank_key: string;
+};
+
+function RankManagement() {
+  const [actorId, setActorId] = useState<string | null>(null);
+  const [actorRank, setActorRank] = useState<string | null>(null);
+  const [canManageRanks, setCanManageRanks] = useState(false);
+  const [members, setMembers] = useState<ManagedCommunityProfile[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [selectedRank, setSelectedRank] = useState("member");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const loadMembers = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Log in to manage community ranks.");
+      setActorId(authData.user.id);
+
+      const { data: actor, error: actorError } = await supabase
+        .from("profiles")
+        .select("rank_key, is_founder")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+      if (actorError) throw actorError;
+      const resolvedRank = actor?.rank_key || (actor?.is_founder ? "founder" : "member");
+      setActorRank(resolvedRank);
+
+      const { data: permissionData, error: permissionError } = await supabase.rpc("has_rank_permission", {
+        p_scope: "community",
+        p_permission_key: "ranks.manage",
+      });
+      if (permissionError) throw permissionError;
+      const permitted = permissionData === true || resolvedRank === "founder" || actor?.is_founder === true;
+      setCanManageRanks(permitted);
+      if (!permitted) {
+        setMembers([]);
+        return;
+      }
+
+      const { data, error: membersError } = await supabase.rpc(
+        "search_rank_management_profiles",
+        { search_term: search.trim() },
+      );
+      if (membersError) throw membersError;
+      setMembers((data ?? []) as ManagedCommunityProfile[]);
+    } catch (loadError) {
+      setError(errorText(loadError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void loadMembers(); }, []);
+
+  useEffect(() => {
+    if (!canManageRanks) return;
+    const refresh = async () => {
+      try {
+        const { data, error: queryError } = await supabase.rpc(
+          "search_rank_management_profiles",
+          { search_term: search.trim() },
+        );
+        if (queryError) throw queryError;
+        setMembers((data ?? []) as ManagedCommunityProfile[]);
+      } catch (searchError) {
+        setError(errorText(searchError));
+      }
+    };
+    void refresh();
+  }, [search, canManageRanks]);
+
+  const selectedMember = members.find((member) => member.id === selectedId) ?? null;
+  const filteredMembers = members;
+  const rankEntries = Object.entries(COMMUNITY_RANKS);
+
+  const assignRank = async () => {
+    if (!selectedMember) return;
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      const { error: assignError } = await supabase.rpc("assign_community_rank", {
+        target_profile_id: selectedMember.id,
+        requested_rank_key: selectedRank,
+      });
+      if (assignError) throw assignError;
+      setMessage(`Updated @${selectedMember.username} to ${COMMUNITY_RANKS[selectedRank]?.label ?? selectedRank}.`);
+      await loadMembers();
+    } catch (saveError) {
+      setError(errorText(saveError));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const actorRankIndex = COMMUNITY_RANK_ORDER.indexOf(
+    (actorRank ?? "member") as (typeof COMMUNITY_RANK_ORDER)[number],
+  );
+  const selectedRankIndex = COMMUNITY_RANK_ORDER.indexOf(
+    selectedRank as (typeof COMMUNITY_RANK_ORDER)[number],
+  );
+  const targetRankIndex = selectedMember
+    ? COMMUNITY_RANK_ORDER.indexOf(
+        (selectedMember.rank_key || "member") as (typeof COMMUNITY_RANK_ORDER)[number],
+      )
+    : -1;
+  const isFounder = actorRank === "founder";
+  const protectedTarget = !isFounder && selectedMember !== null && targetRankIndex >= 0 &&
+    actorRankIndex >= 0 && targetRankIndex <= actorRankIndex;
+  const canManageTarget = canManageRanks && Boolean(selectedMember) &&
+    selectedMember?.id !== actorId &&
+    !protectedTarget &&
+    selectedRank !== "founder" &&
+    selectedRankIndex > actorRankIndex;
+
+  return (
+    <section className="section-card developer-card">
+      <div className="section-header">
+        <div>
+          <span className="card-label">COMMUNITY ADMINISTRATION</span>
+          <h3>Rank Management</h3>
+        </div>
+        <span className={`developer-status ${canManageRanks ? "active" : ""}`}>
+          {canManageRanks ? (actorRank === "founder" ? "Founder access" : actorRank === "owner" ? "Owner access" : actorRank === "management" ? "Management access" : "Rank management access") : "Restricted"}
+        </span>
+      </div>
+      <p className="subtitle">Search for a community member, review their current rank, and assign a new rank or reset them to Member.</p>
+      {loading ? <p className="subtitle">Loading community members…</p> :
+        !canManageRanks ? (
+          <div className="developer-warning">
+            <span className="developer-warning-icon">!</span>
+            <div><strong>Access denied</strong><p>Your account does not have the community ranks.manage permission.</p></div>
+          </div>
+        ) : (
+          <>
+            <label className="setting-line developer-setting-line">
+              <span>Search member</span>
+              <input className="developer-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Username or display name" />
+            </label>
+            <label className="setting-line developer-setting-line">
+              <span>Community member</span>
+              <select className="developer-input" value={selectedId} onChange={(event) => {
+                setSelectedId(event.target.value);
+                const member = members.find((item) => item.id === event.target.value);
+                if (member) setSelectedRank(member.rank_key || "member");
+              }}>
+                <option value="">Select a member…</option>
+                {filteredMembers.map((member) => (
+                  <option key={member.id} value={member.id}>@{member.username} · {COMMUNITY_RANKS[member.rank_key]?.label ?? member.rank_key}</option>
+                ))}
+              </select>
+            </label>
+            {selectedMember && (
+              <>
+                <div className="developer-info-grid">
+                  <div><span>Username</span><strong>@{selectedMember.username}</strong></div>
+                  <div><span>Current rank</span><strong style={{ color: COMMUNITY_RANKS[selectedMember.rank_key]?.color ?? "#C3BFE0" }}>{COMMUNITY_RANKS[selectedMember.rank_key]?.label ?? selectedMember.rank_key}</strong></div>
+                </div>
+                <label className="setting-line developer-setting-line">
+                  <span>Assign rank</span>
+                  <select className="developer-input" value={selectedRank} onChange={(event) => setSelectedRank(event.target.value)}>
+                    {rankEntries.map(([key, rank]) => {
+                      const rankIndex = COMMUNITY_RANK_ORDER.indexOf(
+                        key as (typeof COMMUNITY_RANK_ORDER)[number],
+                      );
+                      const cannotAssign = key === "founder" ||
+                        (!isFounder && rankIndex <= actorRankIndex);
+                      return (
+                        <option key={key} value={key} disabled={cannotAssign}>
+                          {rank.label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+                <div className="developer-actions">
+                  <button className="friends-primary rank-save-button" type="button" disabled={saving || !canManageTarget || selectedRank === selectedMember.rank_key} onClick={() => void assignRank()}>
+                    {saving ? "Saving…" : "Save rank"}
+                  </button>
+                  <button className="friends-secondary" type="button" disabled={saving || !canManageTarget || selectedMember.rank_key === "member"} onClick={() => { setSelectedRank("member"); void (async () => {
+                    setSaving(true); setError(""); setMessage("");
+                    try {
+                      const { error: assignError } = await supabase.rpc("assign_community_rank", { target_profile_id: selectedMember.id, requested_rank_key: "member" });
+                      if (assignError) throw assignError;
+                      setMessage(`Reset @${selectedMember.username} to Member.`);
+                      await loadMembers();
+                    } catch (saveError) { setError(errorText(saveError)); }
+                    finally { setSaving(false); }
+                  })(); }}>Reset to Member</button>
+                </div>
+                {!canManageTarget && <p className="subtitle" role="status">
+                  {saving ? "Saving rank…" :
+                    selectedMember.id === actorId ? "You cannot change your own rank." :
+                    protectedTarget ? "You cannot change a member whose rank is equal to or higher than yours." :
+                    selectedRank === "founder" ? "Founder rank cannot be assigned here." :
+                    selectedRankIndex <= actorRankIndex ? "You cannot assign a rank equal to or higher than your own." :
+                    "This rank change is not permitted."}
+                </p>}
+                {canManageTarget && selectedRank === selectedMember.rank_key && <p className="subtitle">Choose a different rank to enable Save rank.</p>}
+              </>
+            )}
+          </>
+        )}
+      {error && <p className="form-error" role="alert">{error}</p>}
+      {message && <p className="form-success" role="status">{message}</p>}
+    </section>
+  );
+}
+
+type AuditLogRow = {
+  id: number;
+  occurred_at: string;
+  actor_label: string | null;
+  product: "launcher" | "client" | "system";
+  category: string;
+  action: string;
+  target_label: string | null;
+  outcome: "success" | "failure" | "denied";
+  details: Record<string, unknown> | null;
+  request_id: string | null;
+};
+
+function AuditTimeline() {
+  const [rows, setRows] = useState<AuditLogRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [productFilter, setProductFilter] = useState("all");
+  const [outcomeFilter, setOutcomeFilter] = useState("all");
+  const [search, setSearch] = useState("");
+
+  const loadLogs = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const { data, error: queryError } = await supabase
+        .from("audit_logs")
+        .select("id, occurred_at, actor_label, product, category, action, target_label, outcome, details, request_id")
+        .order("occurred_at", { ascending: false })
+        .limit(200);
+      if (queryError) throw queryError;
+      setRows((data ?? []) as AuditLogRow[]);
+    } catch (loadError) {
+      setError(errorText(loadError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadLogs();
+  }, []);
+
+  const filteredRows = rows.filter((row) => {
+    if (productFilter !== "all" && row.product !== productFilter) return false;
+    if (outcomeFilter !== "all" && row.outcome !== outcomeFilter) return false;
+    const haystack = [row.actor_label, row.product, row.category, row.action, row.target_label, row.outcome, row.request_id]
+      .filter(Boolean).join(" ").toLowerCase();
+    return haystack.includes(search.trim().toLowerCase());
+  });
+
+  return (
+    <section className="section-card developer-card audit-timeline">
+      <div className="section-header audit-heading">
+        <div>
+          <span className="card-label">SECURITY &amp; ACTIVITY</span>
+          <h3>Audit Timeline</h3>
+          <p>Chronological record of developer actions performed.</p>
+        </div>
+        <button type="button" className="small-button" onClick={() => void loadLogs()} disabled={loading}>
+          {loading ? "Loading…" : "Refresh"}
+        </button>
+      </div>
+
+      <div className="audit-filters">
+        <label>Product
+          <select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
+            <option value="all">Alle producten</option>
+            <option value="launcher">Launcher</option>
+            <option value="client">Client</option>
+            <option value="system">Systeem</option>
+          </select>
+        </label>
+        <label>Resultaat
+          <select value={outcomeFilter} onChange={(event) => setOutcomeFilter(event.target.value)}>
+            <option value="all">Alle resultaten</option>
+            <option value="success">Success</option>
+            <option value="failure">Failed</option>
+            <option value="denied">Denied</option>
+          </select>
+        </label>
+        <label className="audit-search-label">Search
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Action, user, target…" />
+        </label>
+      </div>
+
+      {error && <div className="audit-state audit-error" role="alert">
+        <strong>Could not load audit log</strong>
+        <p>{error}</p>
+        <small>Check your developer permissions, the audit_logs RLS policy, and the Supabase connection.</small>
+      </div>}
+      {!error && loading && <div className="audit-state">Loading audit logs…</div>}
+      {!error && !loading && filteredRows.length === 0 && <div className="audit-state">No audit entries match these filters.</div>}
+      {!error && !loading && filteredRows.length > 0 && (
+        <div className="audit-list">
+          {filteredRows.map((row) => (
+            <article className="audit-row" key={row.id}>
+              <span className={`audit-outcome audit-outcome-${row.outcome}`}>{row.outcome === "success" ? "SUCCESS" : row.outcome === "failure" ? "FAILED" : "DENIED"}</span>
+              <div className="audit-row-main">
+                <div className="audit-row-title">
+                  <strong>{({
+                    "changelog.create": "Create",
+                    "changelog.update": "Edit",
+                    "changelog.publish": "Publish",
+                    "changelog.unpublish": "Unpublish",
+                    "changelog.delete": "Delete",
+                  } as Record<string, string>)[row.action] ?? row.action.replace(/_/g, " ")}</strong>
+                  <span className="audit-product">{row.product}</span>
+                </div>
+                <p>{row.category}{row.target_label ? ` · Doel: ${row.target_label}` : ""}</p>
+                <small>{row.actor_label || "Onbekende actor"} · {new Date(row.occurred_at).toLocaleString()}</small>
+                {row.details && Object.keys(row.details).length > 0 && (
+                  <details className="audit-details">
+                    <summary>View details</summary>
+                    <pre>{JSON.stringify(row.details, null, 2)}</pre>
+                    {row.request_id && <small>Request ID: {row.request_id}</small>}
+                  </details>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+      <div className="audit-footer">Showing up to 200 most recent entries · {filteredRows.length} weergegeven</div>
+    </section>
+  );
+}
+
 type DeveloperTool =
   | "Rank Management"
   | "Permission Explorer"
@@ -2200,6 +3477,7 @@ function DeveloperPage({
   setDeveloperPassword,
   developerUserEmail,
   developerAuthorized,
+  canManageReleases,
   developerAuthLoading,
   developerAuthError,
   developerSigningIn,
@@ -2224,6 +3502,7 @@ function DeveloperPage({
   setDeveloperPassword: (value: string) => void;
   developerUserEmail: string | null;
   developerAuthorized: boolean;
+  canManageReleases: boolean;
   developerAuthLoading: boolean;
   developerAuthError: string;
   developerSigningIn: boolean;
@@ -2259,7 +3538,7 @@ function DeveloperPage({
     const body = draftBody.trim();
 
     if (!version || !title || !body) {
-      setChangelogError("Vul versie, titel en wijzigingen in.");
+      setChangelogError("Enter a version, title, and change description.");
       return;
     }
 
@@ -2311,21 +3590,7 @@ function DeveloperPage({
         </div>
       )}
 
-      {tool === "Permission Explorer" && (
-        <div className="developer-info-grid">
-          {[
-            "Mod Management",
-            "Blacklist Management",
-            "Rank Management",
-            "Release Management",
-          ].map((permission) => (
-            <div key={permission}>
-              <span>Example permission</span>
-              <strong>{permission}</strong>
-            </div>
-          ))}
-        </div>
-      )}
+      {tool === "Permission Explorer" && <RankPermissionsManager />}
 
       {tool === "Feature Rollout Manager" && (
         <div className="developer-info-grid">
@@ -2355,19 +3620,19 @@ function DeveloperPage({
           description="Beveiligde toegang tot developer tools en releasebeheer."
         />
         <section className="section-card developer-card">
-          <p className="subtitle">Supabase-sessie en developerrechten controleren…</p>
+          <p className="subtitle">Checking Supabase session and developer permissions…</p>
         </section>
       </div>
     );
   }
 
-  if (!developerAuthorized) {
+  if (!developerAuthorized && !canManageReleases) {
     return (
       <div className="page developer-page">
         <PageTitle
           eyebrow="DEVELOPMENT"
           title="Developer Login"
-          description="Log in met je developeraccount om de developer tools te openen."
+          description="Sign in with your developer account to access developer tools."
         />
 
         <section className="section-card developer-card">
@@ -2381,8 +3646,8 @@ function DeveloperPage({
 
           {developerUserEmail && (
             <p className="subtitle">
-              Ingelogd als {developerUserEmail}, maar dit account heeft geen
-              bevestigde developerrechten.
+              Signed in as {developerUserEmail}, but this account does not have
+              verified developer permissions.
             </p>
           )}
 
@@ -2419,7 +3684,7 @@ function DeveloperPage({
               autoComplete="current-password"
               value={developerPassword}
               onChange={(event) => setDeveloperPassword(event.target.value)}
-              placeholder="Je Supabase-accountwachtwoord"
+              placeholder="Your Supabase account password"
               required
             />
 
@@ -2457,7 +3722,7 @@ function DeveloperPage({
       <PageTitle
         eyebrow="DEVELOPMENT"
         title="Developer Center"
-        description="Een centrale plek voor Alpha Client development, beheer en releases."
+        description="A central hub for Alpha Client development, management, and releases."
       />
 
       <div className="developer-warning">
@@ -2465,9 +3730,9 @@ function DeveloperPage({
         <div>
           <strong>Developer access verified</strong>
           <p>
-            Ingelogd als {developerUserEmail}. Developerrechten zijn
-            gecontroleerd via Supabase. Changelogwijzigingen worden in de
-            database opgeslagen.
+            Signed in as {developerUserEmail}. Developer permissions have been
+            verified through Supabase. Changelog changes are stored in the
+            database.
           </p>
         </div>
         <button
@@ -2483,9 +3748,9 @@ function DeveloperPage({
         <section className="developer-dashboard" aria-label="Developer modules">
           <div className="developer-dashboard-heading">
             <span className="card-label">DEVELOPER WORKSPACE</span>
-            <h2>Waar wil je aan werken?</h2>
+            <h2>What would you like to work on?</h2>
             <p>
-              Kies een module om te openen. Je komt niet automatisch in een tool
+              Select a module to open. You will not be taken directly into a tool
               terecht.
             </p>
           </div>
@@ -2525,13 +3790,15 @@ function DeveloperPage({
               </span>
               <span className="developer-tool-nav-copy">
                 <strong>Developer Dashboard</strong>
-                <small>Terug naar alle modules</small>
+                <small>Back to all modules</small>
               </span>
             </button>
 
             <span className="card-label">DEVELOPER MENU</span>
 
-            {developerTools.map((tool) => (
+            {developerTools
+              .filter((tool) => developerAuthorized || tool.name === "Release Manager")
+              .map((tool) => (
               <button
                 type="button"
                 key={tool.name}
@@ -2554,31 +3821,23 @@ function DeveloperPage({
           </nav>
 
           <div className="developer-tool-content">
-            {activeTool === "Rank Management" &&
-              renderPlaceholder(
-                "Rank Management",
-                "Beheer ranks zoals Owner, Developer, Staff, Tester en User, en koppel later gecontroleerde rechten aan elke rank.",
-              )}
+            {developerAuthorized && activeTool === "Rank Management" && <RankManagement />}
 
-            {activeTool === "Permission Explorer" &&
+            {developerAuthorized && activeTool === "Permission Explorer" &&
               renderPlaceholder(
                 "Permission Explorer",
-                "Bekijk welke acties beschikbaar zijn, welke rank ze krijgt en waar een permission wordt gebruikt.",
+                "Explore available actions, which ranks receive them, and where each permission is used.",
               )}
 
-            {activeTool === "Audit Timeline" &&
-              renderPlaceholder(
-                "Audit Timeline",
-                "Een tijdlijn voor wijzigingen aan ranks, permissions, instellingen en releases. Er worden nog geen acties gelogd.",
-              )}
+            {developerAuthorized && activeTool === "Audit Timeline" && <AuditTimeline />}
 
-            {activeTool === "Change Review" &&
+            {developerAuthorized && activeTool === "Change Review" &&
               renderPlaceholder(
                 "Change Review",
-                "Een review-stap voor wijzigingen, zodat voorstellen kunnen worden bekeken en goedgekeurd voordat ze worden toegepast.",
+                "Review proposed changes and approve them before they are applied.",
               )}
 
-            {activeTool === "Development Sandbox" && (
+            {developerAuthorized && activeTool === "Development Sandbox" && (
               <>
                 <section className="section-card developer-card">
                   <div className="section-header">
@@ -2596,7 +3855,7 @@ function DeveloperPage({
                   <label className="setting-line developer-setting-line">
                     <span>
                       <strong>Enable offline test mode</strong>
-                      <small>Alleen voor lokale development-tests.</small>
+                      <small>For local development testing only.</small>
                     </span>
                     <input
                       type="checkbox"
@@ -2672,7 +3931,7 @@ function DeveloperPage({
               </>
             )}
 
-            {activeTool === "Feature Rollout Manager" &&
+            {developerAuthorized && activeTool === "Feature Rollout Manager" &&
               renderPlaceholder(
                 "Feature Rollout Manager",
                 "Plan feature flags, target groups and staged rollouts. Publishing and remote targeting are not connected yet.",
@@ -2691,9 +3950,7 @@ function DeveloperPage({
                 </div>
 
                 <p className="subtitle">
-                  Concepten worden opgeslagen in Supabase als niet-gepubliceerd.
-                  Gepubliceerde changelogs verschijnen in de launcher voor alle
-                  gebruikers.
+                  Drafts are saved in Supabase as unpublished entries. Published changelogs appear in the launcher for all users.
                 </p>
 
                 <label
@@ -2718,7 +3975,7 @@ function DeveloperPage({
                   className="developer-input-label"
                   htmlFor="changelog-version"
                 >
-                  Versie
+                  Version
                 </label>
                 <input
                   id="changelog-version"
@@ -2732,7 +3989,7 @@ function DeveloperPage({
                   className="developer-input-label"
                   htmlFor="changelog-title"
                 >
-                  Titel
+                  Title
                 </label>
                 <input
                   id="changelog-title"
@@ -2746,7 +4003,7 @@ function DeveloperPage({
                   className="developer-input-label"
                   htmlFor="changelog-body"
                 >
-                  Wijzigingen
+                  Changes
                 </label>
                 <textarea
                   id="changelog-body"
@@ -2755,7 +4012,7 @@ function DeveloperPage({
                   value={draftBody}
                   onChange={(event) => setDraftBody(event.target.value)}
                   placeholder={
-                    "Added — Nieuwe functies\nFixed — Bugs opgelost\nImproved — Verbeteringen"
+                    "Added — New features\nFixed — Bug fixes\nImproved — Improvements"
                   }
                 />
 
@@ -2767,8 +4024,8 @@ function DeveloperPage({
                 {changelogMessage && (
                   <p
                     className={
-                      changelogMessage.toLowerCase().includes("mislukt") ||
-                      changelogMessage.toLowerCase().includes("geen toestemming")
+                      changelogMessage.toLowerCase().includes("failed") ||
+                      changelogMessage.toLowerCase().includes("not authorized")
                         ? "launch-error"
                         : "launch-success"
                     }
@@ -2806,7 +4063,7 @@ function DeveloperPage({
                 <div className="news-list">
                   {changelogs.length === 0 ? (
                     <p className="subtitle">
-                      Nog geen changelogs. Voeg hierboven je eerste toe.
+                      No changelogs yet. Create your first one above.
                     </p>
                   ) : (
                     changelogs.map((entry) => (
@@ -2827,7 +4084,7 @@ function DeveloperPage({
                             · {entry.date}
                           </time>
                           <span>
-                            Status: {entry.published ? "Gepubliceerd" : "Concept"}
+                            Status: {entry.published ? "Published" : "Draft"}
                           </span>
                         </div>
 
@@ -2864,7 +4121,7 @@ function DeveloperPage({
                             onClick={() => {
                               if (
                                 window.confirm(
-                                  `Weet je zeker dat je "${entry.title}" wilt verwijderen?`,
+                                  `Are you sure you want to delete "${entry.title}"?`,
                                 )
                               ) {
                                 onDeleteChangelog(entry.id);
@@ -2950,12 +4207,14 @@ function SettingsPage({
 function AccountPage({
   account,
   isLoggingIn,
+  isMinecraftRunning,
   loginError,
   onLogin,
   onLogout,
 }: {
   account: MicrosoftAccount | null;
   isLoggingIn: boolean;
+  isMinecraftRunning: boolean;
   loginError: string | null;
   onLogin: () => void;
   onLogout: () => void;
@@ -2963,7 +4222,7 @@ function AccountPage({
   return (
     <div className="page">
       <PageTitle
-        eyebrow="ACCOUNT"
+        eyebrow="MINECRAFT ACCOUNT"
         title="Your account"
         description="Manage the Microsoft account used by AlphaClient."
       />
@@ -3018,16 +4277,19 @@ function AccountPage({
               type="button"
               className="secondary-button"
               onClick={onLogin}
-              disabled={isLoggingIn}
+              disabled={isLoggingIn || isMinecraftRunning}
+              title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}
             >
-              {isLoggingIn ? "LOGGING IN..." : "SWITCH ACCOUNT"}
+              {isMinecraftRunning ? "MINECRAFT IS RUNNING" : isLoggingIn ? "LOGGING IN..." : "SWITCH ACCOUNT"}
             </button>
             <button
               type="button"
               className="secondary-button"
               onClick={onLogout}
+              disabled={isMinecraftRunning}
+              title={isMinecraftRunning ? "Close Minecraft before logging out." : undefined}
             >
-              LOG OUT
+              {isMinecraftRunning ? "MINECRAFT IS RUNNING" : "LOG OUT"}
             </button>
           </>
         )}
