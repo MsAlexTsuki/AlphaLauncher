@@ -4383,7 +4383,10 @@ fn update_alphaclient_internal()
     } else {
         alphastaffmod_version_from_jar(&destination)
     };
-    let jar_version_mismatch = installed_jar_version.as_deref() != Some(manifest.version.as_str());
+    let jar_version_mismatch = installed_jar_version
+        .as_deref()
+        .map(|version| parse_version_parts(version) != parse_version_parts(&manifest.version))
+        .unwrap_or(true);
     let manifest_is_newer = version_is_newer(&manifest.version, &current_version);
 
     if !jar_missing && !jar_version_mismatch && !manifest_is_newer {
