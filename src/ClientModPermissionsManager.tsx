@@ -72,7 +72,7 @@ export default function ClientModPermissionsManager() {
         p_rank_key: selectedRank,
         p_permissions: mods.map(mod => ({
           mod_id: mod.mod_id,
-          enabled: permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false,
+          enabled: selectedRank === "founder" || (permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false),
         })),
       });
       if (rpcError) throw rpcError;
@@ -122,7 +122,7 @@ export default function ClientModPermissionsManager() {
   return <div className="client-mod-manager">
     <section className="section-card developer-card">
       <div className="section-header"><div><span className="card-label">ALPHACLIENT</span><h3>Mod permission defaults</h3></div><button className="small-button" onClick={() => void load()} disabled={loading || busy}>Refresh</button></div>
-      <p className="subtitle">Configure each rank's default access per mod. Individual player grants can override these defaults without changing their community rank.</p>
+      <p className="subtitle">Configure each rank's default access per mod. Founder always has all mod permissions. Individual player grants can override these defaults without changing their community rank.</p>
       <label className="developer-input-label">Rank defaults</label>
       <select className="developer-text-input" value={selectedRank} onChange={e => setSelectedRank(e.target.value)}>
         {RANKS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
@@ -131,7 +131,8 @@ export default function ClientModPermissionsManager() {
         <h4>{group.label}</h4>
         {group.mods.map(mod => <label className="setting-line developer-setting-line" key={mod.mod_id}>
           <span><strong>{mod.display_name}</strong><small>{mod.description} · {mod.mod_id}</small></span>
-          <input type="checkbox" checked={permissions.find(p => p.rank_key === selectedCategory && p.mod_id === mod.mod_id)?.enabled ?? false}
+          <input type="checkbox" checked={selectedRank === "founder" || (permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false)}
+            disabled={selectedRank === "founder"}
             onChange={e => setPermissions(old => {
               const rest = old.filter(p => !(p.rank_key === selectedRank && p.mod_id === mod.mod_id));
               return [...rest, { rank_key: selectedRank, mod_id: mod.mod_id, enabled: e.target.checked }];
