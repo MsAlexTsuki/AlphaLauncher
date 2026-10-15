@@ -6,6 +6,24 @@ type RankPermission = { rank_key: string; mod_id: string; enabled: boolean };
 type PlayerRecord = { user_id: string; username: string; display_name: string | null; rank_key: string };
 type GrantRecord = { id: string; user_id: string; category_key: string; expires_at: string | null; reason: string; username?: string };
 type OverrideRecord = { id: string; user_id: string; mod_id: string; effect: "allow" | "deny"; expires_at: string | null; reason: string; username?: string };
+type RankSearchPlayer = { id: string; username: string; display_name: string | null; rank_key: string };
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    const parts = [
+      typeof value.message === "string" ? value.message : "",
+      typeof value.code === "string" ? `Code: ${value.code}` : "",
+      typeof value.details === "string" ? `Details: ${value.details}` : "",
+      typeof value.hint === "string" ? `Hint: ${value.hint}` : "",
+    ].filter(Boolean);
+    if (parts.length) return parts.join(" · ");
+    try { return JSON.stringify(error); } catch { return "An unknown error occurred."; }
+  }
+  return String(error);
+}
 
 const RANKS = [
   ["founder", "Founder"], ["owner", "Owner"], ["management", "Management"],
@@ -45,17 +63,22 @@ export default function ClientModPermissionsManager() {
       const [catalog, rankRows, playerRows, grantRows, overrideRows] = await Promise.all([
         supabase.rpc("admin_list_client_mods"),
         supabase.rpc("admin_get_client_mod_rank_permissions"),
-        supabase.rpc("admin_search_client_mod_players", { p_search: term.trim() }),
+        supabase.rpc("search_rank_management_profiles", { search_term: term.trim() }),
         supabase.rpc("admin_list_client_mod_category_grants"),
         supabase.rpc("admin_list_client_mod_user_overrides"),
       ]);
       for (const result of [catalog, rankRows, playerRows, grantRows, overrideRows]) if (result.error) throw result.error;
       setMods((catalog.data ?? []) as ModRecord[]);
       setPermissions((rankRows.data ?? []) as RankPermission[]);
-      setPlayers((playerRows.data ?? []) as PlayerRecord[]);
+      setPlayers(((playerRows.data ?? []) as RankSearchPlayer[]).map(player => ({
+        user_id: player.id,
+        username: player.username,
+        display_name: player.display_name,
+        rank_key: player.rank_key,
+      })));
       setGrants((grantRows.data ?? []) as GrantRecord[]);
       setOverrides((overrideRows.data ?? []) as OverrideRecord[]);
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { setError(errorMessage(e)); }
     finally { setLoading(false); }
   };
 
@@ -78,7 +101,7 @@ export default function ClientModPermissionsManager() {
       if (rpcError) throw rpcError;
       setMessage("Rank defaults saved.");
       await load();
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { setError(errorMessage(e)); }
     finally { setBusy(false); }
   };
 
@@ -111,12 +134,12 @@ export default function ClientModPermissionsManager() {
   const revokeGrant = async (id: string) => {
     setBusy(true); setError("");
     try { const { error: e } = await supabase.rpc("revoke_client_mod_category_grant", { p_grant_id: id }); if (e) throw e; await load(); }
-    catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+    catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   };
   const revokeOverride = async (id: string) => {
     setBusy(true); setError("");
     try { const { error: e } = await supabase.rpc("revoke_client_mod_user_override", { p_override_id: id }); if (e) throw e; await load(); }
-    catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+    catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   };
 
   return <div className="client-mod-manager">
