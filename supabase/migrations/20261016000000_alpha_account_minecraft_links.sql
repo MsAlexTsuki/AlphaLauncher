@@ -45,10 +45,12 @@ begin
     raise exception 'No Alpha community profile exists for this account.' using errcode = 'P0002';
   end if;
 
+  -- Serialize attempts for the same UUID, including the not-yet-linked case.
+  perform pg_advisory_xact_lock(hashtextextended(target_uuid::text, 0));
+
   select a.profile_id into existing_profile_id
   from public.alpha_minecraft_accounts a
-  where a.mc_uuid = target_uuid
-  for update;
+  where a.mc_uuid = target_uuid;
 
   if existing_profile_id is not null and existing_profile_id <> current_profile_id then
     raise exception 'This Minecraft account is already linked to another Alpha account.'
@@ -65,7 +67,8 @@ revoke all on function public.link_minecraft_uuid(uuid) from public, anon;
 grant execute on function public.link_minecraft_uuid(uuid) to authenticated;
 
 -- Public display lookup only: UUID -> linked Alpha profile -> profile-owned rank.
--- The return shape stays compatible with RankCache.java.
+-- The return shape stays compatible with RankCache.java. Unlinked UUIDs are omitted
+-- so the client does not incorrectly display a Member badge for every unlinked player.
 create or replace function public.get_public_ranks(uuids uuid[])
 returns table (mc_uuid uuid, rank text)
 language sql
@@ -76,8 +79,8 @@ as $$
   select requested.mc_uuid,
          coalesce(p.rank_key, 'member') as rank
   from unnest(coalesce(uuids, array[]::uuid[])) as requested(mc_uuid)
-  left join public.alpha_minecraft_accounts a on a.mc_uuid = requested.mc_uuid
-  left join public.profiles p on p.id = a.profile_id;
+  join public.alpha_minecraft_accounts a on a.mc_uuid = requested.mc_uuid
+  join public.profiles p on p.id = a.profile_id;
 $$;
 
 revoke all on function public.get_public_ranks(uuid[]) from public, anon;
