@@ -7488,3 +7488,76 @@ button:not(:disabled):active {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Release Manager folder menu and section return navigation */
+.release-manager-nav-item {
+  position: relative;
+  min-height: 116px;
+  align-items: flex-start;
+  padding: 18px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
+}
+
+.release-manager-nav-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 18px;
+  width: 42px;
+  height: 4px;
+  border-radius: 0 0 4px 4px;
+  background: var(--yellow);
+  opacity: 0.65;
+}
+
+.release-manager-nav-item.active {
+  border-color: var(--border);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
+  box-shadow: none;
+}
+
+.release-manager-nav-icon.release-folder-icon {
+  flex-basis: 42px;
+  width: 42px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 200, 61, 0.12);
+  color: var(--yellow-light);
+  font-size: 24px;
+}
+
+.release-manager-nav-item > span:nth-child(2) {
+  padding-top: 4px;
+}
+
+.release-manager-nav-item:hover .release-manager-nav-icon {
+  background: rgba(255, 200, 61, 0.18);
+}
+
+.release-manager-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.release-manager-back:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.release-manager-back span {
+  color: var(--yellow-light);
+  font-size: 15px;
+}
