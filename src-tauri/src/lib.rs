@@ -4674,7 +4674,8 @@ async fn launch_alphaclient() -> Result<String, String> {
 
 #[tauri::command]
 async fn launch_partner_server() -> Result<String, String> {
-    launch_alphaclient_for_server(Some("alpha.rip".to_string())).await
+    // Start at the Minecraft main menu; let the player choose when to join Alpha.rip.
+    launch_alphaclient_for_server(None).await
 }
 
 async fn launch_alphaclient_for_server(server: Option<String>)
@@ -4893,7 +4894,7 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                     })
                     .collect::<Vec<_>>();
 
-            // Optional direct-connect target used only by the Partner Server button.
+            // Optional direct-connect target. Launcher buttons currently start at the main menu.
             let mut game_arguments = game_arguments;
             if let Some(server_address) = server.as_deref() {
                 game_arguments.push("--server".to_string());
