@@ -2300,6 +2300,25 @@ fn find_built_alphastaffmod_jar()
                 .join("libs")
         );
 
+        // Some project layouts keep the Gradle module one level below the repository.
+        build_directories.push(
+            profile
+                .join("Desktop")
+                .join("Staffmods")
+                .join("Staffmods_main")
+                .join("build")
+                .join("libs")
+        );
+
+        // Also support the renamed AlphaClient mod repository folder.
+        build_directories.push(
+            profile
+                .join("Desktop")
+                .join("AlphaClient---Mod")
+                .join("build")
+                .join("libs")
+        );
+
         build_directories.push(
             profile
                 .join("Desktop")
