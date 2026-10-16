@@ -7493,9 +7493,9 @@ button:not(:disabled):active {
 /* Release Manager folder menu and section return navigation */
 .release-manager-nav-item {
   position: relative;
-  min-height: 116px;
+  min-height: 0;
   align-items: flex-start;
-  padding: 18px;
+  padding: 12px 14px;
   border-radius: 14px;
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
 }
@@ -7504,7 +7504,7 @@ button:not(:disabled):active {
   content: "";
   position: absolute;
   top: 0;
-  left: 18px;
+  left: 14px;
   width: 42px;
   height: 4px;
   border-radius: 0 0 4px 4px;
