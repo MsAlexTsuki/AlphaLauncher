@@ -3523,6 +3523,7 @@ function DeveloperPage({
 }) {
   const [activeTool, setActiveTool] = useState<DeveloperTool | null>(null);
   const [activeReleaseSection, setActiveReleaseSection] = useState<"Changelogs" | "Releases" | null>(null);
+  const [activeReleaseTool, setActiveReleaseTool] = useState<"Built JARs" | "Publish release" | "Official version" | "Test versions" | null>(null);
   const [draftVersion, setDraftVersion] = useState("");
   const [draftTitle, setDraftTitle] = useState("");
   const [draftBody, setDraftBody] = useState("");
@@ -4208,38 +4209,59 @@ function DeveloperPage({
                       This is the dedicated Releases workspace. The next step is connecting build discovery, JAR metadata reading,
                       release publishing, and the official-version setting to the release backend.
                     </p>
-                    <div className="release-overview-grid">
-                      <div className="release-overview-card">
-                        <span className="release-overview-icon" aria-hidden="true">▣</span>
-                        <strong>Built JARs</strong>
-                        <small>Find local AlphaClient builds and read each JAR's actual version.</small>
-                      </div>
-                      <div className="release-overview-card">
-                        <span className="release-overview-icon" aria-hidden="true">↑</span>
-                        <strong>Publish release</strong>
-                        <small>Publish a selected build as an official AlphaClient release.</small>
-                      </div>
-                      <div className="release-overview-card">
-                        <span className="release-overview-icon" aria-hidden="true">★</span>
-                        <strong>Official version</strong>
-                        <small>Choose the version ordinary launcher users receive by default.</small>
-                      </div>
-                      <div className="release-overview-card">
-                        <span className="release-overview-icon" aria-hidden="true">⌁</span>
-                        <strong>Test versions</strong>
-                        <small>Keep older or test builds available for your own development use.</small>
-                      </div>
-                    </div>
-                    <div className="developer-warning">
-                      <span className="developer-warning-icon">i</span>
-                      <div>
-                        <strong>Release actions are not enabled yet</strong>
-                        <p>
-                          No release has been published or changed by this screen. Publishing and official-version selection
-                          need a secure backend connection before these actions can be enabled.
+                    {activeReleaseTool === null ? (
+                      <>
+                        <div className="release-overview-grid">
+                          <button type="button" className="release-overview-card" onClick={() => setActiveReleaseTool("Built JARs")}>
+                            <span className="release-overview-icon" aria-hidden="true">▣</span>
+                            <strong>Built JARs</strong>
+                            <small>Find local AlphaClient builds and read each JAR's actual version.</small>
+                          </button>
+                          <button type="button" className="release-overview-card" onClick={() => setActiveReleaseTool("Publish release")}>
+                            <span className="release-overview-icon" aria-hidden="true">↑</span>
+                            <strong>Publish release</strong>
+                            <small>Publish a selected build as an official AlphaClient release.</small>
+                          </button>
+                          <button type="button" className="release-overview-card" onClick={() => setActiveReleaseTool("Official version")}>
+                            <span className="release-overview-icon" aria-hidden="true">★</span>
+                            <strong>Official version</strong>
+                            <small>Choose the version ordinary launcher users receive by default.</small>
+                          </button>
+                          <button type="button" className="release-overview-card" onClick={() => setActiveReleaseTool("Test versions")}>
+                            <span className="release-overview-icon" aria-hidden="true">⌁</span>
+                            <strong>Test versions</strong>
+                            <small>Keep older or test builds available for your own development use.</small>
+                          </button>
+                        </div>
+                        <div className="developer-warning">
+                          <span className="developer-warning-icon">i</span>
+                          <div>
+                            <strong>Release actions are not enabled yet</strong>
+                            <p>
+                              No release has been published or changed by this screen. Publishing and official-version selection
+                              need a secure backend connection before these actions can be enabled.
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="release-tool-detail">
+                        <button type="button" className="release-manager-back" onClick={() => setActiveReleaseTool(null)}>
+                          <span aria-hidden="true">←</span> Back to Releases
+                        </button>
+                        <div className="section-header">
+                          <div>
+                            <span className="card-label">ALPHACLIENT RELEASES</span>
+                            <h3>{activeReleaseTool}</h3>
+                          </div>
+                          <span className="developer-status">Not connected</span>
+                        </div>
+                        <p className="subtitle">
+                          This section is ready for navigation. Its release-management functionality has not been connected yet.
                         </p>
                       </div>
-                    </div>
+                    )}
+
                     </section>
                   </>
                 )}
