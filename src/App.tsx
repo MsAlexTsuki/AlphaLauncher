@@ -1077,7 +1077,7 @@ console.error("Developer permission check failed:", errorMessage);
               changelogs={changelogs.filter((entry) => entry.published)}
               updateInfo={updateInfo}
               showNews={settings.showNews}
-              onPlay={handlePlay}
+              onPlay={() => void handlePlay()}
               isLaunching={isLaunching || isUpdatingClient}
               launchError={launchError}
               launchMessage={launchMessage}
@@ -1104,7 +1104,7 @@ console.error("Developer permission check failed:", errorMessage);
 
           {page === "Play" && (
             <PlayPage
-              onPlay={handlePlay}
+              onPlay={() => void handlePlay()}
               isLaunching={isLaunching || isUpdatingClient}
               launchError={launchError}
               launchMessage={launchMessage}
