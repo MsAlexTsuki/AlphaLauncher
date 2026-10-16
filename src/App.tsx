@@ -3960,8 +3960,6 @@ function DeveloperPage({
                   <div className="release-manager-nav" aria-label="Release Manager sections">
                     <button
                       type="button"
-                      role="tab"
-                      aria-selected={activeReleaseSection === "Changelogs"}
                       className={`release-manager-nav-item ${activeReleaseSection === "Changelogs" ? "active" : ""}`}
                       onClick={() => setActiveReleaseSection("Changelogs")}
                     >
@@ -3974,8 +3972,6 @@ function DeveloperPage({
                     </button>
                     <button
                       type="button"
-                      role="tab"
-                      aria-selected={activeReleaseSection === "Releases"}
                       className={`release-manager-nav-item ${activeReleaseSection === "Releases" ? "active" : ""}`}
                       onClick={() => setActiveReleaseSection("Releases")}
                     >
