@@ -180,20 +180,17 @@ export default function AccountSwitcher({
                       <strong>{saved.name}</strong>
                       <span>{active ? "Active account" : saved.email}</span>
                     </button>
-                    {active ? (
-                      <span className="account-switcher-active-dot" title="Active account" />
-                    ) : (
-                      <button
-                        type="button"
-                        className="account-switcher-remove"
-                        aria-label={"Remove " + saved.name}
-                        title={"Remove " + saved.name}
-                        disabled={disabled}
-                        onClick={() => void handleRemove(saved)}
-                      >
-                        ×
-                      </button>
-                    )}
+                    {active && <span className="account-switcher-active-dot" title="Active account" />}
+                    <button
+                      type="button"
+                      className="account-switcher-remove"
+                      aria-label={"Remove " + saved.name}
+                      title={"Remove " + saved.name}
+                      disabled={disabled}
+                      onClick={() => void handleRemove(saved)}
+                    >
+                      ×
+                    </button>
                     {switchingUuid === saved.uuid && <span className="account-switcher-spinner" aria-label="Switching account" />}
                     {removingUuid === saved.uuid && <span className="account-switcher-spinner" aria-label="Removing account" />}
                   </div>
