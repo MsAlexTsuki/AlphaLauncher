@@ -816,7 +816,13 @@ async fn start_microsoft_login()
         return Err(minecraft_running_error());
     }
 
-    tauri::async_runtime::spawn_blocking(
+    // Keep the previously selected account active if the user cancels or a
+    // newly added Microsoft account fails to authenticate.
+    let previous_uuid = load_account_vault()
+        .ok()
+        .and_then(|vault| vault.active_uuid);
+
+    let result = tauri::async_runtime::spawn_blocking(
         perform_microsoft_login
     )
     .await
@@ -825,7 +831,17 @@ async fn start_microsoft_login()
             "Microsoft login task failed: {}",
             error
         )
-    })?
+    })?;
+
+    if result.is_err() {
+        if let Some(uuid) = previous_uuid {
+            if let Err(restore_error) = activate_saved_account(&uuid) {
+                eprintln!("Could not restore previous Microsoft account after cancelled login: {}", restore_error);
+            }
+        }
+    }
+
+    result
 }
 
 
