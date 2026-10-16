@@ -4894,15 +4894,8 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                     })
                     .collect::<Vec<_>>();
 
-            // Optional direct-connect target. Launcher buttons currently start at the main menu.
-            let mut game_arguments = game_arguments;
-            if let Some(server_address) = server.as_deref() {
-                game_arguments.push("--server".to_string());
-                game_arguments.push(server_address.to_string());
-                game_arguments.push("--port".to_string());
-                game_arguments.push("25565".to_string());
-            }
-
+            // Partner launches pass a JVM property instead of Minecraft's early --server arguments.
+            // AlphaClient waits until its main menu is loaded before starting the connection.
             let mut command =
                 Command::new(
                     &java
@@ -4917,7 +4910,13 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                         "-Djava.library.path={}",
                         natives_path
                     )
-                )
+                );
+
+            if let Some(server_address) = server.as_deref() {
+                command.arg(format!("-Dalphaclient.partnerServer={}", server_address));
+            }
+
+            command
                 .arg("-cp")
                 .arg(classpath)
                 .arg(main_class)
