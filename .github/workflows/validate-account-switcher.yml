@@ -1,0 +1,38 @@
+name: Validate Minecraft account switcher
+
+on:
+  push:
+    branches:
+      - feature/minecraft-account-switcher
+  pull_request:
+    branches:
+      - feature/changelog-audit-logging
+      - development
+
+jobs:
+  frontend:
+    name: TypeScript and Vite build
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Type-check and build frontend
+        run: npx tsc --noEmit --noUnusedLocals false && npx vite build
+
+  backend:
+    name: Rust and Tauri compile check
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up stable Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Check Rust backend
+        run: cargo check --manifest-path src-tauri/Cargo.toml

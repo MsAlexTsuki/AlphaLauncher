@@ -5,6 +5,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { supabase } from "./lib/supabase";
 import PrivateChatPanel from "./PrivateChatPanel";
 import InboxButton from "./InboxButton";
+import AccountSwitcher from "./AccountSwitcher";
 import RankPermissionsManager from "./RankPermissionsManager";
 import ClientModPermissionsManager from "./ClientModPermissionsManager";
 import "./App.css";
@@ -21,7 +22,7 @@ type Page =
   | "Settings"
   | "Account";
 
-type MicrosoftAccount = { name: string; email: string };
+type MicrosoftAccount = { name: string; email: string; uuid: string };
 type LastPlayed = { timestamp: number; version: string };
 type ChangelogProduct = "launcher" | "client";
 type ChangelogEntry = {
@@ -939,6 +940,15 @@ console.error("Developer permission check failed:", errorMessage);
         </div>
 
         <div className="titlebar-actions" data-tauri-drag-region="false">
+          <AccountSwitcher
+            account={account}
+            isMinecraftRunning={isMinecraftRunning}
+            isLoggingIn={isLoggingIn}
+            loginError={loginError}
+            onLogin={handleMicrosoftLogin}
+            onAccountChanged={setAccount}
+            onOpenAccountPage={() => navigate("Account")}
+          />
           <InboxButton onOpenFriends={() => void handleNavigation("Friends")} onOpenChats={(friendId) => { setChatTargetFriendId(friendId ?? null); void handleNavigation("Chats"); }} />
         </div>
 
