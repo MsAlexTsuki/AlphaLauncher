@@ -3522,6 +3522,7 @@ function DeveloperPage({
   changelogMessage: string;
 }) {
   const [activeTool, setActiveTool] = useState<DeveloperTool | null>(null);
+  const [activeReleaseSection, setActiveReleaseSection] = useState<"Changelogs" | "Releases">("Changelogs");
   const [draftVersion, setDraftVersion] = useState("");
   const [draftTitle, setDraftTitle] = useState("");
   const [draftBody, setDraftBody] = useState("");
@@ -3946,7 +3947,46 @@ function DeveloperPage({
               )}
 
             {activeTool === "Release Manager" && (
-              <section className="section-card developer-card changelog-editor">
+              <>
+                <div className="release-manager-header">
+                  <div>
+                    <span className="card-label">RELEASE WORKSPACE</span>
+                    <h3>Release Manager</h3>
+                    <p>Choose whether to manage changelogs or client releases.</p>
+                  </div>
+                </div>
+                <div className="release-manager-nav" role="tablist" aria-label="Release Manager sections">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeReleaseSection === "Changelogs"}
+                    className={`release-manager-nav-item ${activeReleaseSection === "Changelogs" ? "active" : ""}`}
+                    onClick={() => setActiveReleaseSection("Changelogs")}
+                  >
+                    <span className="release-manager-nav-icon" aria-hidden="true">≡</span>
+                    <span>
+                      <strong>Changelogs</strong>
+                      <small>Edit and publish launcher/client changelogs</small>
+                    </span>
+                    <span className="release-manager-chevron" aria-hidden="true">›</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeReleaseSection === "Releases"}
+                    className={`release-manager-nav-item ${activeReleaseSection === "Releases" ? "active" : ""}`}
+                    onClick={() => setActiveReleaseSection("Releases")}
+                  >
+                    <span className="release-manager-nav-icon" aria-hidden="true">↑</span>
+                    <span>
+                      <strong>Releases</strong>
+                      <small>Build selection and official version management</small>
+                    </span>
+                    <span className="release-manager-chevron" aria-hidden="true">›</span>
+                  </button>
+                </div>
+                {activeReleaseSection === "Changelogs" && (
+                  <section className="section-card developer-card changelog-editor">
                 <div className="section-header">
                   <div>
                     <span className="card-label">HOME PAGE CONTENT</span>
@@ -4144,7 +4184,56 @@ function DeveloperPage({
                     ))
                   )}
                 </div>
-              </section>
+                  </section>
+                )}
+                {activeReleaseSection === "Releases" && (
+                  <section className="section-card developer-card release-overview">
+                    <div className="section-header">
+                      <div>
+                        <span className="card-label">ALPHACLIENT RELEASES</span>
+                        <h3>Release management</h3>
+                      </div>
+                      <span className="developer-status">Not connected</span>
+                    </div>
+                    <p className="subtitle">
+                      This is the dedicated Releases workspace. The next step is connecting build discovery, JAR metadata reading,
+                      release publishing, and the official-version setting to the release backend.
+                    </p>
+                    <div className="release-overview-grid">
+                      <div className="release-overview-card">
+                        <span className="release-overview-icon" aria-hidden="true">▣</span>
+                        <strong>Built JARs</strong>
+                        <small>Find local AlphaClient builds and read each JAR's actual version.</small>
+                      </div>
+                      <div className="release-overview-card">
+                        <span className="release-overview-icon" aria-hidden="true">↑</span>
+                        <strong>Publish release</strong>
+                        <small>Publish a selected build as an official AlphaClient release.</small>
+                      </div>
+                      <div className="release-overview-card">
+                        <span className="release-overview-icon" aria-hidden="true">★</span>
+                        <strong>Official version</strong>
+                        <small>Choose the version ordinary launcher users receive by default.</small>
+                      </div>
+                      <div className="release-overview-card">
+                        <span className="release-overview-icon" aria-hidden="true">⌁</span>
+                        <strong>Test versions</strong>
+                        <small>Keep older or test builds available for your own development use.</small>
+                      </div>
+                    </div>
+                    <div className="developer-warning">
+                      <span className="developer-warning-icon">i</span>
+                      <div>
+                        <strong>Release actions are not enabled yet</strong>
+                        <p>
+                          No release has been published or changed by this screen. Publishing and official-version selection
+                          need a secure backend connection before these actions can be enabled.
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                )}
+              </>
             )}
           </div>
         </div>
