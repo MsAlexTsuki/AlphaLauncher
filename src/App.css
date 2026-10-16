@@ -7449,6 +7449,11 @@ button:not(:disabled):active {
 }
 
 .release-overview-card {
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -7458,6 +7463,15 @@ button:not(:disabled):active {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.018);
+}
+
+.release-overview-card:hover {
+  border-color: var(--border-hover);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.release-tool-detail {
+  padding: 4px 0 8px;
 }
 
 .release-overview-icon {
