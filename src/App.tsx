@@ -3524,6 +3524,7 @@ function DeveloperPage({
   const [activeTool, setActiveTool] = useState<DeveloperTool | null>(null);
   const [activeReleaseSection, setActiveReleaseSection] = useState<"Changelogs" | "Releases" | null>(null);
   const [activeReleaseTool, setActiveReleaseTool] = useState<"Built JARs" | "Publish release" | "Official version" | "Test versions" | null>(null);
+  const [activeRolloutSection, setActiveRolloutSection] = useState<"Rollout plans" | "Audience targeting" | "Rollout schedule" | "Monitoring" | null>(null);
   const [draftVersion, setDraftVersion] = useState("");
   const [draftTitle, setDraftTitle] = useState("");
   const [draftBody, setDraftBody] = useState("");
@@ -3941,11 +3942,67 @@ function DeveloperPage({
               </>
             )}
 
-            {developerAuthorized && activeTool === "Feature Rollout Manager" &&
-              renderPlaceholder(
-                "Feature Rollout Manager",
-                "Plan feature flags, target groups and staged rollouts. Publishing and remote targeting are not connected yet.",
-              )}
+            {developerAuthorized && activeTool === "Feature Rollout Manager" && (
+              <section className="section-card developer-card rollout-manager">
+                {activeRolloutSection === null ? (
+                  <>
+                    <div className="section-header">
+                      <div>
+                        <span className="card-label">CONTROLLED DEPLOYMENT</span>
+                        <h3>Feature Rollout Manager</h3>
+                      </div>
+                      <span className="developer-status">Not connected</span>
+                    </div>
+                    <p className="subtitle">
+                      Plan staged AlphaClient updates so they reach users in controlled groups instead of everyone at once.
+                    </p>
+                    <div className="release-overview-grid">
+                      <button type="button" className="release-overview-card" onClick={() => setActiveRolloutSection("Rollout plans")}>
+                        <span className="release-overview-icon" aria-hidden="true">▤</span>
+                        <strong>Rollout plans</strong>
+                        <small>Create and review staged rollout plans for a client version.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveRolloutSection("Audience targeting")}>
+                        <span className="release-overview-icon" aria-hidden="true">◎</span>
+                        <strong>Audience targeting</strong>
+                        <small>Plan how users are grouped and how many receive an update per wave.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveRolloutSection("Rollout schedule")}>
+                        <span className="release-overview-icon" aria-hidden="true">◷</span>
+                        <strong>Rollout schedule</strong>
+                        <small>Plan wave timing, pauses, and gradual percentage increases.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveRolloutSection("Monitoring")}>
+                        <span className="release-overview-icon" aria-hidden="true">⌁</span>
+                        <strong>Monitoring</strong>
+                        <small>Review rollout progress and plan when to pause or continue.</small>
+                      </button>
+                    </div>
+                    <div className="developer-warning">
+                      <span className="developer-warning-icon">i</span>
+                      <div>
+                        <strong>Rollout execution is not connected yet</strong>
+                        <p>These sections are navigation and planning placeholders. They do not change who receives an update until rollout rules are connected to a secure backend and enforced by the launcher update flow.</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="release-tool-detail">
+                    <button type="button" className="release-manager-back" onClick={() => setActiveRolloutSection(null)}>
+                      <span aria-hidden="true">←</span> Back to Feature Rollout Manager
+                    </button>
+                    <div className="section-header">
+                      <div>
+                        <span className="card-label">CONTROLLED DEPLOYMENT</span>
+                        <h3>{activeRolloutSection}</h3>
+                      </div>
+                      <span className="developer-status">Not connected</span>
+                    </div>
+                    <p className="subtitle">This section is ready for navigation. Rollout configuration and update delivery are not connected yet.</p>
+                  </div>
+                )}
+              </section>
+            )}
 
             {activeTool === "Release Manager" && (
               <>
