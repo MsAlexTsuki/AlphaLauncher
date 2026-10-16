@@ -870,14 +870,17 @@ fn get_minecraft_process_status()
 
 
 #[tauri::command]
-fn get_microsoft_account() -> Result<Option<MicrosoftAccount>, String> {
+async fn get_microsoft_account() -> Result<Option<MicrosoftAccount>, String> {
     if let Some(account) = microsoft_account_state().lock()
         .map_err(|_| "Could not access Microsoft account state.".to_string())?.clone() {
         return Ok(Some(account));
     }
     let vault = load_account_vault()?;
     if let Some(uuid) = vault.active_uuid {
-        match activate_saved_account(&uuid) {
+        let restored = tauri::async_runtime::spawn_blocking(move || activate_saved_account(&uuid))
+            .await
+            .map_err(|error| format!("Microsoft account restore task failed: {}", error))?;
+        match restored {
             Ok(account) => return Ok(Some(account)),
             Err(error) => {
                 // Keep the saved account visible; the UI can still let the user retry or remove it.
@@ -894,19 +897,23 @@ fn get_saved_microsoft_accounts() -> Result<Vec<MicrosoftAccount>, String> {
 }
 
 #[tauri::command]
-fn switch_microsoft_account(uuid: String) -> Result<MicrosoftAccount, String> {
-    let previous_uuid = load_account_vault()?.active_uuid;
-    let result = activate_saved_account(&uuid);
-    if result.is_err() {
-        if let Some(previous_uuid) = previous_uuid {
-            if previous_uuid != uuid {
-                if let Err(restore_error) = activate_saved_account(&previous_uuid) {
-                    eprintln!("Could not restore previous Minecraft account after failed switch: {}", restore_error);
+async fn switch_microsoft_account(uuid: String) -> Result<MicrosoftAccount, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let previous_uuid = load_account_vault()?.active_uuid;
+        let result = activate_saved_account(&uuid);
+        if result.is_err() {
+            if let Some(previous_uuid) = previous_uuid {
+                if previous_uuid != uuid {
+                    if let Err(restore_error) = activate_saved_account(&previous_uuid) {
+                        eprintln!("Could not restore previous Minecraft account after failed switch: {}", restore_error);
+                    }
                 }
             }
         }
-    }
-    result
+        result
+    })
+    .await
+    .map_err(|error| format!("Minecraft account switch task failed: {}", error))?
 }
 
 #[tauri::command]
