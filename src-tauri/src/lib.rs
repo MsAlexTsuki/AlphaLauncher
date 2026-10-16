@@ -2375,14 +2375,37 @@ fn find_built_alphastaffmod_jar()
         }
     }
 
+    // Prefer the highest semantic mod version. File timestamps are unreliable
+    // when builds are copied between folders or restored from archives.
+    // If versions match, prefer the most recently modified JAR.
     candidates.sort_by(|a, b| {
-        let a_time = fs::metadata(a)
-            .and_then(|metadata| metadata.modified())
-            .ok();
-        let b_time = fs::metadata(b)
-            .and_then(|metadata| metadata.modified())
-            .ok();
+        let a_version = alphastaffmod_version_from_jar(a).unwrap_or_default();
+        let b_version = alphastaffmod_version_from_jar(b).unwrap_or_default();
 
+        let version_order = {
+            let a_parts = parse_version_parts(&a_version);
+            let b_parts = parse_version_parts(&b_version);
+            let length = a_parts.len().max(b_parts.len());
+            let mut ordering = std::cmp::Ordering::Equal;
+
+            for index in 0..length {
+                let a_part = *a_parts.get(index).unwrap_or(&0);
+                let b_part = *b_parts.get(index).unwrap_or(&0);
+                if a_part != b_part {
+                    ordering = b_part.cmp(&a_part);
+                    break;
+                }
+            }
+
+            ordering
+        };
+
+        if version_order != std::cmp::Ordering::Equal {
+            return version_order;
+        }
+
+        let a_time = fs::metadata(a).and_then(|metadata| metadata.modified()).ok();
+        let b_time = fs::metadata(b).and_then(|metadata| metadata.modified()).ok();
         b_time.cmp(&a_time)
     });
 
