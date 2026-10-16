@@ -141,11 +141,25 @@ const MINECRAFT_PROFILE_URL: &str =
 // GLOBAL AUTH STATE
 // ============================================================
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct MicrosoftAccount {
     name: String,
     email: String,
     uuid: String,
+}
+
+
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct SavedMicrosoftAccount {
+    account: MicrosoftAccount,
+    refresh_token: String,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+struct MicrosoftAccountVault {
+    accounts: Vec<SavedMicrosoftAccount>,
+    active_uuid: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -473,6 +487,272 @@ struct MinecraftEntitlement {
 // CLEAR AUTH STATE
 // ============================================================
 
+
+
+// ============================================================
+// ENCRYPTED MICROSOFT ACCOUNT VAULT
+// ============================================================
+
+fn account_vault_path() -> Result<PathBuf, String> {
+    Ok(alpha_client_directory()?.join("accounts-vault.bin"))
+}
+
+#[cfg(windows)]
+fn protect_account_vault(data: &[u8]) -> Result<Vec<u8>, String> {
+    use std::{ffi::c_void, ptr, slice};
+
+    #[repr(C)]
+    struct DataBlob {
+        cb_data: u32,
+        pb_data: *mut u8,
+    }
+
+    #[link(name = "Crypt32")]
+    extern "system" {
+        fn CryptProtectData(
+            input: *const DataBlob,
+            description: *const u16,
+            entropy: *const DataBlob,
+            reserved: *mut c_void,
+            prompt: *mut c_void,
+            flags: u32,
+            output: *mut DataBlob,
+        ) -> i32;
+    }
+    #[link(name = "Kernel32")]
+    extern "system" {
+        fn LocalFree(memory: *mut c_void) -> *mut c_void;
+    }
+
+    if data.len() > u32::MAX as usize {
+        return Err("The account vault is too large to encrypt.".to_string());
+    }
+    let input = DataBlob {
+        cb_data: data.len() as u32,
+        pb_data: data.as_ptr() as *mut u8,
+    };
+    let mut output = DataBlob { cb_data: 0, pb_data: ptr::null_mut() };
+    let success = unsafe {
+        CryptProtectData(
+            &input,
+            ptr::null(),
+            ptr::null(),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            0x1,
+            &mut output,
+        )
+    };
+    if success == 0 {
+        return Err(format!("Windows could not encrypt saved accounts: {}", std::io::Error::last_os_error()));
+    }
+    let encrypted = unsafe {
+        slice::from_raw_parts(output.pb_data, output.cb_data as usize).to_vec()
+    };
+    unsafe { LocalFree(output.pb_data.cast::<c_void>()); }
+    Ok(encrypted)
+}
+
+#[cfg(not(windows))]
+fn protect_account_vault(_data: &[u8]) -> Result<Vec<u8>, String> {
+    Err("Secure saved Microsoft accounts are currently supported on Windows only.".to_string())
+}
+
+#[cfg(windows)]
+fn unprotect_account_vault(data: &[u8]) -> Result<Vec<u8>, String> {
+    use std::{ffi::c_void, ptr, slice};
+
+    #[repr(C)]
+    struct DataBlob {
+        cb_data: u32,
+        pb_data: *mut u8,
+    }
+
+    #[link(name = "Crypt32")]
+    extern "system" {
+        fn CryptUnprotectData(
+            input: *const DataBlob,
+            description: *mut *mut u16,
+            entropy: *const DataBlob,
+            reserved: *mut c_void,
+            prompt: *mut c_void,
+            flags: u32,
+            output: *mut DataBlob,
+        ) -> i32;
+    }
+    #[link(name = "Kernel32")]
+    extern "system" {
+        fn LocalFree(memory: *mut c_void) -> *mut c_void;
+    }
+
+    if data.len() > u32::MAX as usize {
+        return Err("The account vault is too large to decrypt.".to_string());
+    }
+    let input = DataBlob {
+        cb_data: data.len() as u32,
+        pb_data: data.as_ptr() as *mut u8,
+    };
+    let mut output = DataBlob { cb_data: 0, pb_data: ptr::null_mut() };
+    let success = unsafe {
+        CryptUnprotectData(
+            &input,
+            ptr::null_mut(),
+            ptr::null(),
+            ptr::null_mut(),
+            ptr::null_mut(),
+            0x1,
+            &mut output,
+        )
+    };
+    if success == 0 {
+        return Err(format!("Windows could not decrypt saved accounts for this Windows user: {}", std::io::Error::last_os_error()));
+    }
+    let decrypted = unsafe {
+        slice::from_raw_parts(output.pb_data, output.cb_data as usize).to_vec()
+    };
+    unsafe { LocalFree(output.pb_data.cast::<c_void>()); }
+    Ok(decrypted)
+}
+
+#[cfg(not(windows))]
+fn unprotect_account_vault(_data: &[u8]) -> Result<Vec<u8>, String> {
+    Err("Secure saved Microsoft accounts are currently supported on Windows only.".to_string())
+}
+
+fn load_account_vault() -> Result<MicrosoftAccountVault, String> {
+    let path = account_vault_path()?;
+    if !path.exists() {
+        return Ok(MicrosoftAccountVault::default());
+    }
+    let encrypted = fs::read(&path).map_err(|error| {
+        format!("Could not read the encrypted account vault: {}", error)
+    })?;
+    let decrypted = unprotect_account_vault(&encrypted)?;
+    serde_json::from_slice(&decrypted).map_err(|error| {
+        format!("Could not read saved Microsoft accounts: {}", error)
+    })
+}
+
+fn save_account_vault(vault: &MicrosoftAccountVault) -> Result<(), String> {
+    let path = account_vault_path()?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|error| {
+            format!("Could not create the account vault directory: {}", error)
+        })?;
+    }
+    let json = serde_json::to_vec(vault).map_err(|error| {
+        format!("Could not serialize saved Microsoft accounts: {}", error)
+    })?;
+    let encrypted = protect_account_vault(&json)?;
+    let temporary_path = path.with_extension("bin.tmp");
+    fs::write(&temporary_path, encrypted).map_err(|error| {
+        format!("Could not write the encrypted account vault: {}", error)
+    })?;
+    fs::rename(&temporary_path, &path).map_err(|error| {
+        let _ = fs::remove_file(&temporary_path);
+        format!("Could not update the encrypted account vault: {}", error)
+    })
+}
+
+fn persist_authenticated_account(account: &MicrosoftAccount) -> Result<(), String> {
+    let refresh_token = microsoft_refresh_token_state()
+        .lock()
+        .map_err(|_| "Could not access the Microsoft refresh token.".to_string())?
+        .clone()
+        .ok_or_else(|| "Microsoft did not provide a refresh token, so this account cannot be saved securely.".to_string())?;
+
+    let mut vault = load_account_vault()?;
+    if let Some(saved) = vault.accounts.iter_mut().find(|saved| saved.account.uuid == account.uuid) {
+        saved.account = account.clone();
+        saved.refresh_token = refresh_token;
+    } else {
+        vault.accounts.push(SavedMicrosoftAccount {
+            account: account.clone(),
+            refresh_token,
+        });
+    }
+    vault.active_uuid = Some(account.uuid.clone());
+    save_account_vault(&vault)
+}
+
+fn saved_account_summaries() -> Result<Vec<MicrosoftAccount>, String> {
+    let vault = load_account_vault()?;
+    Ok(vault.accounts.into_iter().map(|saved| saved.account).collect())
+}
+
+fn activate_saved_account(uuid: &str) -> Result<MicrosoftAccount, String> {
+    if minecraft_process_is_running() {
+        return Err(minecraft_running_error());
+    }
+
+    let vault = load_account_vault()?;
+    let saved = vault.accounts.iter()
+        .find(|saved| saved.account.uuid == uuid)
+        .cloned()
+        .ok_or_else(|| "That saved Minecraft account could not be found.".to_string())?;
+
+    clear_microsoft_auth_state();
+
+    let result = (|| {
+        let refreshed = exchange_refresh_token(&saved.refresh_token)?;
+        let refresh_token = refreshed.refresh_token.clone().unwrap_or(saved.refresh_token.clone());
+
+        *microsoft_access_token_state().lock()
+            .map_err(|_| "Could not store Microsoft access token.".to_string())? =
+            Some(refreshed.access_token.clone());
+        *microsoft_refresh_token_state().lock()
+            .map_err(|_| "Could not store Microsoft refresh token.".to_string())? =
+            Some(refresh_token);
+
+        let xbox = authenticate_xbox_live(&refreshed.access_token)?;
+        let user_hash = xbox.display_claims.xui.first()
+            .map(|claim| claim.user_hash.clone())
+            .ok_or_else(|| "Xbox Live did not return a user hash for this account.".to_string())?;
+        let xsts = authenticate_xsts(&xbox.token)?;
+        let minecraft = authenticate_minecraft_services(&user_hash, &xsts.token)?;
+        verify_minecraft_entitlement(&minecraft.access_token)?;
+        let profile = get_minecraft_profile(&minecraft.access_token)?;
+
+        *xbox_live_token_state().lock()
+            .map_err(|_| "Could not store Xbox Live token.".to_string())? = Some(xbox.token);
+        *xsts_token_state().lock()
+            .map_err(|_| "Could not store XSTS token.".to_string())? = Some(xsts.token);
+        *xbox_user_hash_state().lock()
+            .map_err(|_| "Could not store Xbox user hash.".to_string())? = Some(user_hash);
+        *minecraft_access_token_state().lock()
+            .map_err(|_| "Could not store Minecraft access token.".to_string())? = Some(minecraft.access_token);
+        *minecraft_uuid_state().lock()
+            .map_err(|_| "Could not store Minecraft UUID.".to_string())? = Some(profile.id.clone());
+
+        let account = MicrosoftAccount {
+            name: profile.name,
+            email: saved.account.email.clone(),
+            uuid: profile.id,
+        };
+        *microsoft_account_state().lock()
+            .map_err(|_| "Could not activate the selected Microsoft account.".to_string())? =
+            Some(account.clone());
+
+        let mut updated_vault = load_account_vault()?;
+        if let Some(entry) = updated_vault.accounts.iter_mut().find(|entry| entry.account.uuid == account.uuid) {
+            entry.account = account.clone();
+            entry.refresh_token = microsoft_refresh_token_state().lock()
+                .map_err(|_| "Could not read refreshed Microsoft token.".to_string())?
+                .clone()
+                .ok_or_else(|| "Microsoft refresh token is missing.".to_string())?;
+        }
+        updated_vault.active_uuid = Some(account.uuid.clone());
+        save_account_vault(&updated_vault)?;
+        Ok(account)
+    })();
+
+    if result.is_err() {
+        clear_microsoft_auth_state();
+    }
+    result
+}
+
+
 fn clear_microsoft_auth_state() {
     if let Ok(mut value) =
         microsoft_account_state().lock()
@@ -558,6 +838,9 @@ fn logout_microsoft()
     }
 
     clear_microsoft_auth_state();
+    let mut vault = load_account_vault()?;
+    vault.active_uuid = None;
+    save_account_vault(&vault)?;
     Ok(())
 }
 
@@ -571,15 +854,47 @@ fn get_minecraft_process_status()
 
 
 #[tauri::command]
-fn get_microsoft_account()
-    -> Option<MicrosoftAccount>
-{
-    microsoft_account_state()
-        .lock()
-        .ok()
-        .and_then(|account| {
-            account.clone()
-        })
+fn get_microsoft_account() -> Result<Option<MicrosoftAccount>, String> {
+    if let Some(account) = microsoft_account_state().lock()
+        .map_err(|_| "Could not access Microsoft account state.".to_string())?.clone() {
+        return Ok(Some(account));
+    }
+    let vault = load_account_vault()?;
+    if let Some(uuid) = vault.active_uuid {
+        match activate_saved_account(&uuid) {
+            Ok(account) => return Ok(Some(account)),
+            Err(error) => {
+                // Keep the saved account visible; the UI can still let the user retry or remove it.
+                eprintln!("Could not restore active Microsoft account: {}", error);
+            }
+        }
+    }
+    Ok(None)
+}
+
+#[tauri::command]
+fn get_saved_microsoft_accounts() -> Result<Vec<MicrosoftAccount>, String> {
+    saved_account_summaries()
+}
+
+#[tauri::command]
+fn switch_microsoft_account(uuid: String) -> Result<MicrosoftAccount, String> {
+    activate_saved_account(&uuid)
+}
+
+#[tauri::command]
+fn remove_saved_microsoft_account(uuid: String) -> Result<Vec<MicrosoftAccount>, String> {
+    if minecraft_process_is_running() {
+        return Err(minecraft_running_error());
+    }
+    let mut vault = load_account_vault()?;
+    vault.accounts.retain(|saved| saved.account.uuid != uuid);
+    if vault.active_uuid.as_deref() == Some(uuid.as_str()) {
+        clear_microsoft_auth_state();
+        vault.active_uuid = None;
+    }
+    save_account_vault(&vault)?;
+    Ok(vault.accounts.into_iter().map(|saved| saved.account).collect())
 }
 
 
@@ -1099,6 +1414,8 @@ fn perform_microsoft_login()
                         account.clone()
                     );
             }
+
+            persist_authenticated_account(&account)?;
 
             Ok(account)
 
@@ -1917,6 +2234,32 @@ fn exchange_authorization_code(
                 error
             )
         })
+}
+
+
+
+
+fn exchange_refresh_token(refresh_token: &str) -> Result<MicrosoftTokenResponse, String> {
+    let client = http_client()?;
+    let response = client
+        .post(MICROSOFT_TOKEN_URL)
+        .form(&[
+            ("client_id", MICROSOFT_CLIENT_ID),
+            ("grant_type", "refresh_token"),
+            ("refresh_token", refresh_token),
+            ("scope", MICROSOFT_SCOPES),
+        ])
+        .send()
+        .map_err(|error| format!("Microsoft session refresh failed: {}", error))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().unwrap_or_else(|_| "Unknown Microsoft refresh error.".to_string());
+        return Err(format!("Microsoft session refresh failed ({}): {}", status, body));
+    }
+
+    response.json::<MicrosoftTokenResponse>()
+        .map_err(|error| format!("Could not parse Microsoft refresh response: {}", error))
 }
 
 
@@ -5396,6 +5739,9 @@ pub fn run()
                 start_microsoft_login,
                 logout_microsoft,
                 get_microsoft_account,
+                get_saved_microsoft_accounts,
+                switch_microsoft_account,
+                remove_saved_microsoft_account,
                 get_minecraft_process_status
             ]
         )
