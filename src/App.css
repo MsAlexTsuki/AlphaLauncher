@@ -7339,3 +7339,152 @@ button:not(:disabled):active {
 .client-mod-rule strong { font-size: 11px; overflow-wrap: anywhere; }
 .client-mod-rule small { color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
 @media (max-width: 760px) { .client-mod-grant-grid { grid-template-columns: 1fr; } }
+
+
+/* =========================================================
+   Release Manager section navigation
+   ========================================================= */
+
+.release-manager-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 4px 0 16px;
+}
+
+.release-manager-header h3 {
+  margin: 6px 0 5px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 22px;
+  letter-spacing: -0.035em;
+}
+
+.release-manager-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.release-manager-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.release-manager-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.release-manager-nav-item:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-2);
+}
+
+.release-manager-nav-item.active {
+  border-color: rgba(255, 200, 61, 0.48);
+  background: linear-gradient(125deg, rgba(255, 200, 61, 0.13), rgba(255, 200, 61, 0.035));
+  box-shadow: inset 0 0 0 1px rgba(255, 200, 61, 0.045);
+}
+
+.release-manager-nav-icon {
+  display: flex;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 200, 61, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 200, 61, 0.08);
+  color: var(--yellow-light);
+  font-size: 19px;
+}
+
+.release-manager-nav-item > span:nth-child(2) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.release-manager-nav-item strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.release-manager-nav-item small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.release-manager-chevron {
+  color: var(--muted);
+  font-size: 20px;
+}
+
+.release-overview > .section-header {
+  margin-bottom: 8px;
+}
+
+.release-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.release-overview-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.release-overview-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(255, 200, 61, 0.08);
+  color: var(--yellow-light);
+  font-size: 17px;
+}
+
+.release-overview-card strong {
+  font-size: 12px;
+}
+
+.release-overview-card small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+@media (max-width: 850px) {
+  .release-manager-nav,
+  .release-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
