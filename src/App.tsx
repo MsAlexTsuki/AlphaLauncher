@@ -3525,6 +3525,7 @@ function DeveloperPage({
   const [activeReleaseSection, setActiveReleaseSection] = useState<"Changelogs" | "Releases" | null>(null);
   const [activeReleaseTool, setActiveReleaseTool] = useState<"Built JARs" | "Publish release" | "Official version" | "Test versions" | null>(null);
   const [activeRolloutSection, setActiveRolloutSection] = useState<"Rollout plans" | "Audience targeting" | "Rollout schedule" | "Monitoring" | null>(null);
+  const [activeChangeReviewSection, setActiveChangeReviewSection] = useState<"Review Changelogs" | "Review Rank Management" | "Review Mod Changes" | "Review Audit Timeline" | null>(null);
   const [draftVersion, setDraftVersion] = useState("");
   const [draftTitle, setDraftTitle] = useState("");
   const [draftBody, setDraftBody] = useState("");
@@ -3842,11 +3843,56 @@ function DeveloperPage({
 
             {developerAuthorized && activeTool === "Audit Timeline" && <AuditTimeline />}
 
-            {developerAuthorized && activeTool === "Change Review" &&
-              renderPlaceholder(
-                "Change Review",
-                "Review proposed changes and approve them before they are applied.",
-              )}
+            {developerAuthorized && activeTool === "Change Review" && (
+              <section className="section-card developer-card change-review-manager">
+                {activeChangeReviewSection === null ? (
+                  <>
+                    <div className="section-header">
+                      <div>
+                        <span className="card-label">CHANGE CONTROL</span>
+                        <h3>Change Review</h3>
+                      </div>
+                    </div>
+                    <p className="subtitle">Choose the area whose proposed changes you want to review.</p>
+                    <div className="release-overview-grid">
+                      <button type="button" className="release-overview-card" onClick={() => setActiveChangeReviewSection("Review Changelogs")}>
+                        <span className="release-overview-icon" aria-hidden="true">▤</span>
+                        <strong>Review Changelogs</strong>
+                        <small>Review proposed changelog edits before they are applied.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveChangeReviewSection("Review Rank Management")}>
+                        <span className="release-overview-icon" aria-hidden="true">◆</span>
+                        <strong>Review Rank Management</strong>
+                        <small>Review proposed rank and rank-assignment changes.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveChangeReviewSection("Review Mod Changes")}>
+                        <span className="release-overview-icon" aria-hidden="true">▦</span>
+                        <strong>Review Mod Changes</strong>
+                        <small>Review proposed AlphaClient mod permission changes.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveChangeReviewSection("Review Audit Timeline")}>
+                        <span className="release-overview-icon" aria-hidden="true">◷</span>
+                        <strong>Review Audit Timeline</strong>
+                        <small>Review audit history relevant to proposed changes.</small>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="release-tool-detail">
+                    <button type="button" className="release-manager-back" onClick={() => setActiveChangeReviewSection(null)}>
+                      <span aria-hidden="true">←</span> Back to Change Review
+                    </button>
+                    <div className="section-header">
+                      <div>
+                        <span className="card-label">CHANGE CONTROL</span>
+                        <h3>{activeChangeReviewSection}</h3>
+                      </div>
+                    </div>
+                    <p className="subtitle">This section is ready for navigation. Change review workflows are not connected yet.</p>
+                  </div>
+                )}
+              </section>
+            )}
 
             {developerAuthorized && activeTool === "Development Sandbox" && (
               <>
