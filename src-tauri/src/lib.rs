@@ -895,7 +895,18 @@ fn get_saved_microsoft_accounts() -> Result<Vec<MicrosoftAccount>, String> {
 
 #[tauri::command]
 fn switch_microsoft_account(uuid: String) -> Result<MicrosoftAccount, String> {
-    activate_saved_account(&uuid)
+    let previous_uuid = load_account_vault()?.active_uuid;
+    let result = activate_saved_account(&uuid);
+    if result.is_err() {
+        if let Some(previous_uuid) = previous_uuid {
+            if previous_uuid != uuid {
+                if let Err(restore_error) = activate_saved_account(&previous_uuid) {
+                    eprintln!("Could not restore previous Minecraft account after failed switch: {}", restore_error);
+                }
+            }
+        }
+    }
+    result
 }
 
 #[tauri::command]
@@ -1011,6 +1022,10 @@ fn perform_microsoft_login()
         .append_pair(
             "response_mode",
             "query"
+        )
+        .append_pair(
+            "prompt",
+            "select_account"
         )
         .append_pair(
             "scope",
