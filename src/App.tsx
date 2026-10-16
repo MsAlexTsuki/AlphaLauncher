@@ -726,7 +726,7 @@ console.error("Developer permission check failed:", errorMessage);
     setIsLaunching(true);
     setLaunchError(null);
     setLaunchMessage(
-      partnerServer ? "Starting AlphaClient and connecting to alpha.rip…" : null,
+      partnerServer ? "Starting AlphaClient…" : null,
     );
 
     try {
