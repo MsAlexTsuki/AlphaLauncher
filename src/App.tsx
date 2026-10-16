@@ -3522,7 +3522,7 @@ function DeveloperPage({
   changelogMessage: string;
 }) {
   const [activeTool, setActiveTool] = useState<DeveloperTool | null>(null);
-  const [activeReleaseSection, setActiveReleaseSection] = useState<"Changelogs" | "Releases">("Changelogs");
+  const [activeReleaseSection, setActiveReleaseSection] = useState<"Changelogs" | "Releases" | null>(null);
   const [draftVersion, setDraftVersion] = useState("");
   const [draftTitle, setDraftTitle] = useState("");
   const [draftBody, setDraftBody] = useState("");
@@ -3948,45 +3948,53 @@ function DeveloperPage({
 
             {activeTool === "Release Manager" && (
               <>
-                <div className="release-manager-header">
-                  <div>
-                    <span className="card-label">RELEASE WORKSPACE</span>
-                    <h3>Release Manager</h3>
-                    <p>Choose whether to manage changelogs or client releases.</p>
+                {activeReleaseSection === null && (
+                  <>
+                  <div className="release-manager-header">
+                    <div>
+                      <span className="card-label">RELEASE WORKSPACE</span>
+                      <h3>Release Manager</h3>
+                      <p>Choose whether to manage changelogs or client releases.</p>
+                    </div>
                   </div>
-                </div>
-                <div className="release-manager-nav" role="tablist" aria-label="Release Manager sections">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeReleaseSection === "Changelogs"}
-                    className={`release-manager-nav-item ${activeReleaseSection === "Changelogs" ? "active" : ""}`}
-                    onClick={() => setActiveReleaseSection("Changelogs")}
-                  >
-                    <span className="release-manager-nav-icon" aria-hidden="true">≡</span>
-                    <span>
-                      <strong>Changelogs</strong>
-                      <small>Edit and publish launcher/client changelogs</small>
-                    </span>
-                    <span className="release-manager-chevron" aria-hidden="true">›</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={activeReleaseSection === "Releases"}
-                    className={`release-manager-nav-item ${activeReleaseSection === "Releases" ? "active" : ""}`}
-                    onClick={() => setActiveReleaseSection("Releases")}
-                  >
-                    <span className="release-manager-nav-icon" aria-hidden="true">↑</span>
-                    <span>
-                      <strong>Releases</strong>
-                      <small>Build selection and official version management</small>
-                    </span>
-                    <span className="release-manager-chevron" aria-hidden="true">›</span>
-                  </button>
-                </div>
+                  <div className="release-manager-nav" aria-label="Release Manager sections">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeReleaseSection === "Changelogs"}
+                      className={`release-manager-nav-item ${activeReleaseSection === "Changelogs" ? "active" : ""}`}
+                      onClick={() => setActiveReleaseSection("Changelogs")}
+                    >
+                      <span className="release-manager-nav-icon release-folder-icon" aria-hidden="true">▰</span>
+                      <span>
+                        <strong>Changelogs</strong>
+                        <small>Edit and publish launcher/client changelogs</small>
+                      </span>
+                      <span className="release-manager-chevron" aria-hidden="true">›</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeReleaseSection === "Releases"}
+                      className={`release-manager-nav-item ${activeReleaseSection === "Releases" ? "active" : ""}`}
+                      onClick={() => setActiveReleaseSection("Releases")}
+                    >
+                      <span className="release-manager-nav-icon release-folder-icon" aria-hidden="true">▰</span>
+                      <span>
+                        <strong>Releases</strong>
+                        <small>Build selection and official version management</small>
+                      </span>
+                      <span className="release-manager-chevron" aria-hidden="true">›</span>
+                    </button>
+                  </div>
+                  </>
+                )}
                 {activeReleaseSection === "Changelogs" && (
-                  <section className="section-card developer-card changelog-editor">
+                  <>
+                    <button type="button" className="release-manager-back" onClick={() => setActiveReleaseSection(null)}>
+                      <span aria-hidden="true">←</span> Back to Release Manager
+                    </button>
+                    <section className="section-card developer-card changelog-editor">
                 <div className="section-header">
                   <div>
                     <span className="card-label">HOME PAGE CONTENT</span>
@@ -4184,10 +4192,15 @@ function DeveloperPage({
                     ))
                   )}
                 </div>
-                  </section>
+                    </section>
+                  </>
                 )}
                 {activeReleaseSection === "Releases" && (
-                  <section className="section-card developer-card release-overview">
+                  <>
+                    <button type="button" className="release-manager-back" onClick={() => setActiveReleaseSection(null)}>
+                      <span aria-hidden="true">←</span> Back to Release Manager
+                    </button>
+                    <section className="section-card developer-card release-overview">
                     <div className="section-header">
                       <div>
                         <span className="card-label">ALPHACLIENT RELEASES</span>
@@ -4231,7 +4244,8 @@ function DeveloperPage({
                         </p>
                       </div>
                     </div>
-                  </section>
+                    </section>
+                  </>
                 )}
               </>
             )}
