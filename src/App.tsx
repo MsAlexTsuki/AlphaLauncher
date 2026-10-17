@@ -1082,7 +1082,6 @@ console.error("Developer permission check failed:", errorMessage);
               launchError={launchError}
               launchMessage={launchMessage}
               onAccount={() => navigate("Account")}
-              onNavigate={navigate}
               onOpenAlphaAuth={() => void handleOpenAlphaAuth()}
               onChangelog={() => {
                 setActiveChangelogTab("client");
@@ -2553,69 +2552,290 @@ function HomePage(props: {
   onOpenAlphaAuth: () => void;
   onChangelog: () => void;
   onNews: () => void;
-  onNavigate: (page: Page) => void;
 }) {
   const {
-    account, clientVersion, updateInfo, onPlay, isLaunching, launchError,
-    launchMessage, onAccount, onOpenAlphaAuth, onChangelog, onNavigate,
+    account,
+    clientVersion,
+    launchHistory,
+    changelogs,
+    updateInfo,
+    showNews,
+    onPlay,
+    isLaunching,
+    launchError,
+    launchMessage,
+    onAccount,
+    onOpenAlphaAuth,
+    onChangelog,
+    onNews,
   } = props;
 
   return (
-    <div className="home-reference-screen">
-      <div className="home-reference-shade" aria-hidden="true" />
-      <header className="home-reference-top">
-        <button type="button" className="home-account-chip" onClick={onAccount}>
-          <span className="home-account-emblem"><AlphaLogo /></span>
-          <span className="home-account-copy">
-            <strong>{account?.name ?? "Alpha Account"}</strong>
-            <small>{account ? "PREMIUM MEMBER" : "SIGN IN TO YOUR ACCOUNT"}</small>
-          </span>
-          <span className="home-account-chevron">⌄</span>
+    <div className="page">
+      <div className="page-header home-page-header">
+        <div
+          className="home-welcome"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            textAlign: "center",
+            gap: "16px",
+          }}
+        >
+          <div
+            className="home-welcome-logo"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              margin: 0,
+            }}
+          >
+            <img
+              className="home-welcome-logo-image"
+              src="/alpha-client-startup-logo.png"
+              alt="AlphaClient logo"
+              draggable={false}
+              style={{
+                display: "block",
+                width: "280px",
+                maxWidth: "100%",
+                height: "auto",
+                objectFit: "contain",
+                objectPosition: "center",
+              }}
+            />
+          </div>
+          <div className="home-welcome-copy" style={{ textAlign: "center" }}>
+            <p className="eyebrow">ALPHACLIENT</p>
+            <h1>Welcome back</h1>
+          </div>
+        </div>
+        <p className="subtitle" style={{ textAlign: "center" }}>
+          Your Minecraft experience is ready.
+        </p>
+      </div>
+
+      <section className="home-grid">
+        <div className="hero-card">
+          <div className="hero-glow" />
+          <div className="hero-content">
+            <div className="hero-brand">
+              <div className="hero-brand-mark">
+                <AlphaLogo />
+              </div>
+              <div className="hero-brand-copy">
+                <strong>AlphaClient</strong>
+                <span>MINECRAFT 1.8.9 · FORGE</span>
+              </div>
+            </div>
+            <span className="version-badge">VERSION {clientVersion}</span>
+            <h2>Ready to play?</h2>
+            <p>
+              A custom Minecraft client built around performance,
+              customization and the Alpha identity.
+            </p>
+            <div className="hero-meta">
+              <span>Minecraft 1.8.9</span>
+              <span>•</span>
+              <span>Forge</span>
+            </div>
+            <button
+              type="button"
+              className="play-button"
+              onClick={onPlay}
+              disabled={isLaunching}
+            >
+              <span>{isLaunching ? "◌" : "▶"}</span>
+              {isLaunching ? "PREPARING..." : "LAUNCH ALPHACLIENT"}
+            </button>
+            {launchError && (
+              <p className="launch-error" role="alert">
+                {launchError}
+              </p>
+            )}
+            {launchMessage && (
+              <p className="launch-success">{launchMessage}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="side-cards">
+          <button
+            type="button"
+            className="info-card info-card-button"
+            onClick={onAccount}
+          >
+            <div className="card-label">ACCOUNT</div>
+            <div className="account-row">
+              <div className={`avatar${account ? " avatar-skin" : ""}`}>
+                {account ? (
+                  <img
+                    src={`https://mc-heads.net/avatar/${encodeURIComponent(account.name)}/64`}
+                    alt={`${account.name} Minecraft skin`}
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  "?"
+                )}
+              </div>
+              <div>
+                <strong>{account?.name ?? "Not connected"}</strong>
+                <span>{account?.email ?? "Click to connect"}</span>
+              </div>
+              <div className={`online-dot ${account ? "" : "offline"}`} />
+            </div>
+          </button>
+
+          <div className="info-card">
+            <div className="card-label">CLIENT STATUS</div>
+            <div className="status-row">
+              <div className="status-icon">
+                {updateInfo?.update_available ? "↻" : "✓"}
+              </div>
+              <div>
+                <strong>
+                  {updateInfo?.update_available
+                    ? "Update available"
+                    : "Launcher ready"}
+                </strong>
+                <span>
+                  AlphaClient {clientVersion}
+                  {updateInfo?.update_available
+                    ? ` • ${updateInfo.latest_version} available`
+                    : ""}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="info-card update-card">
+            <div className="card-label">UPDATES</div>
+            <strong>
+              {changelogs[0]?.title ?? "View the latest release notes."}
+            </strong>
+            {changelogs[0] && (
+              <span className="card-label">
+                {changelogs[0].version} · {changelogs[0].date}
+              </span>
+            )}
+            <button
+              type="button"
+              className="text-button"
+              onClick={onChangelog}
+            >
+              View changelog →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="lower-grid">
+        {showNews && (
+          <div className="section-card">
+            <div className="section-header">
+              <div>
+                <span className="card-label">LATEST</span>
+                <h3>News</h3>
+              </div>
+              <button type="button" className="text-button" onClick={onNews}>
+                View all →
+              </button>
+            </div>
+            <div className="news-list">
+              {changelogs.slice(0, 2).map((entry) => (
+                <div
+                  className="news-item"
+                  key={`${entry.product ?? "client"}-${entry.id}`}
+                >
+                  <div className="news-icon">
+                    {entry.product === "launcher" ? "+" : "A"}
+                  </div>
+                  <div>
+                    <strong>{entry.title}</strong>
+                    <span>{entry.body}</span>
+                  </div>
+                  <time>
+                    {entry.product === "launcher" ? "Launcher" : "Client"}
+                  </time>
+                </div>
+              ))}
+              {changelogs.length === 0 && (
+                <p className="subtitle">
+                  There are no published changelogs yet.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="section-card">
+          <div className="section-header">
+            <div>
+              <span className="card-label">HISTORY</span>
+              <h3>Last played</h3>
+            </div>
+          </div>
+          <div className="launch-history-list">
+            {launchHistory.length > 0 ? (
+              launchHistory.slice(0, MAX_LAUNCH_HISTORY).map((session, index) => (
+                <div
+                  className="last-played"
+                  key={`${session.timestamp}-${index}`}
+                >
+                  <div className="minecraft-icon">A</div>
+                  <div className="last-played-info">
+                    <strong>AlphaClient</strong>
+                    <span>Minecraft 1.8.9 • Forge</span>
+                  </div>
+                  <div className="played-time">
+                    <strong>
+                      {new Date(session.timestamp).toLocaleString(undefined, {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </strong>
+                    <span>
+                      {session.version.startsWith("Offline test · ")
+                        ? `Offline test · ${session.version.slice("Offline test · ".length)}`
+                        : `AlphaClient ${session.version}`}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="last-played">
+                <div className="minecraft-icon">A</div>
+                <div className="last-played-info">
+                  <strong>AlphaClient</strong>
+                  <span>Minecraft 1.8.9 • Forge</span>
+                </div>
+                <div className="played-time">
+                  <strong>—</strong>
+                  <span>No launch history</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <div className="home-community-account-wrap">
+        <button
+          type="button"
+          className="home-community-account-button"
+          onClick={onOpenAlphaAuth}
+        >
+          <span aria-hidden="true">✦</span>
+          Login to your Alpha Account
+          <span className="home-community-account-arrow" aria-hidden="true">›</span>
         </button>
-        <div className="home-reference-window-actions">
-          <button type="button" aria-label="Notifications" title="Notifications" onClick={onOpenAlphaAuth}>♟</button>
-          <button type="button" aria-label="Alpha Community" title="Alpha Community" onClick={() => onNavigate("Community")}>◉</button>
-          <button type="button" aria-label="Minimize window" title="Minimize window" onClick={() => void getCurrentWindow().minimize()}>−</button>
-          <button type="button" aria-label="Close window" title="Close window" onClick={() => void getCurrentWindow().close()}>×</button>
-        </div>
-      </header>
-
-      <main className="home-reference-center">
-        <div className="home-reference-brand">
-          <img src="/alpha-client-startup-logo.png" alt="AlphaClient" draggable={false} />
-        </div>
-        <nav className="home-reference-menu" aria-label="Main menu">
-          <button type="button" className="home-reference-menu-button primary" onClick={onPlay} disabled={isLaunching}>
-            <span className="menu-button-icon">{isLaunching ? "◌" : "▶"}</span>
-            <span>{isLaunching ? "STARTING..." : "PLAY"}</span>
-          </button>
-          <button type="button" className="home-reference-menu-button" onClick={() => onNavigate("Settings")}>
-            <span className="menu-button-icon">⚙</span><span>SETTINGS</span>
-          </button>
-          <button type="button" className="home-reference-menu-button" onClick={onAccount}>
-            <span className="menu-button-icon">♟</span><span>CHANGE SKIN</span>
-          </button>
-          <button type="button" className="home-reference-menu-button" onClick={() => onNavigate("Mods")}>
-            <span className="menu-button-icon">✣</span><span>MODS</span>
-          </button>
-          <button type="button" className="home-reference-menu-button" onClick={() => void getCurrentWindow().close()}>
-            <span className="menu-button-icon">⇥</span><span>EXIT</span>
-          </button>
-        </nav>
-        {launchError && <p className="home-reference-message error" role="alert">{launchError}</p>}
-        {launchMessage && <p className="home-reference-message">{launchMessage}</p>}
-      </main>
-
-      <div className="home-reference-slogan">Play Different<span>.</span></div>
-      <div className="home-reference-footer">
-        <div className="home-reference-motto">
-          <span className="motto-crown">♛</span>
-          <span><strong>Play together. Achieve more.</strong><small>AlphaClient — Your adventure. Our focus.</small></span>
-        </div>
-        <div className="home-reference-version">
-          <span className="version-status-dot" />
-          <span>{updateInfo?.update_available ? "UPDATE AVAILABLE" : "VERSION"} {clientVersion}</span>
-        </div>
       </div>
     </div>
   );
