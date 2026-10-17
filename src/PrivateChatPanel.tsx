@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { supabase } from "./lib/supabase";
 
-type ChatFriend = { id: string; username: string; display_name?: string; is_founder?: boolean; rank_key?: string | null; avatar_url?: string | null };
+type ChatFriend = { id: string; username: string; display_name?: string; is_founder?: boolean; rank_key?: string | null; rank_keys?: string[]; avatar_url?: string | null };
 type PrivateMessage = { id: string; sender_id: string; recipient_id: string; body: string; created_at: string };
 type Props = { userId: string; friends: ChatFriend[]; selectedFriendId: string | null; onSelectFriend: (friendId: string) => void };
 
-function formatRank(rankKey: string | null | undefined, isFounder?: boolean) {
-  const key = (rankKey || (isFounder ? "founder" : "member")).toLowerCase();
+function formatRank(rankKey: string | null | undefined, isFounder?: boolean, rankKeys?: string[]) {
+  const assigned = rankKeys ?? [];
+  const key = (isFounder || assigned.includes("founder") ? "founder" : assigned.includes("the_nibbler") ? "the_nibbler" : (rankKey || "member")).toLowerCase();
   const labels: Record<string, string> = {
     member: "Member",
     donator: "Alpha",
@@ -29,6 +30,7 @@ function formatRank(rankKey: string | null | undefined, isFounder?: boolean) {
     manager: "Manager",
     owner: "Owner",
     founder: "FOUNDER",
+    the_nibbler: "The Nibbler",
   };
   return labels[key] || "Member";
 }
@@ -44,8 +46,30 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [confirmDeleteChat, setConfirmDeleteChat] = useState(false);
+  const [friendRankKeys, setFriendRankKeys] = useState<Record<string, string[]>>({});
   const messageListRef = useRef<HTMLDivElement>(null);
   const selectedFriend = friends.find(friend => friend.id === selectedFriendId) ?? null;
+
+  useEffect(() => {
+    let active = true;
+    const loadFriendRanks = async () => {
+      if (friends.length === 0) {
+        setFriendRankKeys({});
+        return;
+      }
+      const { data, error: rankError } = await supabase.rpc("get_profile_ranks", {
+        p_profile_ids: friends.map(friend => friend.id),
+      });
+      if (!active || rankError) return;
+      const next: Record<string, string[]> = {};
+      for (const row of (data ?? []) as { profile_id: string; rank_key: string }[]) {
+        (next[row.profile_id] ??= []).push(row.rank_key);
+      }
+      setFriendRankKeys(next);
+    };
+    void loadFriendRanks();
+    return () => { active = false; };
+  }, [friends]);
 
   useEffect(() => {
     if (!selectedFriendId || !friends.some(friend => friend.id === selectedFriendId)) {
@@ -110,7 +134,7 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
         {friends.length === 0 ? <div className="private-chat-no-contacts">Add friends to start a private conversation.</div> : friends.map(friend =>
           <button type="button" className={`private-chat-contact${selectedFriendId === friend.id ? " is-active" : ""}`} key={friend.id} onClick={() => onSelectFriend(friend.id)} aria-pressed={selectedFriendId === friend.id}>
             <span className="private-chat-avatar">{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : friend.username.slice(0,1).toUpperCase()}<i /></span>
-            <span className="private-chat-contact-copy"><strong>{friend.username}</strong><small className={`private-chat-rank${formatRank(friend.rank_key, friend.is_founder) === "FOUNDER" ? " is-founder" : ""}`}>{formatRank(friend.rank_key, friend.is_founder)}</small></span><span className="private-chat-contact-arrow">›</span>
+            <span className="private-chat-contact-copy"><strong>{friend.username}</strong><small className={`private-chat-rank${formatRank(friend.rank_key, friend.is_founder, friendRankKeys[friend.id] ?? friend.rank_keys) === "FOUNDER" ? " is-founder" : formatRank(friend.rank_key, friend.is_founder, friendRankKeys[friend.id] ?? friend.rank_keys) === "The Nibbler" ? " is-nibbler" : ""}`}>{formatRank(friend.rank_key, friend.is_founder, friendRankKeys[friend.id] ?? friend.rank_keys)}</small></span><span className="private-chat-contact-arrow">›</span>
           </button>)}
       </aside>
       <div className="private-chat-conversation">
