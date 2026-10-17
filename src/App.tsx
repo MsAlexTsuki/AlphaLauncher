@@ -3293,7 +3293,7 @@ function RankManagement() {
                   <div><span>Current rank</span><strong style={{ color: COMMUNITY_RANKS[selectedMember.rank_key]?.color ?? "#C3BFE0" }}>{COMMUNITY_RANKS[selectedMember.rank_key]?.label ?? selectedMember.rank_key}</strong></div>
                 </div>
                 <div className="setting-line developer-setting-line rank-checkbox-setting">
-                  <span>Assigned ranks</span>
+                  <span>Assign their rank</span>
                   <div className="rank-checkbox-grid">
                     {rankEntries.map(([key, rank]) => {
                       const rankIndex = COMMUNITY_RANK_ORDER.indexOf(
