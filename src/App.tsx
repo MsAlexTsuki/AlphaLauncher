@@ -3200,7 +3200,10 @@ function RankManagement() {
 
   const selectedMember = members.find((member) => member.id === selectedId) ?? null;
   const filteredMembers = members;
-  const rankEntries = Object.entries(COMMUNITY_RANKS);
+  const rankEntries = Object.entries(COMMUNITY_RANKS).sort(([a], [b]) =>
+    COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) -
+    COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number]),
+  );
 
   const assignRank = async () => {
     if (!selectedMember) return;
