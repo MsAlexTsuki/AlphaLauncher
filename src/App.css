@@ -7649,8 +7649,8 @@ button:not(:disabled):active {
 .profile-rank-list {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 7px;
+  align-items: center;
+  gap: 5px;
   margin-top: 12px;
 }
 .profile-rank-list .profile-founder-status {
