@@ -1499,6 +1499,7 @@ type EditableCommunityProfile = {
   avatar_url: string | null;
   is_founder: boolean;
   rank_key?: string | null;
+  rank_keys?: string[];
 };
 
 const COMMUNITY_RANK_ORDER = [
@@ -1510,11 +1511,11 @@ const COMMUNITY_RANK_ORDER = [
   "senior_moderator",
   "moderator",
   "trial_moderator",
+  "the_nibbler",
   "beta",
   "alpha_plus",
   "alpha",
   "member",
-  "the_nibbler",
 ] as const;
 
 const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
@@ -1530,7 +1531,7 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   alpha_plus: { label: "ALPHA+", color: "#FFF300" },
   alpha: { label: "ALPHA", color: "#F300FF" },
   member: { label: "MEMBER", color: "#C3BFE0" },
-  the_nibbler: { label: "THE NIBBLER", color: "#C3BFE0" },
+  the_nibbler: { label: "THE NIBBLER", color: "#A855F7" },
 };
 
 const COMMUNITY_RANK_ICONS: Record<string, string> = {
@@ -1894,7 +1895,9 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
         setProfile(null);
         return;
       }
-      const loaded = data as EditableCommunityProfile;
+      const { data: rankRows, error: rankError } = await supabase.rpc("get_profile_ranks", { p_profile_ids: [user.id] });
+      if (rankError) throw rankError;
+      const loaded = { ...(data as EditableCommunityProfile), rank_keys: (rankRows ?? []).map((row: { rank_key: string }) => row.rank_key) };
       setProfile(loaded);
       setDisplayName(loaded.username || "");
       setBio(loaded.bio || "");
@@ -1952,7 +1955,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
         .select("id, username, display_name, bio, avatar_url, is_founder, rank_key")
         .single();
       if (updateError) throw updateError;
-      setProfile(data as EditableCommunityProfile);
+      setProfile({ ...(data as EditableCommunityProfile), rank_keys: profile.rank_keys });
       setDisplayName(data.username || profile.username); setBio(cleanBio); setAvatarUrl(nextAvatarUrl);
       setIsEditing(false);
       setSelectedAvatar(null);
@@ -2001,11 +2004,10 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
       <div className="profile-preview-divider" />
       <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>
       {(() => {
-        const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member");
         const rankLabels: Record<string, string> = {
           founder: "Founder of Alpha",
           owner: "Owner of Alpha",
-          management: "Manager of Alpha",
+          management: "Management on Alpha",
           senior_admin: "Senior Admin on Alpha",
           admin: "Admin on Alpha",
           senior_moderator: "Senior Moderator on Alpha",
@@ -2017,11 +2019,18 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
           member: "Member on Alpha",
           the_nibbler: "The Nibbler on Alpha",
         };
-        const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member;
-        const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member);
-        return <div className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}>
-          {rankKey === "the_nibbler" ? <CommunityRankIcon rankKey={rankKey} className="profile-founder-crown" /> : <span className="profile-founder-crown" aria-hidden="true">{icon}</span>}
-          {rankLabels[rankKey] || rankLabels.member}
+        const rankKeys = profile.rank_keys?.length
+          ? profile.rank_keys
+          : [profile.rank_key || (profile.is_founder ? "founder" : "member")];
+        return <div className="profile-rank-list">
+          {rankKeys.map((rankKey) => {
+            const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member;
+            const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member);
+            return <div key={rankKey} className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}>
+              {rankKey === "the_nibbler" ? <CommunityRankIcon rankKey={rankKey} className="profile-founder-crown" /> : <span className="profile-founder-crown" aria-hidden="true">{icon}</span>}
+              {rankLabels[rankKey] || rank.label}
+            </div>;
+          })}
         </div>;
       })()}
     </section>}
@@ -3082,6 +3091,7 @@ type ManagedCommunityProfile = {
   username: string;
   display_name: string | null;
   rank_key: string;
+  rank_keys: string[];
 };
 
 function RankManagement() {
@@ -3091,6 +3101,7 @@ function RankManagement() {
   const [members, setMembers] = useState<ManagedCommunityProfile[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [selectedRank, setSelectedRank] = useState("member");
+  const [selectedRanks, setSelectedRanks] = useState<string[]>(["member"]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -3132,7 +3143,21 @@ function RankManagement() {
         { search_term: search.trim() },
       );
       if (membersError) throw membersError;
-      setMembers((data ?? []) as ManagedCommunityProfile[]);
+      const profileRows = (data ?? []) as Omit<ManagedCommunityProfile, "rank_keys">[];
+      const { data: rankRows, error: rankRowsError } = await supabase.rpc("get_profile_ranks", {
+        p_profile_ids: profileRows.map((member) => member.id),
+      });
+      if (rankRowsError) throw rankRowsError;
+      const rankMap = new Map<string, string[]>();
+      for (const rankRow of rankRows ?? []) {
+        const keys = rankMap.get(rankRow.profile_id) ?? [];
+        keys.push(rankRow.rank_key);
+        rankMap.set(rankRow.profile_id, keys);
+      }
+      setMembers(profileRows.map((member) => ({
+        ...member,
+        rank_keys: rankMap.get(member.id) ?? [member.rank_key || "member"],
+      })));
     } catch (loadError) {
       setError(errorText(loadError));
     } finally {
@@ -3151,7 +3176,21 @@ function RankManagement() {
           { search_term: search.trim() },
         );
         if (queryError) throw queryError;
-        setMembers((data ?? []) as ManagedCommunityProfile[]);
+        const profileRows = (data ?? []) as Omit<ManagedCommunityProfile, "rank_keys">[];
+      const { data: rankRows, error: rankRowsError } = await supabase.rpc("get_profile_ranks", {
+        p_profile_ids: profileRows.map((member) => member.id),
+      });
+      if (rankRowsError) throw rankRowsError;
+      const rankMap = new Map<string, string[]>();
+      for (const rankRow of rankRows ?? []) {
+        const keys = rankMap.get(rankRow.profile_id) ?? [];
+        keys.push(rankRow.rank_key);
+        rankMap.set(rankRow.profile_id, keys);
+      }
+      setMembers(profileRows.map((member) => ({
+        ...member,
+        rank_keys: rankMap.get(member.id) ?? [member.rank_key || "member"],
+      })));
       } catch (searchError) {
         setError(errorText(searchError));
       }
@@ -3171,10 +3210,10 @@ function RankManagement() {
     try {
       const { error: assignError } = await supabase.rpc("assign_community_rank", {
         target_profile_id: selectedMember.id,
-        requested_rank_key: selectedRank,
+        requested_rank_keys: selectedRanks,
       });
       if (assignError) throw assignError;
-      setMessage(`Updated @${selectedMember.username} to ${COMMUNITY_RANKS[selectedRank]?.label ?? selectedRank}.`);
+      setMessage(`Updated @${selectedMember.username} to ${selectedRanks.map((key) => COMMUNITY_RANKS[key]?.label ?? key).join(", ")}.`);
       await loadMembers();
     } catch (saveError) {
       setError(errorText(saveError));
@@ -3198,7 +3237,7 @@ function RankManagement() {
   const protectedTarget = !isFounder && selectedMember !== null && targetRankIndex >= 0 &&
     actorRankIndex >= 0 && targetRankIndex <= actorRankIndex;
   const canManageTarget = canManageRanks && Boolean(selectedMember) &&
-    selectedMember?.id !== actorId &&
+    (selectedMember?.id !== actorId || (isFounder && selectedMember?.rank_key === "founder")) &&
     !protectedTarget &&
     selectedRank !== "founder" &&
     selectedRankIndex > actorRankIndex;
@@ -3232,11 +3271,11 @@ function RankManagement() {
               <select className="developer-input" value={selectedId} onChange={(event) => {
                 setSelectedId(event.target.value);
                 const member = members.find((item) => item.id === event.target.value);
-                if (member) setSelectedRank(member.rank_key || "member");
+                if (member) { setSelectedRank(member.rank_key || "member"); setSelectedRanks(member.rank_keys?.length ? member.rank_keys : [member.rank_key || "member"]); }
               }}>
                 <option value="">Select a member…</option>
                 {filteredMembers.map((member) => (
-                  <option key={member.id} value={member.id}>@{member.username} · {COMMUNITY_RANKS[member.rank_key]?.label ?? member.rank_key}</option>
+                  <option key={member.id} value={member.id}>@{member.username} · {(member.rank_keys ?? [member.rank_key]).map((key) => COMMUNITY_RANKS[key]?.label ?? key).join(" + ")}</option>
                 ))}
               </select>
             </label>
@@ -3246,31 +3285,49 @@ function RankManagement() {
                   <div><span>Username</span><strong>@{selectedMember.username}</strong></div>
                   <div><span>Current rank</span><strong style={{ color: COMMUNITY_RANKS[selectedMember.rank_key]?.color ?? "#C3BFE0" }}>{COMMUNITY_RANKS[selectedMember.rank_key]?.label ?? selectedMember.rank_key}</strong></div>
                 </div>
-                <label className="setting-line developer-setting-line">
-                  <span>Assign rank</span>
-                  <select className="developer-input" value={selectedRank} onChange={(event) => setSelectedRank(event.target.value)}>
+                <div className="setting-line developer-setting-line rank-checkbox-setting">
+                  <span>Assigned ranks</span>
+                  <div className="rank-checkbox-grid">
                     {rankEntries.map(([key, rank]) => {
                       const rankIndex = COMMUNITY_RANK_ORDER.indexOf(
                         key as (typeof COMMUNITY_RANK_ORDER)[number],
                       );
-                      const cannotAssign = key === "founder" ||
+                      const cannotAssign = (key === "founder" && !isFounder) ||
                         (!isFounder && rankIndex <= actorRankIndex);
                       return (
-                        <option key={key} value={key} disabled={cannotAssign}>
-                          {rank.label}
-                        </option>
+                        <label key={key} className="rank-checkbox-option">
+                          <input
+                            type="checkbox"
+                            checked={selectedRanks.includes(key)}
+                            disabled={cannotAssign || (key === "the_nibbler" && !isFounder)}
+                            onChange={(event) => {
+                              const next = event.target.checked
+                                ? [...selectedRanks, key]
+                                : selectedRanks.filter((item) => item !== key);
+                              if (!next.length) return;
+                              const ordered = next.sort((a, b) =>
+                                COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) -
+                                COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])
+                              );
+                              setSelectedRanks(ordered);
+                              setSelectedRank(ordered[0]);
+                            }}
+                          />
+                          <span style={{ color: rank.color }}>{rank.label}</span>
+                        </label>
                       );
                     })}
-                  </select>
-                </label>
+                  </div>
+                  <small className="subtitle">The highest rank becomes the primary rank. The Nibbler is Founder-only and limited to two accounts.</small>
+                </div>
                 <div className="developer-actions">
-                  <button className="friends-primary rank-save-button" type="button" disabled={saving || !canManageTarget || selectedRank === selectedMember.rank_key} onClick={() => void assignRank()}>
+                  <button className="friends-primary rank-save-button" type="button" disabled={saving || !canManageTarget || selectedRanks.slice().sort((a, b) => COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) - COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])).join(",") === (selectedMember.rank_keys ?? [selectedMember.rank_key]).slice().sort((a, b) => COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) - COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])).join(",")} onClick={() => void assignRank()}>
                     {saving ? "Saving…" : "Save rank"}
                   </button>
-                  <button className="friends-secondary" type="button" disabled={saving || !canManageTarget || selectedMember.rank_key === "member"} onClick={() => { setSelectedRank("member"); void (async () => {
+                  <button className="friends-secondary" type="button" disabled={saving || !canManageTarget || selectedMember.rank_key === "member"} onClick={() => { setSelectedRank("member"); setSelectedRanks(["member"]); void (async () => {
                     setSaving(true); setError(""); setMessage("");
                     try {
-                      const { error: assignError } = await supabase.rpc("assign_community_rank", { target_profile_id: selectedMember.id, requested_rank_key: "member" });
+                      const { error: assignError } = await supabase.rpc("assign_community_ranks", { target_profile_id: selectedMember.id, requested_rank_keys: ["member"] });
                       if (assignError) throw assignError;
                       setMessage(`Reset @${selectedMember.username} to Member.`);
                       await loadMembers();
@@ -3286,7 +3343,7 @@ function RankManagement() {
                     selectedRankIndex <= actorRankIndex ? "You cannot assign a rank equal to or higher than your own." :
                     "This rank change is not permitted."}
                 </p>}
-                {canManageTarget && selectedRank === selectedMember.rank_key && <p className="subtitle">Choose a different rank to enable Save rank.</p>}
+                {canManageTarget && selectedRanks.slice().sort((a, b) => COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) - COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])).join(",") === (selectedMember.rank_keys ?? [selectedMember.rank_key]).slice().sort((a, b) => COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) - COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])).join(",") && <p className="subtitle">Choose a different rank to enable Save rank.</p>}
               </>
             )}
           </>
