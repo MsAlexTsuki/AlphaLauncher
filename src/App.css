@@ -6710,6 +6710,9 @@ button:not(:disabled):active {
 .private-chat-contact-copy .private-chat-rank.is-founder {
   color: #ffd866;
 }
+.private-chat-contact-copy .private-chat-rank.is-nibbler {
+  color: #a855f7;
+}
 
 
 .inbox-message-toast {
@@ -6937,6 +6940,9 @@ button:not(:disabled):active {
 
 .chats-page .private-chat-contact-copy .private-chat-rank.is-founder {
   color: #ffd866;
+}
+.chats-page .private-chat-contact-copy .private-chat-rank.is-nibbler {
+  color: #a855f7;
 }
 
 .chats-page .private-chat-conversation {
