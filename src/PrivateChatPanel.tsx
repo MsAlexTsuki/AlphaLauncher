@@ -43,7 +43,7 @@ function rankClass(rankKey: string | null | undefined, isFounder?: boolean, rank
       ? "the_nibbler"
       : (rankKey || "member")).toLowerCase();
   const aliases: Record<string, string> = {
-    donor: "alpha", donator: "alpha", beta_testers: "beta_tester",
+    the_nibbler: "nibbler", donor: "alpha", donator: "alpha", beta_testers: "beta_tester",
     t_mod: "trial_moderator", mod: "moderator", srmod: "senior_moderator",
     manager: "management", sradmin: "senior_admin",
   };
