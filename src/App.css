@@ -6707,12 +6707,20 @@ button:not(:disabled):active {
   letter-spacing: 0.045em;
   text-transform: none;
 }
-.private-chat-contact-copy .private-chat-rank.is-founder {
-  color: #ffd866;
-}
-.private-chat-contact-copy .private-chat-rank.is-nibbler {
-  color: #a855f7;
-}
+.private-chat-contact-copy .private-chat-rank.is-member { color: #8f929e; }
+.private-chat-contact-copy .private-chat-rank.is-alpha { color: #55c7ff; }
+.private-chat-contact-copy .private-chat-rank.is-alpha_plus { color: #3ddc97; }
+.private-chat-contact-copy .private-chat-rank.is-beta,
+.private-chat-contact-copy .private-chat-rank.is-beta_tester { color: #38bdf8; }
+.private-chat-contact-copy .private-chat-rank.is-trial_moderator { color: #a3e635; }
+.private-chat-contact-copy .private-chat-rank.is-moderator { color: #4ade80; }
+.private-chat-contact-copy .private-chat-rank.is-senior_moderator { color: #22c55e; }
+.private-chat-contact-copy .private-chat-rank.is-admin { color: #fb7185; }
+.private-chat-contact-copy .private-chat-rank.is-senior_admin { color: #f43f5e; }
+.private-chat-contact-copy .private-chat-rank.is-management { color: #f97316; }
+.private-chat-contact-copy .private-chat-rank.is-owner { color: #ef4444; }
+.private-chat-contact-copy .private-chat-rank.is-founder { color: #ffd866; }
+.private-chat-contact-copy .private-chat-rank.is-nibbler { color: #a855f7; }
 
 
 .inbox-message-toast {
@@ -6938,12 +6946,20 @@ button:not(:disabled):active {
   text-transform: none;
 }
 
-.chats-page .private-chat-contact-copy .private-chat-rank.is-founder {
-  color: #ffd866;
-}
-.chats-page .private-chat-contact-copy .private-chat-rank.is-nibbler {
-  color: #a855f7;
-}
+.chats-page .private-chat-contact-copy .private-chat-rank.is-member { color: #8f929e; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-alpha { color: #55c7ff; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-alpha_plus { color: #3ddc97; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-beta,
+.chats-page .private-chat-contact-copy .private-chat-rank.is-beta_tester { color: #38bdf8; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-trial_moderator { color: #a3e635; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-moderator { color: #4ade80; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-senior_moderator { color: #22c55e; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-admin { color: #fb7185; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-senior_admin { color: #f43f5e; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-management { color: #f97316; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-owner { color: #ef4444; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-founder { color: #ffd866; }
+.chats-page .private-chat-contact-copy .private-chat-rank.is-nibbler { color: #a855f7; }
 
 .chats-page .private-chat-conversation {
   display: flex;
