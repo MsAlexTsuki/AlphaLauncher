@@ -3208,7 +3208,7 @@ function RankManagement() {
     setError("");
     setMessage("");
     try {
-      const { error: assignError } = await supabase.rpc("assign_community_rank", {
+      const { error: assignError } = await supabase.rpc("assign_community_ranks", {
         target_profile_id: selectedMember.id,
         requested_rank_keys: selectedRanks,
       });
@@ -3239,8 +3239,8 @@ function RankManagement() {
   const canManageTarget = canManageRanks && Boolean(selectedMember) &&
     (selectedMember?.id !== actorId || (isFounder && selectedMember?.rank_key === "founder")) &&
     !protectedTarget &&
-    selectedRank !== "founder" &&
-    selectedRankIndex > actorRankIndex;
+    (selectedRank !== "founder" || (isFounder && selectedMember?.rank_key === "founder")) &&
+    (selectedRankIndex > actorRankIndex || (isFounder && selectedMember?.rank_key === "founder"));
 
   return (
     <section className="section-card developer-card">
@@ -3292,7 +3292,7 @@ function RankManagement() {
                       const rankIndex = COMMUNITY_RANK_ORDER.indexOf(
                         key as (typeof COMMUNITY_RANK_ORDER)[number],
                       );
-                      const cannotAssign = (key === "founder" && !isFounder) ||
+                      const cannotAssign = (key === "founder" && (!isFounder || selectedMember.rank_key === "founder")) ||
                         (!isFounder && rankIndex <= actorRankIndex);
                       return (
                         <label key={key} className="rank-checkbox-option">
@@ -3324,7 +3324,7 @@ function RankManagement() {
                   <button className="friends-primary rank-save-button" type="button" disabled={saving || !canManageTarget || selectedRanks.slice().sort((a, b) => COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) - COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])).join(",") === (selectedMember.rank_keys ?? [selectedMember.rank_key]).slice().sort((a, b) => COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) - COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])).join(",")} onClick={() => void assignRank()}>
                     {saving ? "Saving…" : "Save rank"}
                   </button>
-                  <button className="friends-secondary" type="button" disabled={saving || !canManageTarget || selectedMember.rank_key === "member"} onClick={() => { setSelectedRank("member"); setSelectedRanks(["member"]); void (async () => {
+                  <button className="friends-secondary" type="button" disabled={saving || !canManageTarget || selectedMember.rank_key === "founder" || selectedMember.rank_key === "member"} onClick={() => { setSelectedRank("member"); setSelectedRanks(["member"]); void (async () => {
                     setSaving(true); setError(""); setMessage("");
                     try {
                       const { error: assignError } = await supabase.rpc("assign_community_ranks", { target_profile_id: selectedMember.id, requested_rank_keys: ["member"] });
