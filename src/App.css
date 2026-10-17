@@ -7602,3 +7602,62 @@ button:not(:disabled):active {
 .community-rank-icon.rank-image-icon { width: 12px; height: 12px; margin-right: 4px; }
 .profile-rank-icon.rank-image-icon { min-width: 13px; width: 13px; height: 13px; }
 .profile-founder-crown.rank-image-icon { width: 14px; height: 14px; }
+
+
+/* Multi-rank assignment and profile rank stack */
+.rank-checkbox-setting {
+  display: grid;
+  gap: 10px;
+  align-items: start;
+}
+.rank-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  width: 100%;
+}
+.rank-checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.018);
+  font-size: 10px;
+  cursor: pointer;
+}
+.rank-checkbox-option:has(input:checked) {
+  border-color: rgba(168, 85, 247, 0.45);
+  background: rgba(168, 85, 247, 0.09);
+}
+.rank-checkbox-option input {
+  flex: 0 0 auto;
+  accent-color: #A855F7;
+}
+.rank-checkbox-option span {
+  overflow-wrap: anywhere;
+}
+.rank-checkbox-option:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rank-checkbox-setting > small {
+  line-height: 1.55;
+}
+.profile-rank-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 12px;
+}
+.profile-rank-list .profile-founder-status {
+  margin-top: 0;
+}
+@media (max-width: 760px) {
+  .rank-checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+}
