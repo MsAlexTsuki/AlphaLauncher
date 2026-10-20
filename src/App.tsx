@@ -1505,6 +1505,7 @@ type EditableCommunityProfile = {
 const COMMUNITY_RANK_ORDER = [
   "founder",
   "owner",
+  "manager",
   "management",
   "senior_admin",
   "admin",
@@ -1512,32 +1513,37 @@ const COMMUNITY_RANK_ORDER = [
   "moderator",
   "trial_moderator",
   "the_nibbler",
-  "beta",
   "alpha_plus",
   "alpha",
+  "elite",
+  "rogue",
+  "scout",
   "member",
 ] as const;
 
 const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   founder: { label: "FOUNDER", color: "#FFD866" },
   owner: { label: "OWNER", color: "#FF2D00" },
-  management: { label: "MANAGEMENT", color: "#5C0303" },
-  senior_admin: { label: "SENIOR ADMIN", color: "#D67020" },
+  manager: { label: "MANAGER", color: "#808080" },
+  management: { label: "PLAT ADMIN (MANAGEMENT)", color: "#5C0303" },
+  senior_admin: { label: "SR ADMIN", color: "#D67020" },
   admin: { label: "ADMIN", color: "#E08D16" },
-  senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" },
-  moderator: { label: "MODERATOR", color: "#29AFCC" },
-  trial_moderator: { label: "TRIAL MODERATOR", color: "#166534" },
-  beta: { label: "BETA", color: "#00FF52" },
+  senior_moderator: { label: "SR MOD", color: "#8C17D1" },
+  moderator: { label: "MOD", color: "#29AFCC" },
+  trial_moderator: { label: "T-MOD", color: "#166534" },
+  the_nibbler: { label: "THE NIBBLER", color: "#A855F7" },
   alpha_plus: { label: "ALPHA+", color: "#FFF300" },
   alpha: { label: "ALPHA", color: "#F300FF" },
+  elite: { label: "ELITE", color: "#808080" },
+  rogue: { label: "ROGUE", color: "#808080" },
+  scout: { label: "SCOUT", color: "#808080" },
   member: { label: "MEMBER", color: "#C3BFE0" },
-  the_nibbler: { label: "THE NIBBLER", color: "#A855F7" },
 };
 
 const COMMUNITY_RANK_ICONS: Record<string, string> = {
-  founder: "🌸", owner: "♛", management: "◆", senior_admin: "⬟", admin: "✦",
-  senior_moderator: "✚", moderator: "✧", trial_moderator: "◇", beta: "β",
-  alpha_plus: "A+", alpha: "A", member: "●", the_nibbler: "N",
+  founder: "🌸", owner: "♛", manager: "◆", management: "⬟", senior_admin: "⬟", admin: "✦",
+  senior_moderator: "✚", moderator: "✧", trial_moderator: "◇", the_nibbler: "N",
+  alpha_plus: "A+", alpha: "A", elite: "E", rogue: "R", scout: "S", member: "●",
 };
 
 const NIBBLER_RANK_IMAGE_URL = "https://raw.githubusercontent.com/MsAlexTsuki/AlphaClient---Mod/development/src/main/resources/assets/alphastaffmod/textures/ranks/the_nibbler.png";
