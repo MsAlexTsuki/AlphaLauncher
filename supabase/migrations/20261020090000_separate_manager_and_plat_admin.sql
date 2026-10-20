@@ -22,6 +22,9 @@ where old_rank.profile_id = new_rank.profile_id
 
 update public.profile_ranks set rank_key = 'plat_admin' where rank_key = 'management';
 update public.profiles set rank_key = 'plat_admin' where rank_key = 'management';
+
+-- Preserve existing StaffMods rank permissions while removing the old catalog key.
+update public.client_mod_rank_permissions set rank_key = 'plat_admin' where rank_key = 'management';
 delete from public.community_ranks where rank_key = 'management';
 
 -- Rebuild the priority ordering without colliding with the unique sort_order constraint.
@@ -64,11 +67,10 @@ set
 
 -- Keep rank permission administration compatible with the renamed rank and new Manager.
 alter table public.rank_permissions drop constraint if exists rank_permissions_rank_key_check;
+update public.rank_permissions set rank_key = 'plat_admin' where rank_key = 'management';
 alter table public.rank_permissions
   add constraint rank_permissions_rank_key_check
   check (rank_key in ('founder','owner','manager','plat_admin','senior_admin','admin','senior_moderator','moderator','trial_moderator','beta','alpha_plus','alpha','member','the_nibbler','elite','rogue','scout'));
-
-update public.rank_permissions set rank_key = 'plat_admin' where rank_key = 'management';
 
 create or replace function public.save_rank_permissions(p_scope text, p_permissions jsonb)
 returns void
