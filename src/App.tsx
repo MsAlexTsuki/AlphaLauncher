@@ -1535,6 +1535,7 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   the_nibbler: { label: "THE NIBBLER", color: "#A855F7" },
   alpha_plus: { label: "ALPHA+", color: "#FFF300" },
   alpha: { label: "ALPHA", color: "#F300FF" },
+  beta: { label: "BETA (LEGACY)", color: "#00FF52" },
   elite: { label: "ELITE", color: "#808080" },
   rogue: { label: "ROGUE", color: "#808080" },
   scout: { label: "SCOUT", color: "#808080" },
@@ -1544,7 +1545,7 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
 const COMMUNITY_RANK_ICONS: Record<string, string> = {
   founder: "🌸", owner: "♛", manager: "◆", management: "⬟", senior_admin: "⬟", admin: "✦",
   senior_moderator: "✚", moderator: "✧", trial_moderator: "◇", the_nibbler: "N",
-  alpha_plus: "A+", alpha: "A", elite: "E", rogue: "R", scout: "S", member: "●",
+  alpha_plus: "A+", alpha: "A", beta: "β", elite: "E", rogue: "R", scout: "S", member: "●",
 };
 
 const NIBBLER_RANK_IMAGE_URL = "https://raw.githubusercontent.com/MsAlexTsuki/AlphaClient---Mod/development/src/main/resources/assets/alphastaffmod/textures/ranks/the_nibbler.png";
