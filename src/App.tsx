@@ -1519,6 +1519,7 @@ const COMMUNITY_RANK_ORDER = [
   "rogue",
   "scout",
   "member",
+  "beta", // Legacy rank retained for existing assignments; hidden from Rank Management.
 ] as const;
 
 const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
@@ -3210,7 +3211,7 @@ function RankManagement() {
 
   const selectedMember = members.find((member) => member.id === selectedId) ?? null;
   const filteredMembers = members;
-  const rankEntries = Object.entries(COMMUNITY_RANKS).filter(([key]) => key !== "founder").sort(([a], [b]) =>
+  const rankEntries = Object.entries(COMMUNITY_RANKS).filter(([key]) => key !== "founder" && key !== "beta").sort(([a], [b]) =>
     COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) -
     COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number]),
   );
