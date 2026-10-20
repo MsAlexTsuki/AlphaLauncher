@@ -1506,7 +1506,7 @@ const COMMUNITY_RANK_ORDER = [
   "founder",
   "owner",
   "manager",
-  "management",
+  "plat_admin",
   "senior_admin",
   "admin",
   "senior_moderator",
@@ -1526,7 +1526,7 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   founder: { label: "FOUNDER", color: "#FFD866" },
   owner: { label: "OWNER", color: "#FF2D00" },
   manager: { label: "MANAGER", color: "#808080" },
-  management: { label: "PLAT ADMIN (MANAGEMENT)", color: "#5C0303" },
+  plat_admin: { label: "PLAT ADMIN", color: "#5C0303" },
   senior_admin: { label: "SR ADMIN", color: "#D67020" },
   admin: { label: "ADMIN", color: "#E08D16" },
   senior_moderator: { label: "SR MOD", color: "#8C17D1" },
@@ -1543,17 +1543,21 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
 };
 
 const COMMUNITY_RANK_ICONS: Record<string, string> = {
-  founder: "🌸", owner: "♛", manager: "◆", management: "⬟", senior_admin: "⬟", admin: "✦",
+  founder: "🌸", owner: "♛", manager: "⬟", plat_admin: "◆", senior_admin: "⬟", admin: "✦",
   senior_moderator: "✚", moderator: "✧", trial_moderator: "◇", the_nibbler: "N",
   alpha_plus: "A+", alpha: "A", beta: "β", elite: "E", rogue: "R", scout: "S", member: "●",
 };
 
 const NIBBLER_RANK_IMAGE_URL = "https://raw.githubusercontent.com/MsAlexTsuki/AlphaClient---Mod/development/src/main/resources/assets/alphastaffmod/textures/ranks/the_nibbler.png";
+const MANAGEMENT_RANK_IMAGE_URL = "https://raw.githubusercontent.com/MsAlexTsuki/AlphaClient---Mod/development/src/main/resources/assets/alphastaffmod/textures/ranks/management.png";
 
 function CommunityRankIcon({ rankKey, className }: { rankKey: string | null | undefined; className: string }) {
   const key = rankKey || "member";
   if (key === "the_nibbler") {
     return <img className={className + " rank-image-icon"} src={NIBBLER_RANK_IMAGE_URL} alt="" aria-hidden="true" draggable={false} />;
+  }
+  if (key === "manager") {
+    return <img className={className + " rank-image-icon"} src={MANAGEMENT_RANK_IMAGE_URL} alt="" aria-hidden="true" draggable={false} />;
   }
   return <span className={className} aria-hidden="true">{COMMUNITY_RANK_ICONS[key] || COMMUNITY_RANK_ICONS.member}</span>;
 }
@@ -2015,7 +2019,8 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
         const rankLabels: Record<string, string> = {
           founder: "Founder of Alpha Client",
           owner: "Owner of Alpha",
-          management: "Management on Alpha",
+          manager: "Manager on Alpha",
+  plat_admin: "Plat Admin on Alpha",
           senior_admin: "Senior Admin on Alpha",
           admin: "Admin on Alpha",
           senior_moderator: "Senior Moderator on Alpha",
@@ -3265,7 +3270,7 @@ function RankManagement() {
           <h3>Rank Management</h3>
         </div>
         <span className={`developer-status ${canManageRanks ? "active" : ""}`}>
-          {canManageRanks ? (actorRank === "founder" ? "Founder access" : actorRank === "owner" ? "Owner access" : actorRank === "management" ? "Management access" : "Rank management access") : "Restricted"}
+          {canManageRanks ? (actorRank === "founder" ? "Founder access" : actorRank === "owner" ? "Owner access" : actorRank === "plat_admin" ? "Plat Admin access" : "Rank management access") : "Restricted"}
         </span>
       </div>
       <p className="subtitle">Search for a community member, review their current rank, and assign a new rank or reset them to Member.</p>
