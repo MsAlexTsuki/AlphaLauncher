@@ -1509,6 +1509,9 @@ const COMMUNITY_RANK_ORDER = [
   "senior_moderator",
   "moderator",
   "trial_moderator",
+  "scout",
+  "rogue",
+  "elite",
   "beta",
   "alpha_plus",
   "alpha",
@@ -1524,6 +1527,9 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" },
   moderator: { label: "MODERATOR", color: "#29AFCC" },
   trial_moderator: { label: "TRIAL MODERATOR", color: "#166534" },
+  scout: { label: "SCOUT", color: "#F2C14E" },
+  rogue: { label: "ROGUE", color: "#9B5DE5" },
+  elite: { label: "ELITE", color: "#00D9FF" },
   beta: { label: "BETA", color: "#00FF52" },
   alpha_plus: { label: "ALPHA+", color: "#FFF300" },
   alpha: { label: "ALPHA", color: "#F300FF" },
@@ -1532,7 +1538,8 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
 
 const COMMUNITY_RANK_ICONS: Record<string, string> = {
   founder: "🌸", owner: "♛", management: "◆", senior_admin: "⬟", admin: "✦",
-  senior_moderator: "✚", moderator: "✧", trial_moderator: "◇", beta: "β",
+  senior_moderator: "✚", moderator: "✧", trial_moderator: "◇",
+  scout: "⌖", rogue: "♜", elite: "✦", beta: "β",
   alpha_plus: "A+", alpha: "A", member: "●",
 };
 
