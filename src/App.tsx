@@ -1526,7 +1526,7 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   founder: { label: "FOUNDER", color: "#FFD866" },
   owner: { label: "OWNER", color: "#FF2D00" },
   manager: { label: "MANAGER", color: "#808080" },
-  plat_admin: { label: "PLAT ADMIN", color: "#5C0303" },
+  plat_admin: { label: "PLAT ADMIN", color: "#808080" },
   senior_admin: { label: "SR ADMIN", color: "#D67020" },
   admin: { label: "ADMIN", color: "#E08D16" },
   senior_moderator: { label: "SR MOD", color: "#8C17D1" },
