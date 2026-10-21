@@ -7716,3 +7716,40 @@ button:not(:disabled):active {
 .home-account-toggle .account-row { display: flex; align-items: center; }
 .home-account-chevron { margin-left: auto; padding-left: 10px; color: var(--yellow, #ffc83d); font-size: 20px; line-height: 1; transition: transform 220ms ease; }
 .home-account-toggle.is-expanded .home-account-chevron { transform: rotate(180deg); }
+
+
+/* Expandable saved Microsoft accounts in the Account tab */
+.account-saved-accounts-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.account-saved-accounts-toggle:focus-visible {
+  outline: 2px solid var(--yellow, #ffc83d);
+  outline-offset: 5px;
+  border-radius: 6px;
+}
+.saved-accounts-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.account-saved-accounts-toggle .saved-accounts-chevron {
+  display: inline-block;
+  color: var(--yellow, #ffc83d);
+  font-size: 20px;
+  line-height: 1;
+  transition: transform 220ms ease;
+}
+.account-saved-accounts-toggle.is-expanded .saved-accounts-chevron {
+  transform: rotate(180deg);
+}
