@@ -7683,3 +7683,18 @@ button:not(:disabled):active {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Saved Microsoft account selector */
+.saved-accounts-card { margin-top: 18px; }
+.saved-accounts-list { display: flex; flex-direction: column; gap: 10px; }
+.saved-account-row { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 11px 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.025); }
+.saved-account-row > img { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 9px; object-fit: cover; background: rgba(255,255,255,.06); }
+.saved-account-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; gap: 3px; }
+.saved-account-copy strong { color: var(--text, #f4f4f5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saved-account-copy span, .saved-accounts-note { color: var(--muted, #9a9aa3); font-size: 12px; overflow-wrap: anywhere; }
+.saved-account-current { color: var(--yellow, #ffc83d); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.saved-account-count { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 7px; border: 1px solid rgba(255,200,61,.25); border-radius: 99px; color: var(--yellow, #ffc83d); font-size: 12px; }
+.saved-accounts-note { margin: 12px 0 0; line-height: 1.5; }
+.account-saved-accounts { margin-top: 20px; }
+@media (max-width: 560px) { .saved-account-row { flex-wrap: wrap; } .saved-account-row .small-button { margin-left: 50px; } }
