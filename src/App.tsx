@@ -1200,7 +1200,6 @@ console.error("Developer permission check failed:", errorMessage);
               onSwitchAccount={(savedAccount) => void handleMicrosoftLogin(savedAccount)}
               onAddAccount={() => void handleMicrosoftLogin()}
               isLoggingIn={isLoggingIn}
-              onAccount={() => navigate("Account")}
               isMinecraftRunning={isMinecraftRunning}
               clientVersion={clientVersion}
               launchHistory={launchHistory}
@@ -2691,7 +2690,6 @@ function HomePage(props: {
   isLoggingIn: boolean;
   isMinecraftRunning: boolean;
   clientVersion: string;
-  onAccount: () => void;
   launchHistory: LastPlayed[];
   changelogs: ChangelogEntry[];
   updateInfo: AlphaClientUpdateInfo | null;
@@ -2712,7 +2710,6 @@ function HomePage(props: {
     isLoggingIn,
     isMinecraftRunning,
     clientVersion,
-    onAccount,
     launchHistory,
     changelogs,
     updateInfo,
@@ -2824,8 +2821,11 @@ function HomePage(props: {
         <div className="side-cards">
           <button
             type="button"
-            className="info-card info-card-button"
-            onClick={onAccount}
+            className={`info-card info-card-button home-account-toggle${accountsExpanded ? " is-expanded" : ""}`}
+            onClick={() => setAccountsExpanded((expanded) => !expanded)}
+            aria-expanded={accountsExpanded}
+            aria-controls="home-saved-accounts-panel"
+            title={accountsExpanded ? "Hide saved Minecraft accounts" : "Show saved Minecraft accounts"}
           >
             <div className="card-label">ACCOUNT</div>
             <div className="account-row">
@@ -2847,6 +2847,7 @@ function HomePage(props: {
                 <span>{account?.email ?? "Click to connect"}</span>
               </div>
               <div className={`online-dot ${account ? "" : "offline"}`} />
+              <span className="home-account-chevron" aria-hidden="true">{accountsExpanded ? "⌃" : "⌄"}</span>
             </div>
           </button>
 
