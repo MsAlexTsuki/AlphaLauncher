@@ -134,6 +134,25 @@ function readSettings(): Settings {
   }
 }
 
+const SAVED_MICROSOFT_ACCOUNTS_KEY = "alphaclient.microsoftAccounts";
+
+function readSavedMicrosoftAccounts(): MicrosoftAccount[] {
+  try {
+    const saved = localStorage.getItem(SAVED_MICROSOFT_ACCOUNTS_KEY);
+    if (!saved) return [];
+    const parsed: unknown = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((entry): entry is MicrosoftAccount =>
+      entry !== null && typeof entry === "object" &&
+      typeof (entry as MicrosoftAccount).name === "string" &&
+      typeof (entry as MicrosoftAccount).email === "string" &&
+      typeof (entry as MicrosoftAccount).uuid === "string"
+    );
+  } catch {
+    return [];
+  }
+}
+
 function readLastPlayed(): LastPlayed[] {
   try {
     const saved = localStorage.getItem(LAST_PLAYED_STORAGE_KEY);
@@ -270,6 +289,7 @@ function LauncherApp() {
   const [changelogs, setChangelogs] = useState<ChangelogEntry[]>([]);
 
   const [account, setAccount] = useState<MicrosoftAccount | null>(null);
+  const [savedAccounts, setSavedAccounts] = useState<MicrosoftAccount[]>(readSavedMicrosoftAccounts);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isMinecraftRunning, setIsMinecraftRunning] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -359,7 +379,15 @@ function LauncherApp() {
 
   useEffect(() => {
     invoke<MicrosoftAccount | null>("get_microsoft_account")
-      .then(setAccount)
+      .then((restoredAccount) => {
+        setAccount(restoredAccount);
+        if (restoredAccount) {
+          setSavedAccounts((current) => [
+            restoredAccount,
+            ...current.filter((saved) => saved.uuid !== restoredAccount.uuid),
+          ]);
+        }
+      })
       .catch((error) =>
         console.warn("Could not restore Microsoft account:", error),
       );
@@ -400,6 +428,14 @@ function LauncherApp() {
         : current,
     );
   }, [clientVersion, updateInfo?.latest_version, updateInfo?.update_available]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SAVED_MICROSOFT_ACCOUNTS_KEY, JSON.stringify(savedAccounts));
+    } catch (error) {
+      console.warn("Could not save Microsoft account list:", error);
+    }
+  }, [savedAccounts]);
 
   useEffect(() => {
     try {
@@ -913,15 +949,18 @@ console.error("Developer permission check failed:", errorMessage);
     }
   };
 
-  const handleMicrosoftLogin = async () => {
+  const handleMicrosoftLogin = async (accountToSwitch?: MicrosoftAccount) => {
     if (isLoggingIn || isMinecraftRunning) return;
 
     setIsLoggingIn(true);
     setLoginError(null);
 
     try {
-      const result = await invoke<MicrosoftAccount>("start_microsoft_login");
+      const result = await invoke<MicrosoftAccount>("start_microsoft_login", {
+        loginHint: accountToSwitch?.email ?? null,
+      });
       setAccount(result);
+      setSavedAccounts((current) => [result, ...current.filter((saved) => saved.uuid !== result.uuid)]);
     } catch (error) {
       setLoginError(errorText(error));
     } finally {
@@ -1150,6 +1189,9 @@ console.error("Developer permission check failed:", errorMessage);
           {page === "Home" && (
             <HomePage
               account={account}
+              savedAccounts={savedAccounts}
+              onSwitchAccount={(savedAccount) => void handleMicrosoftLogin(savedAccount)}
+              isMinecraftRunning={isMinecraftRunning}
               clientVersion={clientVersion}
               launchHistory={launchHistory}
               changelogs={changelogs.filter((entry) => entry.published)}
@@ -1286,6 +1328,8 @@ console.error("Developer permission check failed:", errorMessage);
             <div className="account-profile-layout">
               <AccountPage
                 account={account}
+                savedAccounts={savedAccounts}
+                onSwitchAccount={(savedAccount) => void handleMicrosoftLogin(savedAccount)}
                 isLoggingIn={isLoggingIn}
                 isMinecraftRunning={isMinecraftRunning}
                 loginError={loginError}
@@ -2632,6 +2676,9 @@ function AlphaAccountAuthModal({ onClose }: { onClose: () => void }) {
 
 function HomePage(props: {
   account: MicrosoftAccount | null;
+  savedAccounts: MicrosoftAccount[];
+  onSwitchAccount: (account: MicrosoftAccount) => void;
+  isMinecraftRunning: boolean;
   clientVersion: string;
   launchHistory: LastPlayed[];
   changelogs: ChangelogEntry[];
@@ -2648,6 +2695,9 @@ function HomePage(props: {
 }) {
   const {
     account,
+    savedAccounts,
+    onSwitchAccount,
+    isMinecraftRunning,
     clientVersion,
     launchHistory,
     changelogs,
@@ -2827,6 +2877,39 @@ function HomePage(props: {
             </button>
           </div>
         </div>
+      </section>
+
+      <section className="section-card saved-accounts-card">
+        <div className="section-header">
+          <div>
+            <span className="card-label">ACCOUNTS</span>
+            <h3>Saved Microsoft accounts</h3>
+          </div>
+          <button type="button" className="text-button" onClick={onAccount}>Manage accounts →</button>
+        </div>
+        {savedAccounts.length === 0 ? (
+          <p className="subtitle">Sign in with Microsoft to save an account here.</p>
+        ) : (
+          <div className="saved-accounts-list">
+            {savedAccounts.map((savedAccount) => (
+              <div className="saved-account-row" key={savedAccount.uuid}>
+                <img src={`https://mc-heads.net/avatar/${encodeURIComponent(savedAccount.name)}/48`} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                <div className="saved-account-copy">
+                  <strong>{savedAccount.name}</strong>
+                  <span>{savedAccount.email}</span>
+                </div>
+                {account?.uuid === savedAccount.uuid ? (
+                  <span className="saved-account-current">Current</span>
+                ) : (
+                  <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLaunching || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>
+                    {isMinecraftRunning ? "Minecraft running" : "Use account"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="saved-accounts-note">Switching opens Microsoft sign-in for the selected email. You may be asked to verify the account.</p>
       </section>
 
       <section className="lower-grid">
@@ -4633,6 +4716,8 @@ function SettingsPage({
 
 function AccountPage({
   account,
+  savedAccounts,
+  onSwitchAccount,
   isLoggingIn,
   isMinecraftRunning,
   loginError,
@@ -4640,6 +4725,8 @@ function AccountPage({
   onLogout,
 }: {
   account: MicrosoftAccount | null;
+  savedAccounts: MicrosoftAccount[];
+  onSwitchAccount: (account: MicrosoftAccount) => void;
   isLoggingIn: boolean;
   isMinecraftRunning: boolean;
   loginError: string | null;
@@ -4721,6 +4808,39 @@ function AccountPage({
           </>
         )}
       </div>
+
+      <section className="section-card saved-accounts-card account-saved-accounts">
+        <div className="section-header">
+          <div>
+            <span className="card-label">ACCOUNTS</span>
+            <h3>Saved Microsoft accounts</h3>
+          </div>
+          <span className="saved-account-count">{savedAccounts.length}</span>
+        </div>
+        {savedAccounts.length === 0 ? (
+          <p className="subtitle">No saved accounts yet. Log in with Microsoft to add one.</p>
+        ) : (
+          <div className="saved-accounts-list">
+            {savedAccounts.map((savedAccount) => (
+              <div className="saved-account-row" key={savedAccount.uuid}>
+                <img src={`https://mc-heads.net/avatar/${encodeURIComponent(savedAccount.name)}/48`} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                <div className="saved-account-copy">
+                  <strong>{savedAccount.name}</strong>
+                  <span>{savedAccount.email}</span>
+                </div>
+                {account?.uuid === savedAccount.uuid ? (
+                  <span className="saved-account-current">Current account</span>
+                ) : (
+                  <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLoggingIn || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>
+                    {isLoggingIn ? "Waiting…" : "Use account"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="saved-accounts-note">Account names are saved on this device. Choosing an account starts Microsoft sign-in with that email as a hint; the launcher does not store Microsoft passwords.</p>
+      </section>
     </div>
   );
 }

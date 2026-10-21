@@ -529,7 +529,7 @@ fn clear_microsoft_auth_state() {
 // ============================================================
 
 #[tauri::command]
-async fn start_microsoft_login()
+async fn start_microsoft_login(login_hint: Option<String>)
     -> Result<MicrosoftAccount, String>
 {
     if minecraft_process_is_running() {
@@ -537,7 +537,7 @@ async fn start_microsoft_login()
     }
 
     tauri::async_runtime::spawn_blocking(
-        perform_microsoft_login
+        move || perform_microsoft_login(login_hint)
     )
     .await
     .map_err(|error| {
@@ -587,7 +587,7 @@ fn get_microsoft_account()
 // MICROSOFT LOGIN
 // ============================================================
 
-fn perform_microsoft_login()
+fn perform_microsoft_login(login_hint: Option<String>)
     -> Result<MicrosoftAccount, String>
 {
     if minecraft_process_is_running() {
@@ -701,6 +701,15 @@ fn perform_microsoft_login()
             "code_challenge_method",
             "S256"
         );
+
+    if let Some(email) = login_hint.as_deref().map(str::trim).filter(|email| !email.is_empty()) {
+        authorization_url.query_pairs_mut()
+            .append_pair("prompt", "login")
+            .append_pair("login_hint", email);
+    } else {
+        authorization_url.query_pairs_mut()
+            .append_pair("prompt", "select_account");
+    }
 
     // --------------------------------------------------------
     // Open browser
