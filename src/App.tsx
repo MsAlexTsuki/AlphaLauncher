@@ -66,6 +66,36 @@ type AlphaClientUpdateInfo = {
   changelog: string;
 };
 
+// Treat an update as available only when the release is newer than the
+// installed version. The initial backend check can race the installed-version
+// lookup and briefly report UNKNOWN even when a valid client is installed.
+function isClientUpdateAvailable(latestVersion: string, installedVersion: string): boolean {
+  const latest = latestVersion.trim().replace(/^v/i, "");
+  const installed = installedVersion.trim().replace(/^v/i, "");
+
+  if (!latest || latest === "UNKNOWN") return false;
+  if (!installed || installed === "UNKNOWN" || installed === "Niet geïnstalleerd") {
+    return true;
+  }
+
+  const latestParts = latest.split(".").map((part) => Number.parseInt(part, 10));
+  const installedParts = installed.split(".").map((part) => Number.parseInt(part, 10));
+  if (
+    latestParts.some((part) => !Number.isFinite(part)) ||
+    installedParts.some((part) => !Number.isFinite(part))
+  ) {
+    return latest !== installed;
+  }
+
+  const length = Math.max(latestParts.length, installedParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const next = latestParts[index] ?? 0;
+    const current = installedParts[index] ?? 0;
+    if (next !== current) return next > current;
+  }
+  return false;
+}
+
 const DEFAULT_SETTINGS: Settings = {
   closeToTray: false,
   showNews: true,
@@ -356,6 +386,21 @@ function LauncherApp() {
         console.warn("Could not check AlphaClient updates:", error),
       );
   }, []);
+
+  useEffect(() => {
+    setUpdateInfo((current) =>
+      current
+        ? {
+            ...current,
+            current_version: clientVersion,
+            update_available: isClientUpdateAvailable(
+              current.latest_version,
+              clientVersion,
+            ),
+          }
+        : current,
+    );
+  }, [clientVersion]);
 
   useEffect(() => {
     try {
@@ -722,8 +767,12 @@ console.error("Developer permission check failed:", errorMessage);
 
   const handlePlay = async (partnerServer = false) => {
     if (isLaunching || isUpdatingClient) return;
-    if (partnerServer && isMinecraftRunning) {
-      setLaunchError("Minecraft is already running. Close it before joining the partner server.");
+    if (isMinecraftRunning) {
+      setLaunchError(
+        partnerServer
+          ? "Minecraft is already running. Close it before joining the partner server."
+          : "Minecraft is already running. Close it before launching or updating AlphaClient.",
+      );
       return;
     }
 
@@ -738,13 +787,29 @@ console.error("Developer permission check failed:", errorMessage);
         const checked = await invoke<AlphaClientUpdateInfo>(
           "check_alphaclient_update",
         );
-        setUpdateInfo(checked);
+        const installedVersion = await invoke<string>("get_alphaclient_version");
+        const reconciledCheck = {
+          ...checked,
+          current_version: installedVersion,
+          update_available: isClientUpdateAvailable(
+            checked.latest_version,
+            installedVersion,
+          ),
+        };
+        setClientVersion(installedVersion);
+        setSelectedVersion(installedVersion);
+        setUpdateInfo(reconciledCheck);
 
-        if (checked.update_available) {
+        if (reconciledCheck.update_available) {
           setIsUpdatingClient(true);
           const updateMessage = await invoke<string>("update_alphaclient");
           setClientVersion(checked.latest_version);
           setSelectedVersion(checked.latest_version);
+          setUpdateInfo({
+            ...reconciledCheck,
+            current_version: checked.latest_version,
+            update_available: false,
+          });
           setLaunchMessage(updateMessage);
           setIsUpdatingClient(false);
         }
@@ -793,7 +858,12 @@ console.error("Developer permission check failed:", errorMessage);
   };
 
   const handleUpdateClient = async () => {
-    if (isUpdatingClient || isLaunching) return;
+    if (isUpdatingClient || isLaunching || isMinecraftRunning) {
+      if (isMinecraftRunning) {
+        setLaunchError("Close Minecraft before updating AlphaClient.");
+      }
+      return;
+    }
 
     setIsUpdatingClient(true);
     setLaunchError(null);
@@ -818,7 +888,12 @@ console.error("Developer permission check failed:", errorMessage);
   };
 
   const handleInstall = async () => {
-    if (isInstalling) return;
+    if (isInstalling || isMinecraftRunning) {
+      if (isMinecraftRunning) {
+        setLaunchError("Close Minecraft before installing or repairing AlphaClient.");
+      }
+      return;
+    }
 
     setIsInstalling(true);
     setInstallMessage(null);
@@ -1120,6 +1195,7 @@ console.error("Developer permission check failed:", errorMessage);
               updateInfo={updateInfo}
               onUpdate={handleUpdateClient}
               isUpdating={isUpdatingClient}
+              isMinecraftRunning={isMinecraftRunning}
             />
           )}
 
@@ -2871,6 +2947,7 @@ function PlayPage(props: {
   updateInfo: AlphaClientUpdateInfo | null;
   onUpdate: () => void;
   isUpdating: boolean;
+  isMinecraftRunning: boolean;
 }) {
   return (
     <div className="page">
@@ -2890,13 +2967,15 @@ function PlayPage(props: {
           <p>Minecraft 1.8.9 • Forge 11.15.1.2318</p>
         </div>
         <span className="installed-badge">
-          {props.updateInfo?.update_available
-            ? `UPDATE ${props.updateInfo.latest_version}`
-            : "INSTALLED"}
+          {props.isMinecraftRunning
+            ? "MINECRAFT RUNNING"
+            : props.updateInfo?.update_available
+              ? `UPDATE ${props.updateInfo.latest_version}`
+              : "INSTALLED"}
         </span>
       </div>
 
-      {props.updateInfo?.update_available && (
+      {!props.isMinecraftRunning && props.updateInfo?.update_available && (
         <div className="section-card">
           <div className="section-header">
             <div>
@@ -2919,23 +2998,37 @@ function PlayPage(props: {
         </div>
       )}
 
+      {props.isMinecraftRunning && (
+        <p className="subtitle">
+          Minecraft is already running. Close the game before launching, updating, or repairing AlphaClient.
+        </p>
+      )}
+
       <button
         type="button"
         className="large-play-button"
         onClick={props.onPlay}
-        disabled={props.isLaunching || props.isUpdating}
+        disabled={props.isLaunching || props.isUpdating || props.isMinecraftRunning}
       >
         <span>▶</span>
-        {props.isLaunching ? "PREPARING..." : "LAUNCH ALPHACLIENT"}
+        {props.isMinecraftRunning
+          ? "MINECRAFT IS RUNNING"
+          : props.isLaunching
+            ? "PREPARING..."
+            : "LAUNCH ALPHACLIENT"}
       </button>
 
       <button
         type="button"
         className="secondary-button install-button"
         onClick={props.onInstall}
-        disabled={props.isInstalling || props.isUpdating}
+        disabled={props.isInstalling || props.isUpdating || props.isMinecraftRunning}
       >
-        {props.isInstalling ? "INSTALLING..." : "INSTALL / REPAIR FILES"}
+        {props.isMinecraftRunning
+          ? "CLOSE MINECRAFT TO REPAIR"
+          : props.isInstalling
+            ? "INSTALLING..."
+            : "INSTALL / REPAIR FILES"}
       </button>
 
       {props.launchError && (
