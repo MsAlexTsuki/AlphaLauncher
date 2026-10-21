@@ -2867,13 +2867,29 @@ function HomePage(props: {
               <span className="home-account-chevron" aria-hidden="true">{accountsExpanded ? "⌃" : "⌄"}</span>
             </div>
           </button>
-          <div className="saved-accounts-collapse${accountsExpanded ? " is-expanded" : ""}" aria-hidden={!accountsExpanded} onClick={(event) => { const target = event.target; if (target instanceof Element && target.closest("button, a, input, select, textarea")) return; setAccountsExpanded(false); }}>
+          <div id="home-saved-accounts-panel" className={`saved-accounts-collapse${accountsExpanded ? " is-expanded" : ""}`} aria-hidden={!accountsExpanded} onClick={(event) => { const target = event.target; if (target instanceof Element && target.closest("button, a, input, select, textarea")) return; setAccountsExpanded(false); }}>
             <div className="saved-accounts-collapse-inner">
               <div className="saved-accounts-inline-header">
                 <span className="card-label">SAVED ACCOUNTS</span>
                 <span className="saved-account-count">{savedAccounts.length}/{MAX_SAVED_MICROSOFT_ACCOUNTS}</span>
               </div>
-              ${listJsx}
+              {savedAccounts.length === 0 ? <p className="subtitle">No Minecraft accounts saved yet. Add one below.</p> : (
+                <div className="saved-accounts-list">
+                  {savedAccounts.map((savedAccount) => (
+                    <div className="saved-account-row" key={savedAccount.uuid ?? savedAccount.email}>
+                      <img src={`https://mc-heads.net/avatar/${encodeURIComponent(savedAccount.name)}/48`} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                      <div className="saved-account-copy"><strong>{savedAccount.name}</strong><span>{savedAccount.email}</span></div>
+                      {(savedAccount.uuid && account?.uuid === savedAccount.uuid) || account?.email.toLowerCase() === savedAccount.email.toLowerCase() ? <span className="saved-account-current">Current</span> : (
+                        <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLoggingIn || isLaunching || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>{isLoggingIn ? "Signing in…" : "Switch"}</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="saved-accounts-footer">
+                <span className="saved-accounts-note">Select an account to sign in with it. Microsoft may ask you to confirm the account.</span>
+                <button type="button" className="small-button saved-account-add" onClick={onAddAccount} disabled={isLoggingIn || isMinecraftRunning || savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS} title={savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS ? "You can save up to 5 accounts." : isMinecraftRunning ? "Close Minecraft before adding an account." : undefined}>{isLoggingIn ? "Waiting for Microsoft…" : savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS ? "Limit reached (5/5)" : "+ Add account"}</button>
+              </div>
             </div>
           </div>
           </div>
