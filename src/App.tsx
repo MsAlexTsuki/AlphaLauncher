@@ -2730,7 +2730,7 @@ function HomePage(props: {
     const closeAccountsOnOutsideClick = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (target.closest(".home-account-toggle, .saved-accounts-card")) return;
+      if (target.closest(".home-account-dropdown-wrap")) return;
       setAccountsExpanded(false);
     };
 
@@ -2835,6 +2835,7 @@ function HomePage(props: {
         </div>
 
         <div className="side-cards">
+          <div className="home-account-dropdown-wrap">
           <button
             type="button"
             className={`info-card info-card-button home-account-toggle${accountsExpanded ? " is-expanded" : ""}`}
@@ -2866,6 +2867,16 @@ function HomePage(props: {
               <span className="home-account-chevron" aria-hidden="true">{accountsExpanded ? "⌃" : "⌄"}</span>
             </div>
           </button>
+          <div className="saved-accounts-collapse${accountsExpanded ? " is-expanded" : ""}" aria-hidden={!accountsExpanded} onClick={(event) => { const target = event.target; if (target instanceof Element && target.closest("button, a, input, select, textarea")) return; setAccountsExpanded(false); }}>
+            <div className="saved-accounts-collapse-inner">
+              <div className="saved-accounts-inline-header">
+                <span className="card-label">SAVED ACCOUNTS</span>
+                <span className="saved-account-count">{savedAccounts.length}/{MAX_SAVED_MICROSOFT_ACCOUNTS}</span>
+              </div>
+              ${listJsx}
+            </div>
+          </div>
+          </div>
 
           <div className="info-card">
             <div className="card-label">CLIENT STATUS</div>
@@ -2910,44 +2921,7 @@ function HomePage(props: {
         </div>
       </section>
 
-      <section className="section-card saved-accounts-card">
-        <div className="section-header saved-accounts-header">
-          <div>
-            <span className="card-label">ACCOUNTS</span>
-            <h3>Saved Minecraft accounts</h3>
-            <p className="saved-accounts-subtitle">Quick switch · {savedAccounts.length}/{MAX_SAVED_MICROSOFT_ACCOUNTS}</p>
-          </div>
-          <button type="button" className={`saved-accounts-toggle${accountsExpanded ? " is-expanded" : ""}`} onClick={() => setAccountsExpanded((expanded) => !expanded)} aria-expanded={accountsExpanded} aria-controls="home-saved-accounts-panel" title={accountsExpanded ? "Collapse accounts" : "Expand accounts"}>
-            <span>{accountsExpanded ? "Hide" : "Show"}</span><span className="saved-accounts-chevron" aria-hidden="true">⌄</span>
-          </button>
-        </div>
-        <div id="home-saved-accounts-panel" className={`saved-accounts-collapse${accountsExpanded ? " is-expanded" : ""}`} aria-hidden={!accountsExpanded}>
-          onClick={(event) => {
-            const target = event.target;
-            if (target instanceof Element && target.closest("button, a, input, select, textarea")) return;
-            setAccountsExpanded(false);
-          }}
-          <div className="saved-accounts-collapse-inner">
-            {savedAccounts.length === 0 ? <p className="subtitle">No Minecraft accounts saved yet. Add one below.</p> : (
-              <div className="saved-accounts-list">
-                {savedAccounts.map((savedAccount) => (
-                  <div className="saved-account-row" key={savedAccount.uuid ?? savedAccount.email}>
-                    <img src={`https://mc-heads.net/avatar/${encodeURIComponent(savedAccount.name)}/48`} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
-                    <div className="saved-account-copy"><strong>{savedAccount.name}</strong><span>{savedAccount.email}</span></div>
-                    {(savedAccount.uuid && account?.uuid === savedAccount.uuid) || account?.email.toLowerCase() === savedAccount.email.toLowerCase() ? <span className="saved-account-current">Current</span> : (
-                      <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLoggingIn || isLaunching || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>{isLoggingIn ? "Signing in…" : "Switch"}</button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="saved-accounts-footer">
-              <span className="saved-accounts-note">Select an account to sign in with it. Microsoft may ask you to confirm the account.</span>
-              <button type="button" className="small-button saved-account-add" onClick={onAddAccount} disabled={isLoggingIn || isMinecraftRunning || savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS} title={savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS ? "You can save up to 5 accounts." : isMinecraftRunning ? "Close Minecraft before adding an account." : undefined}>{isLoggingIn ? "Waiting for Microsoft…" : savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS ? "Limit reached (5/5)" : "+ Add account"}</button>
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       <section className="lower-grid">
         {showNews && (
