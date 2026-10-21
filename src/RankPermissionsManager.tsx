@@ -10,13 +10,12 @@ const RANKS: Rank[] = [
   { key: "founder", label: "Founder" },
   { key: "owner", label: "Owner" },
   { key: "manager", label: "Manager" },
-  { key: "plat_admin", label: "Platform Admin" },
+  { key: "management", label: "Platform Admin" },
   { key: "senior_admin", label: "Senior Admin" },
   { key: "admin", label: "Admin" },
   { key: "senior_moderator", label: "Senior Moderator" },
   { key: "moderator", label: "Moderator" },
   { key: "trial_moderator", label: "Trial Moderator" },
-  { key: "beta", label: "Beta" },
 ];
 
 const PERMISSIONS: Permission[] = [
@@ -116,7 +115,7 @@ export default function RankPermissionsManager() {
     <div className="rank-permission-summary">
       <div>
         <span className="rank-permission-summary-label">PERMISSIONS</span>
-        <strong>{selectedRank === "beta" ? "Beta access" : RANKS.find(rank => rank.key === selectedRank)?.label}</strong>
+        <strong>{RANKS.find(rank => rank.key === selectedRank)?.label}</strong>
       </div>
       <span className="rank-permission-count">{selectedRank === "founder" ? PERMISSIONS.length + " of " + PERMISSIONS.length + " enabled · always on" : enabledCount + " of " + PERMISSIONS.length + " enabled"}</span>
     </div>
