@@ -7753,3 +7753,11 @@ button:not(:disabled):active {
 .account-saved-accounts-toggle.is-expanded .saved-accounts-chevron {
   transform: rotate(180deg);
 }
+
+
+.account-large-card-toggle { position: relative; padding-right: 48px; cursor: pointer; transition: border-color 180ms ease, background 180ms ease; }
+.account-large-card-toggle:hover, .account-large-card-toggle.is-expanded { border-color: rgba(255, 200, 61, 0.32); }
+.account-large-card-toggle:focus-visible { outline: 2px solid var(--yellow, #ffc83d); outline-offset: 4px; }
+.account-large-chevron { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: var(--yellow, #ffc83d); font-size: 22px; line-height: 1; transition: transform 220ms ease; }
+.account-large-card-toggle.is-expanded .account-large-chevron { transform: translateY(-50%) rotate(180deg); }
+.account-saved-accounts-panel { margin-top: 8px; margin-bottom: 18px; }
