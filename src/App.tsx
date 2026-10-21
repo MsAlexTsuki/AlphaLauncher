@@ -4815,7 +4815,7 @@ function AccountPage({
                       <span className="saved-account-current">Current account</span>
                     ) : (
                       <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLoggingIn || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>
-                        {isLoggingIn ? "Waiting…" : "Use account"}
+                        {isLoggingIn ? "Waiting…" : "Your Accounts"}
                       </button>
                     )}
                   </div>
