@@ -10,7 +10,7 @@ set sort_order = case rank_key
   when 'founder' then 1
   when 'owner' then 2
   when 'manager' then 3
-  when 'management' then 4
+  when 'plat_admin' then 4
   when 'senior_admin' then 5
   when 'admin' then 6
   when 'senior_moderator' then 7
@@ -35,9 +35,9 @@ alter table public.rank_permissions
 alter table public.rank_permissions
   add constraint rank_permissions_rank_key_check
   check (rank_key in (
-    'founder', 'owner', 'manager', 'management',
+    'founder', 'owner', 'manager', 'plat_admin',
     'senior_admin', 'admin', 'senior_moderator', 'moderator', 'trial_moderator',
-    'beta', 'alpha_plus', 'alpha', 'member'
+    'beta', 'alpha_plus', 'alpha', 'member', 'the_nibbler', 'elite', 'rogue', 'scout'
   ));
 
 create or replace function public.save_rank_permissions(p_scope text, p_permissions jsonb)
@@ -69,9 +69,9 @@ begin
     v_enabled := (item->>'enabled')::boolean;
 
     if v_rank not in (
-         'founder', 'owner', 'manager', 'management',
+         'founder', 'owner', 'manager', 'plat_admin',
          'senior_admin', 'admin', 'senior_moderator', 'moderator', 'trial_moderator',
-         'beta', 'alpha_plus', 'alpha', 'member'
+         'beta', 'alpha_plus', 'alpha', 'member', 'the_nibbler', 'elite', 'rogue', 'scout'
        )
        or v_permission not in (
          'members.manage', 'moderation.manage', 'bans_reports.manage',

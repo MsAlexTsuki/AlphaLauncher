@@ -10,7 +10,7 @@ const RANKS: Rank[] = [
   { key: "founder", label: "Founder" },
   { key: "owner", label: "Owner" },
   { key: "manager", label: "Manager" },
-  { key: "management", label: "Platform Admin" },
+  { key: "plat_admin", label: "Platform Admin" },
   { key: "senior_admin", label: "Senior Admin" },
   { key: "admin", label: "Admin" },
   { key: "senior_moderator", label: "Senior Moderator" },
