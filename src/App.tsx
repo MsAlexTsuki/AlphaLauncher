@@ -74,9 +74,8 @@ function isClientUpdateAvailable(latestVersion: string, installedVersion: string
   const installed = installedVersion.trim().replace(/^v/i, "");
 
   if (!latest || latest === "UNKNOWN") return false;
-  if (!installed || installed === "UNKNOWN" || installed === "Niet geïnstalleerd") {
-    return true;
-  }
+  if (!installed || installed === "UNKNOWN") return false;
+  if (installed === "Niet geïnstalleerd") return true;
 
   const latestParts = latest.split(".").map((part) => Number.parseInt(part, 10));
   const installedParts = installed.split(".").map((part) => Number.parseInt(part, 10));
@@ -1211,6 +1210,7 @@ console.error("Developer permission check failed:", errorMessage);
               isInstalling={isInstalling}
               onUpdate={handleUpdateClient}
               isUpdating={isUpdatingClient}
+              isMinecraftRunning={isMinecraftRunning}
             />
           )}
 
@@ -3063,6 +3063,7 @@ function VersionsPage(props: {
   updateInfo: AlphaClientUpdateInfo | null;
   onUpdate: () => void;
   isUpdating: boolean;
+  isMinecraftRunning: boolean;
 }) {
   const versions = [
     {
@@ -3129,14 +3130,17 @@ function VersionsPage(props: {
                   ? props.onUpdate()
                   : props.setSelectedVersion(version.version)
               }
-              disabled={props.isUpdating}
+              disabled={props.isUpdating || props.isMinecraftRunning}
+              title={props.isMinecraftRunning ? "Close Minecraft before changing or updating versions." : undefined}
             >
-              {version.version === props.selectedVersion
-                ? "Selected"
-                : props.updateInfo?.update_available &&
-                    version.version === props.updateInfo.latest_version
-                  ? "Update"
-                  : "Select"}
+              {props.isMinecraftRunning
+                ? "Minecraft running"
+                : version.version === props.selectedVersion
+                  ? "Selected"
+                  : props.updateInfo?.update_available &&
+                      version.version === props.updateInfo.latest_version
+                    ? "Update"
+                    : "Select"}
             </button>
           </div>
         ))}
@@ -3146,9 +3150,14 @@ function VersionsPage(props: {
         type="button"
         className="large-play-button"
         onClick={props.onInstall}
-        disabled={props.isInstalling || props.isUpdating}
+        disabled={props.isInstalling || props.isUpdating || props.isMinecraftRunning}
+        title={props.isMinecraftRunning ? "Close Minecraft before installing or repairing AlphaClient." : undefined}
       >
-        {props.isInstalling ? "INSTALLING..." : "INSTALL / REPAIR CLIENT"}
+        {props.isMinecraftRunning
+          ? "CLOSE MINECRAFT TO REPAIR"
+          : props.isInstalling
+            ? "INSTALLING..."
+            : "INSTALL / REPAIR CLIENT"}
       </button>
     </div>
   );
