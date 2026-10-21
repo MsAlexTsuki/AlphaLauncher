@@ -6,3 +6,4 @@
 
 - Fixed legacy Gson compatibility by replacing inaccessible JSON deep-copy calls with a supported JSON copy helper.
 - Fixed profile migration compilation by adding a case-insensitive duplicate-profile check in the legacy profile manager.
+- Ordinary modules now appear only in their assigned rank folders; Owner and Founder retain rank-based access instead of showing duplicated ordinary modules in their own folders.
