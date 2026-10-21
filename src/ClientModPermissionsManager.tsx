@@ -26,15 +26,15 @@ function errorMessage(error: unknown): string {
 }
 
 const RANKS = [
-  ["founder", "Founder"], ["owner", "Owner"], ["management", "Management"],
-  ["senior_admin", "Senior Admin"], ["admin", "Admin"], ["senior_moderator", "Senior Moderator"],
+  ["founder", "Founder"], ["owner", "Owner"], ["manager", "Manager"], ["plat_admin", "Platform Admin"],
+  ["management", "Management (legacy)"], ["senior_admin", "Senior Admin"], ["admin", "Admin"], ["senior_moderator", "Senior Moderator"],
   ["moderator", "Moderator"], ["trial_moderator", "Trial Moderator"], ["beta", "Beta"],
   ["alpha_plus", "Alpha+"], ["alpha", "Alpha"], ["member", "Member"],
 ] as const;
 const CATEGORIES = [
   ["general", "General"], ["staff", "Staff"], ["trial_moderator", "Trial Moderator"],
   ["moderator", "Moderator"], ["senior_moderator", "Senior Moderator"], ["admin", "Admin"],
-  ["senior_admin", "Senior Admin"], ["management", "Management"], ["owner", "Owner"],
+  ["senior_admin", "Senior Admin"], ["management", "Management"], ["plat_admin", "Platform Admin"], ["manager", "Manager"], ["owner", "Owner"],
   ["beta", "Beta"], ["alpha", "Alpha"], ["alpha_plus", "Alpha+"],
 ] as const;
 
