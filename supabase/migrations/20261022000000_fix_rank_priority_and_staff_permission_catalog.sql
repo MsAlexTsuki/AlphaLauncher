@@ -27,8 +27,12 @@ set sort_order = case rank_key
   else sort_order
 end;
 
--- Manager is a real staff rank. Keep legacy community-rank permission keys
--- valid for compatibility, but the staff permission editor exposes staff ranks only.
+-- Community/supporter ranks are not staff ranks and must not hold staff-only
+-- website or launcher permissions. The live catalog currently has no such rows,
+-- but remove legacy assignments defensively before tightening the constraint.
+delete from public.rank_permissions
+where rank_key in ('beta', 'alpha_plus', 'alpha', 'member', 'the_nibbler', 'elite', 'rogue', 'scout');
+
 alter table public.rank_permissions
   drop constraint if exists rank_permissions_rank_key_check;
 
@@ -36,8 +40,7 @@ alter table public.rank_permissions
   add constraint rank_permissions_rank_key_check
   check (rank_key in (
     'founder', 'owner', 'manager', 'plat_admin',
-    'senior_admin', 'admin', 'senior_moderator', 'moderator', 'trial_moderator',
-    'beta', 'alpha_plus', 'alpha', 'member', 'the_nibbler', 'elite', 'rogue', 'scout'
+    'senior_admin', 'admin', 'senior_moderator', 'moderator', 'trial_moderator'
   ));
 
 create or replace function public.save_rank_permissions(p_scope text, p_permissions jsonb)
@@ -70,8 +73,7 @@ begin
 
     if v_rank not in (
          'founder', 'owner', 'manager', 'plat_admin',
-         'senior_admin', 'admin', 'senior_moderator', 'moderator', 'trial_moderator',
-         'beta', 'alpha_plus', 'alpha', 'member', 'the_nibbler', 'elite', 'rogue', 'scout'
+         'senior_admin', 'admin', 'senior_moderator', 'moderator', 'trial_moderator'
        )
        or v_permission not in (
          'members.manage', 'moderation.manage', 'bans_reports.manage',
