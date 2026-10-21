@@ -4766,7 +4766,7 @@ function AccountPage({
     <div className="page">
       <PageTitle
         eyebrow="MINECRAFT ACCOUNT"
-        title="Your account"
+        title="Your accounts"
         description="Manage the Microsoft account used by AlphaClient."
       />
 
