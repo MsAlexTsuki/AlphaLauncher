@@ -21,7 +21,7 @@ type Page =
   | "Settings"
   | "Account";
 
-type MicrosoftAccount = { name: string; email: string; uuid: string };
+type MicrosoftAccount = { name: string; email: string; uuid?: string };
 type LastPlayed = { timestamp: number; version: string };
 type ChangelogProduct = "launcher" | "client";
 type ChangelogEntry = {
@@ -148,10 +148,10 @@ function readSavedMicrosoftAccounts(): MicrosoftAccount[] {
         entry !== null && typeof entry === "object" &&
         typeof (entry as MicrosoftAccount).name === "string" &&
         typeof (entry as MicrosoftAccount).email === "string" &&
-        typeof (entry as MicrosoftAccount).uuid === "string" &&
-        (entry as MicrosoftAccount).uuid.trim().length > 0
+        ((entry as MicrosoftAccount).uuid === undefined ||
+          (typeof (entry as MicrosoftAccount).uuid === "string" && (entry as MicrosoftAccount).uuid.trim().length > 0))
       )
-      .filter((entry, index, accounts) => accounts.findIndex((candidate) => candidate.uuid === entry.uuid) === index)
+      .filter((entry, index, accounts) => accounts.findIndex((candidate) => candidate.email.toLowerCase() === entry.email.toLowerCase()) === index)
       .slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS);
   } catch {
     return [];
@@ -387,7 +387,7 @@ function LauncherApp() {
       .then((restoredAccount) => {
         setAccount(restoredAccount);
         if (restoredAccount) {
-          setSavedAccounts((current) => [restoredAccount, ...current.filter((saved) => saved.uuid !== restoredAccount.uuid)].slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS));
+          setSavedAccounts((current) => [restoredAccount, ...current.filter((saved) => saved.uuid !== restoredAccount.uuid && saved.email.toLowerCase() !== restoredAccount.email.toLowerCase())].slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS));
         }
       })
       .catch((error) =>
@@ -967,7 +967,7 @@ console.error("Developer permission check failed:", errorMessage);
         loginHint: accountToSwitch?.email ?? null,
       });
       setAccount(result);
-      setSavedAccounts((current) => [result, ...current.filter((saved) => saved.uuid !== result.uuid)].slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS));
+      setSavedAccounts((current) => [result, ...current.filter((saved) => saved.uuid !== result.uuid && saved.email.toLowerCase() !== result.email.toLowerCase())].slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS));
     } catch (error) {
       setLoginError(errorText(error));
     } finally {
@@ -2909,10 +2909,10 @@ function HomePage(props: {
             {savedAccounts.length === 0 ? <p className="subtitle">No Minecraft accounts saved yet. Add one below.</p> : (
               <div className="saved-accounts-list">
                 {savedAccounts.map((savedAccount) => (
-                  <div className="saved-account-row" key={savedAccount.uuid}>
+                  <div className="saved-account-row" key={savedAccount.uuid ?? savedAccount.email}>
                     <img src={`https://mc-heads.net/avatar/${encodeURIComponent(savedAccount.name)}/48`} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
                     <div className="saved-account-copy"><strong>{savedAccount.name}</strong><span>{savedAccount.email}</span></div>
-                    {account?.uuid === savedAccount.uuid ? <span className="saved-account-current">Current</span> : (
+                    {(savedAccount.uuid && account?.uuid === savedAccount.uuid) || account?.email.toLowerCase() === savedAccount.email.toLowerCase() ? <span className="saved-account-current">Current</span> : (
                       <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLoggingIn || isLaunching || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>{isLoggingIn ? "Signing in…" : "Switch"}</button>
                     )}
                   </div>
@@ -4837,13 +4837,13 @@ function AccountPage({
         ) : (
           <div className="saved-accounts-list">
             {savedAccounts.map((savedAccount) => (
-              <div className="saved-account-row" key={savedAccount.uuid}>
+              <div className="saved-account-row" key={savedAccount.uuid ?? savedAccount.email}>
                 <img src={`https://mc-heads.net/avatar/${encodeURIComponent(savedAccount.name)}/48`} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
                 <div className="saved-account-copy">
                   <strong>{savedAccount.name}</strong>
                   <span>{savedAccount.email}</span>
                 </div>
-                {account?.uuid === savedAccount.uuid ? (
+                {(savedAccount.uuid && account?.uuid === savedAccount.uuid) || account?.email.toLowerCase() === savedAccount.email.toLowerCase() ? (
                   <span className="saved-account-current">Current account</span>
                 ) : (
                   <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLoggingIn || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>
