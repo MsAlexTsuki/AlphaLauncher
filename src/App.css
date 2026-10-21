@@ -7710,3 +7710,9 @@ button:not(:disabled):active {
 .saved-account-add:disabled { opacity: .5; cursor: not-allowed; }
 .account-saved-accounts { margin-top: 20px; }
 @media (max-width: 560px) { .saved-account-row { flex-wrap: wrap; } .saved-accounts-footer { align-items: stretch; flex-direction: column; } .saved-account-add { align-self: flex-start; } }
+
+/* Make the Home account card open the saved-account slide */
+.home-account-toggle { text-align: left; }
+.home-account-toggle .account-row { display: flex; align-items: center; }
+.home-account-chevron { margin-left: auto; padding-left: 10px; color: var(--yellow, #ffc83d); font-size: 20px; line-height: 1; transition: transform 220ms ease; }
+.home-account-toggle.is-expanded .home-account-chevron { transform: rotate(180deg); }
