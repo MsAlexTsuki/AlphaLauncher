@@ -2922,6 +2922,11 @@ function HomePage(props: {
           </button>
         </div>
         <div id="home-saved-accounts-panel" className={`saved-accounts-collapse${accountsExpanded ? " is-expanded" : ""}`} aria-hidden={!accountsExpanded}>
+          onClick={(event) => {
+            const target = event.target;
+            if (target instanceof Element && target.closest("button, a, input, select, textarea")) return;
+            setAccountsExpanded(false);
+          }}
           <div className="saved-accounts-collapse-inner">
             {savedAccounts.length === 0 ? <p className="subtitle">No Minecraft accounts saved yet. Add one below.</p> : (
               <div className="saved-accounts-list">
