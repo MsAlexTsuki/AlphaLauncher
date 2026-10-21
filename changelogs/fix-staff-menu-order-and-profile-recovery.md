@@ -1,4 +1,5 @@
 ## Fixed
+- Fixed profile switching so BHOP settings load from the same active profile as the Mods menu; BHOP settings are saved to the current profile before switching, preventing profiles from sharing or reverting settings.
 - Staff rank folders now appear from lowest rank to highest rank, with General first and Founder last.
 - W-Tap Assistance is restricted to the Founder folder and no longer appears in other staff-rank folders.
 - Existing profiles are merged between both profile stores, including module settings and saved colors, instead of being hidden from the active Mods menu.
