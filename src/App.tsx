@@ -399,7 +399,7 @@ function LauncherApp() {
           }
         : current,
     );
-  }, [clientVersion]);
+  }, [clientVersion, updateInfo?.latest_version, updateInfo?.update_available]);
 
   useEffect(() => {
     try {
