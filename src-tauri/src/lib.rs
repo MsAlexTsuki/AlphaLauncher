@@ -3978,8 +3978,7 @@ fn alpha_client_version_file(
 }
 
 
-// Read the version from the actual installed mod JAR. The JSON version marker
-// is only bookkeeping and must never override the version of the JAR Minecraft loads.
+// Read the version from the actual installed mod JAR.
 fn alphastaffmod_version_from_jar(path: &Path) -> Option<String>
 {
     let file = File::open(path).ok()?;
@@ -4016,6 +4015,28 @@ fn alphastaffmod_version_from_jar(path: &Path) -> Option<String>
     }
 
     None
+}
+
+
+// If JAR metadata is missing or invalid, use the version marker written by
+// the launcher during install/update. This prevents a valid installation from
+// briefly displaying UNKNOWN until the next update repairs its metadata.
+fn alphaclient_version_from_marker(root: &Path) -> Option<String>
+{
+    let contents = fs::read_to_string(alpha_client_version_file(root)).ok()?;
+    let metadata: Value = serde_json::from_str(&contents).ok()?;
+    let version = metadata.get("version")?.as_str()?.trim();
+
+    if version.is_empty()
+        || version.contains("${")
+        || !version.trim_start_matches('v').chars().next()
+            .map(|character| character.is_ascii_digit())
+            .unwrap_or(false)
+    {
+        return None;
+    }
+
+    Some(version.to_string())
 }
 
 
@@ -4059,7 +4080,7 @@ fn installed_alphaclient_version(
     }
 
     if found_alphastaffmod {
-        Ok("Onbekend".to_string())
+        Ok(alphaclient_version_from_marker(root).unwrap_or_else(|| "UNKNOWN".to_string()))
     } else {
         Ok("Niet geïnstalleerd".to_string())
     }
@@ -4263,7 +4284,7 @@ fn check_alphaclient_update_internal()
             current_version: current_version.clone(),
             latest_version: manifest.version.clone(),
             update_available: current_version == "Niet geïnstalleerd"
-                || current_version == "Onbekend"
+                || current_version == "UNKNOWN"
                 || version_is_newer(
                     &manifest.version,
                     &current_version
