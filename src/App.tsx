@@ -952,6 +952,11 @@ console.error("Developer permission check failed:", errorMessage);
   const handleMicrosoftLogin = async (accountToSwitch?: MicrosoftAccount) => {
     if (isLoggingIn || isMinecraftRunning) return;
 
+    if (!accountToSwitch && savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS) {
+      setLoginError("You can save up to 5 Minecraft accounts. Select a saved account to switch, or remove one before adding another.");
+      return;
+    }
+
     setIsLoggingIn(true);
     setLoginError(null);
 
