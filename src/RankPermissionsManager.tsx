@@ -9,7 +9,9 @@ type PermissionRow = { scope: string; rank_key: string; permission_key: string; 
 const RANKS: Rank[] = [
   { key: "founder", label: "Founder" },
   { key: "owner", label: "Owner" },
-  { key: "management", label: "Management" },
+  { key: "manager", label: "Manager" },
+  { key: "plat_admin", label: "Platform Admin" },
+  { key: "management", label: "Management (legacy)" },
   { key: "senior_admin", label: "Senior Admin" },
   { key: "admin", label: "Admin" },
   { key: "senior_moderator", label: "Senior Moderator" },
