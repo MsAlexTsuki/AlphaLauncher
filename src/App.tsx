@@ -1200,6 +1200,7 @@ console.error("Developer permission check failed:", errorMessage);
               onSwitchAccount={(savedAccount) => void handleMicrosoftLogin(savedAccount)}
               onAddAccount={() => void handleMicrosoftLogin()}
               isLoggingIn={isLoggingIn}
+              onAccount={() => navigate("Account")}
               isMinecraftRunning={isMinecraftRunning}
               clientVersion={clientVersion}
               launchHistory={launchHistory}
@@ -2690,6 +2691,7 @@ function HomePage(props: {
   isLoggingIn: boolean;
   isMinecraftRunning: boolean;
   clientVersion: string;
+  onAccount: () => void;
   launchHistory: LastPlayed[];
   changelogs: ChangelogEntry[];
   updateInfo: AlphaClientUpdateInfo | null;
@@ -2710,6 +2712,7 @@ function HomePage(props: {
     isLoggingIn,
     isMinecraftRunning,
     clientVersion,
+    onAccount,
     launchHistory,
     changelogs,
     updateInfo,
