@@ -253,8 +253,8 @@ function LauncherApp() {
   const [settings, setSettings] = useState<Settings>(readSettings);
   const [mods, setMods] = useState<ModItem[]>(INITIAL_MODS);
   const [versionFilter, setVersionFilter] = useState("All");
-  const [selectedVersion, setSelectedVersion] = useState("0.3.79");
-  const [clientVersion, setClientVersion] = useState("0.3.79");
+  const [selectedVersion, setSelectedVersion] = useState("UNKNOWN");
+  const [clientVersion, setClientVersion] = useState("UNKNOWN");
   const [updateInfo, setUpdateInfo] =
     useState<AlphaClientUpdateInfo | null>(null);
   const [isUpdatingClient, setIsUpdatingClient] = useState(false);
@@ -344,7 +344,11 @@ function LauncherApp() {
         setClientVersion(version);
         setSelectedVersion(version);
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.warn("Could not read AlphaClient version:", error);
+        setClientVersion("UNKNOWN");
+        setSelectedVersion("UNKNOWN");
+      });
 
     invoke<AlphaClientUpdateInfo>("check_alphaclient_update")
       .then(setUpdateInfo)
