@@ -1210,7 +1210,6 @@ console.error("Developer permission check failed:", errorMessage);
               isLaunching={isLaunching || isUpdatingClient}
               launchError={launchError}
               launchMessage={launchMessage}
-              onAccount={() => navigate("Account")}
               onOpenAlphaAuth={() => void handleOpenAlphaAuth()}
               onChangelog={() => {
                 setActiveChangelogTab("client");
@@ -2699,7 +2698,6 @@ function HomePage(props: {
   isLaunching: boolean;
   launchError: string | null;
   launchMessage: string | null;
-  onAccount: () => void;
   onOpenAlphaAuth: () => void;
   onChangelog: () => void;
   onNews: () => void;
@@ -2720,7 +2718,6 @@ function HomePage(props: {
     isLaunching,
     launchError,
     launchMessage,
-    onAccount,
     onOpenAlphaAuth,
     onChangelog,
     onNews,
