@@ -2724,6 +2724,22 @@ function HomePage(props: {
   } = props;
   const [accountsExpanded, setAccountsExpanded] = useState(false);
 
+  useEffect(() => {
+    if (!accountsExpanded) return;
+
+    const closeAccountsOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".home-account-toggle, .saved-accounts-card")) return;
+      setAccountsExpanded(false);
+    };
+
+    document.addEventListener("pointerdown", closeAccountsOnOutsideClick);
+    return () => {
+      document.removeEventListener("pointerdown", closeAccountsOnOutsideClick);
+    };
+  }, [accountsExpanded]);
+
   return (
     <div className="page">
       <div className="page-header home-page-header">
