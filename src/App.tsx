@@ -4770,7 +4770,7 @@ function AccountPage({
         description="Manage the Microsoft account used by AlphaClient."
       />
 
-      <div className="account-large-card">
+      <div className={`account-large-card account-large-card-toggle${savedAccountsExpanded ? " is-expanded" : ""}`} role="button" tabIndex={0} onClick={() => setSavedAccountsExpanded((expanded) => !expanded)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSavedAccountsExpanded((expanded) => !expanded); } }} aria-expanded={savedAccountsExpanded} aria-controls="account-saved-microsoft-accounts-panel">
         <div className={`large-avatar${account ? " avatar-skin" : ""}`}>
           {account ? (
             <img
@@ -4795,9 +4795,39 @@ function AccountPage({
             Connected
           </div>
         )}
+        <span className="account-large-chevron" aria-hidden="true">{savedAccountsExpanded ? "⌃" : "⌄"}</span>
       </div>
 
-      {loginError && (
+        <div id="account-saved-microsoft-accounts-panel" className={`saved-accounts-collapse account-saved-accounts-panel${savedAccountsExpanded ? " is-expanded" : ""}`} aria-hidden={!savedAccountsExpanded}>
+          <div className="saved-accounts-collapse-inner">
+            {savedAccounts.length === 0 ? (
+              <p className="subtitle">No saved accounts yet. Log in with Microsoft to add one.</p>
+            ) : (
+              <div className="saved-accounts-list">
+                {savedAccounts.map((savedAccount) => (
+                  <div className="saved-account-row" key={savedAccount.uuid ?? savedAccount.email}>
+                    <img src={`https://mc-heads.net/avatar/${encodeURIComponent(savedAccount.name)}/48`} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                    <div className="saved-account-copy">
+                      <strong>{savedAccount.name}</strong>
+                      <span>{savedAccount.email}</span>
+                    </div>
+                    {(savedAccount.uuid && account?.uuid === savedAccount.uuid) || account?.email.toLowerCase() === savedAccount.email.toLowerCase() ? (
+                      <span className="saved-account-current">Current account</span>
+                    ) : (
+                      <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLoggingIn || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>
+                        {isLoggingIn ? "Waiting…" : "Use account"}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="saved-accounts-note">Account names are saved on this device. Choosing an account starts Microsoft sign-in with that email as a hint; the launcher does not store Microsoft passwords.</p>
+          </div>
+        </div>
+
+
+            {loginError && (
         <p className="launch-error" role="alert">
           {loginError}
         </p>
@@ -4838,51 +4868,7 @@ function AccountPage({
         )}
       </div>
 
-      <section className="section-card saved-accounts-card account-saved-accounts">
-        <button
-          type="button"
-          className={`section-header saved-accounts-header account-saved-accounts-toggle${savedAccountsExpanded ? " is-expanded" : ""}`}
-          onClick={() => setSavedAccountsExpanded((expanded) => !expanded)}
-          aria-expanded={savedAccountsExpanded}
-          aria-controls="account-saved-microsoft-accounts-panel"
-        >
-          <div>
-            <span className="card-label">ACCOUNTS</span>
-            <h3>Saved Microsoft accounts</h3>
-          </div>
-          <div className="saved-accounts-header-right">
-            <span className="saved-account-count">{savedAccounts.length}</span>
-            <span className="saved-accounts-chevron" aria-hidden="true">{savedAccountsExpanded ? "⌃" : "⌄"}</span>
-          </div>
-        </button>
-        <div id="account-saved-microsoft-accounts-panel" className={`saved-accounts-collapse${savedAccountsExpanded ? " is-expanded" : ""}`} aria-hidden={!savedAccountsExpanded}>
-          <div className="saved-accounts-collapse-inner">
-            {savedAccounts.length === 0 ? (
-              <p className="subtitle">No saved accounts yet. Log in with Microsoft to add one.</p>
-            ) : (
-              <div className="saved-accounts-list">
-                {savedAccounts.map((savedAccount) => (
-                  <div className="saved-account-row" key={savedAccount.uuid ?? savedAccount.email}>
-                    <img src={`https://mc-heads.net/avatar/${encodeURIComponent(savedAccount.name)}/48`} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
-                    <div className="saved-account-copy">
-                      <strong>{savedAccount.name}</strong>
-                      <span>{savedAccount.email}</span>
-                    </div>
-                    {(savedAccount.uuid && account?.uuid === savedAccount.uuid) || account?.email.toLowerCase() === savedAccount.email.toLowerCase() ? (
-                      <span className="saved-account-current">Current account</span>
-                    ) : (
-                      <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLoggingIn || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>
-                        {isLoggingIn ? "Waiting…" : "Use account"}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            <p className="saved-accounts-note">Account names are saved on this device. Choosing an account starts Microsoft sign-in with that email as a hint; the launcher does not store Microsoft passwords.</p>
-          </div>
-        </div>
-      </section>
+
     </div>
   );
 }
