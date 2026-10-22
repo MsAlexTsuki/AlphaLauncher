@@ -1645,13 +1645,13 @@ const COMMUNITY_RANK_ORDER = [
   "moderator",
   "trial_moderator",
   "the_nibbler",
+  "beta",
   "alpha_plus",
   "alpha",
   "elite",
   "rogue",
   "scout",
   "member",
-  "beta", // Legacy rank retained for existing assignments; hidden from Rank Management.
 ] as const;
 
 const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
@@ -1667,7 +1667,7 @@ const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   the_nibbler: { label: "THE NIBBLER", color: "#A855F7" },
   alpha_plus: { label: "ALPHA+", color: "#FFF300" },
   alpha: { label: "ALPHA", color: "#F300FF" },
-  beta: { label: "BETA (LEGACY)", color: "#00FF52" },
+  beta: { label: "BETA", color: "#00FF52" },
   elite: { label: "ELITE", color: "#00D9FF" },
   rogue: { label: "ROGUE", color: "#A855F7" },
   scout: { label: "SCOUT", color: "#FFD700" },
