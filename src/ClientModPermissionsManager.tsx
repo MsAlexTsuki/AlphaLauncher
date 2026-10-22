@@ -64,7 +64,7 @@ export default function ClientModPermissionsManager() {
       const [catalog, rankRows, playerRows, grantRows, overrideRows] = await Promise.all([
         supabase.rpc("admin_list_client_mods"),
         supabase.rpc("admin_get_client_mod_rank_permissions"),
-        supabase.rpc("search_rank_management_profiles", { search_term: term.trim() }),
+        supabase.rpc("admin_search_client_mod_players", { p_search: term.trim() }),
         supabase.rpc("admin_list_client_mod_category_grants"),
         supabase.rpc("admin_list_client_mod_user_overrides"),
       ]);
@@ -72,7 +72,7 @@ export default function ClientModPermissionsManager() {
       setMods((catalog.data ?? []) as ModRecord[]);
       setPermissions((rankRows.data ?? []) as RankPermission[]);
       setPlayers(((playerRows.data ?? []) as RankSearchPlayer[]).map(player => ({
-        user_id: player.id,
+        user_id: player.user_id,
         username: player.username,
         display_name: player.display_name,
         rank_key: player.rank_key,
@@ -181,12 +181,19 @@ export default function ClientModPermissionsManager() {
         <h4>{group.label}</h4>
         {group.mods.map(mod => <label className="setting-line developer-setting-line" key={mod.mod_id}>
           <span><strong>{mod.display_name}</strong><small>{mod.description} · {mod.mod_id}</small></span>
-          <input type="checkbox" checked={selectedRank === "founder" || (permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false)}
+          <button
+            type="button"
+            className="mods-permission-switch"
+            role="switch"
+            aria-label={`${mod.display_name} permission`}
+            aria-checked={selectedRank === "founder" || (permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false)}
             disabled={selectedRank === "founder"}
-            onChange={e => setPermissions(old => {
+            onClick={() => setPermissions(old => {
+              const current = selectedRank === "founder" || (old.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false);
               const rest = old.filter(p => !(p.rank_key === selectedRank && p.mod_id === mod.mod_id));
-              return [...rest, { rank_key: selectedRank, mod_id: mod.mod_id, enabled: e.target.checked }];
-            })} />
+              return [...rest, { rank_key: selectedRank, mod_id: mod.mod_id, enabled: !current }];
+            })}
+          ><span /></button>
         </label>)}
       </div>)}
       <button className="large-play-button developer-start-button" onClick={() => void saveRankDefaults()} disabled={busy || loading}>{busy ? "SAVING…" : "SAVE RANK DEFAULTS"}</button>
