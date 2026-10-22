@@ -39,7 +39,7 @@ const CATEGORIES = [
 ] as const;
 
 export default function ClientModPermissionsManager() {
-  const [activeTab, setActiveTab] = useState<"rank" | "player" | "rules">("rank");
+  const [activeTab, setActiveTab] = useState<"home" | "rank" | "player" | "rules">("home");
   const [mods, setMods] = useState<ModRecord[]>([]);
   const [permissions, setPermissions] = useState<RankPermission[]>([]);
   const [players, setPlayers] = useState<PlayerRecord[]>([]);
@@ -148,11 +148,28 @@ export default function ClientModPermissionsManager() {
       <div><span className="card-label">ALPHACLIENT MODS</span><h2>Mod Permissions</h2><p className="subtitle">Manage mod access by rank, player, or individual access rule.</p></div>
       <button className="small-button" onClick={() => void load()} disabled={loading || busy}>Refresh</button>
     </div>
-    <nav className="mods-permission-tabs" aria-label="Mod permission sections">
-      <button type="button" className={activeTab === "rank" ? "mods-permission-tab active" : "mods-permission-tab"} aria-current={activeTab === "rank" ? "page" : undefined} onClick={() => setActiveTab("rank")}>Rank Permission</button>
-      <button type="button" className={activeTab === "player" ? "mods-permission-tab active" : "mods-permission-tab"} aria-current={activeTab === "player" ? "page" : undefined} onClick={() => setActiveTab("player")}>Player Permission</button>
-      <button type="button" className={activeTab === "rules" ? "mods-permission-tab active" : "mods-permission-tab"} aria-current={activeTab === "rules" ? "page" : undefined} onClick={() => setActiveTab("rules")}>Grants and Overrides</button>
-    </nav>
+    {activeTab === "home" ? <section className="mods-permissions-home" aria-label="Mods sections">
+      <button type="button" className="mods-permissions-home-card" onClick={() => setActiveTab("rank")}>
+        <span className="mods-permissions-home-icon" aria-hidden="true">◇</span>
+        <span className="mods-permissions-home-copy"><strong>Rank Permission</strong><small>Manage default mod access for each rank.</small></span>
+        <span className="mods-permissions-home-chevron" aria-hidden="true">›</span>
+      </button>
+      <button type="button" className="mods-permissions-home-card" onClick={() => setActiveTab("player")}>
+        <span className="mods-permissions-home-icon" aria-hidden="true">♙</span>
+        <span className="mods-permissions-home-copy"><strong>Player Permission</strong><small>Manage individual player access and grants.</small></span>
+        <span className="mods-permissions-home-chevron" aria-hidden="true">›</span>
+      </button>
+      <button type="button" className="mods-permissions-home-card" onClick={() => setActiveTab("rules")}>
+        <span className="mods-permissions-home-icon" aria-hidden="true">☷</span>
+        <span className="mods-permissions-home-copy"><strong>Grants and Overrides</strong><small>Review, manage, and revoke access rules.</small></span>
+        <span className="mods-permissions-home-chevron" aria-hidden="true">›</span>
+      </button>
+    </section> : <>
+      <button type="button" className="mods-permissions-back" onClick={() => setActiveTab("home")}><span aria-hidden="true">‹</span> Back to Mods</button>
+      {activeTab === "rank" && <div className="mods-permissions-section-title"><h3>Rank Permission</h3><p className="subtitle">Configure default mod access for each rank.</p></div>}
+      {activeTab === "player" && <div className="mods-permissions-section-title"><h3>Player Permission</h3><p className="subtitle">Manage individual player access.</p></div>}
+      {activeTab === "rules" && <div className="mods-permissions-section-title"><h3>Grants and Overrides</h3><p className="subtitle">Review and revoke category grants and individual overrides.</p></div>}
+    </>}
     {activeTab === "rank" && <section className="section-card developer-card">
       <div className="section-header"><div><span className="card-label">ALPHACLIENT</span><h3>Mod permission defaults</h3></div><button className="small-button" onClick={() => void load()} disabled={loading || busy}>Refresh</button></div>
       <p className="subtitle">Configure each rank's default access per mod. Founder always has all mod permissions. Individual player grants can override these defaults without changing their community rank.</p>
