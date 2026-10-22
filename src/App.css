@@ -8021,3 +8021,110 @@ button:not(:disabled):active {
   cursor: not-allowed;
   opacity: 0.62;
 }
+
+
+/* Rank Permission — rank-folder overview and focused per-rank editor */
+.rank-folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+  gap: 10px;
+  margin: 18px 0 22px;
+}
+.rank-folder-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 76px;
+  padding: 13px 14px;
+  text-align: left;
+  color: var(--text-primary, #f4f4f5);
+  background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
+  border: 1px solid var(--border, rgba(255,255,255,.1));
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.rank-folder-card:hover { border-color: rgba(255,200,61,.42); transform: translateY(-1px); }
+.rank-folder-card.is-selected {
+  border-color: #ffc83d;
+  background: linear-gradient(145deg, rgba(255,200,61,.13), rgba(255,200,61,.035));
+  box-shadow: inset 0 0 0 1px rgba(255,200,61,.12);
+}
+.rank-folder-card:focus-visible { outline: 2px solid #ffc83d; outline-offset: 2px; }
+.rank-folder-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  color: #ffc83d;
+  background: rgba(255,200,61,.1);
+  font-size: 17px;
+}
+.rank-folder-copy { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.rank-folder-copy strong { font-size: 13px; font-weight: 700; }
+.rank-folder-copy small { color: var(--text-muted, #a1a1aa); font-size: 11px; line-height: 1.35; }
+.rank-folder-chevron { color: var(--text-muted, #a1a1aa); font-size: 23px; }
+.rank-folder-card.is-selected .rank-folder-chevron { color: #ffc83d; }
+.rank-folder-editor {
+  padding: 20px;
+  border: 1px solid var(--border, rgba(255,255,255,.1));
+  border-radius: 14px;
+  background: rgba(0,0,0,.14);
+}
+.rank-folder-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.rank-folder-editor-heading h4 { margin: 5px 0 0; font-size: 20px; }
+.rank-folder-count {
+  padding: 7px 10px;
+  border: 1px solid rgba(255,200,61,.2);
+  border-radius: 8px;
+  background: rgba(255,200,61,.07);
+  color: #ffc83d;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.rank-mod-group { margin-top: 18px; }
+.rank-mod-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 9px;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,.1));
+}
+.rank-mod-group-heading h5 { margin: 0; color: var(--text-primary, #f4f4f5); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.rank-mod-group-heading span { color: var(--text-muted, #a1a1aa); font-size: 11px; }
+.rank-mod-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; padding-top: 10px; }
+.rank-mod-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  padding: 12px 13px;
+  border: 1px solid var(--border, rgba(255,255,255,.08));
+  border-radius: 10px;
+  background: rgba(255,255,255,.018);
+}
+.rank-mod-row.is-enabled { border-color: rgba(255,200,61,.19); background: rgba(255,200,61,.035); }
+.rank-mod-copy { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.rank-mod-copy strong { font-size: 12px; }
+.rank-mod-copy small { color: var(--text-muted, #a1a1aa); font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
+@media (max-width: 620px) {
+  .rank-folder-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .rank-folder-card { min-height: 70px; padding: 10px; gap: 8px; }
+  .rank-folder-icon { flex-basis: 31px; width: 31px; height: 31px; }
+  .rank-folder-copy strong { font-size: 12px; }
+  .rank-folder-copy small { font-size: 10px; }
+  .rank-folder-editor { padding: 13px; }
+  .rank-folder-editor-heading { align-items: flex-start; flex-direction: column; }
+  .rank-mod-rows { grid-template-columns: minmax(0, 1fr); }
+}
