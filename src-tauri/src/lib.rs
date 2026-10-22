@@ -4658,7 +4658,7 @@ fn download_optifine_from_official_page(
             .map(|index| index + 1)
             .unwrap_or(position);
         let candidate = &html[link_start..];
-        let link_end = candidate.find(['"', '\'', '<', ' ', '\\r', '\\n'])
+        let link_end = candidate.find(['"', '\'', '<', ' ', '\r', '\n'])
             .unwrap_or(candidate.len());
         let href = candidate[..link_end].replace("&amp;", "&");
         let href = if href.starts_with("http://") || href.starts_with("https://") {
