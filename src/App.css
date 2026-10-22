@@ -8128,3 +8128,41 @@ button:not(:disabled):active {
   .rank-folder-editor-heading { align-items: flex-start; flex-direction: column; }
   .rank-mod-rows { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+/* AlphaClient's real StaffMods folder hierarchy inside Rank Permission */
+.rank-management-subfolders {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(255, 200, 61, 0.16);
+  border-radius: 14px;
+  background: rgba(8, 10, 15, 0.28);
+}
+.rank-management-subfolders .rank-folder-editor-heading {
+  margin-bottom: 12px;
+}
+.rank-folder-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 22px;
+  border: 1px dashed rgba(184, 189, 200, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.015);
+}
+.rank-folder-empty .rank-folder-icon {
+  color: #ffc83d;
+  font-size: 22px;
+}
+.rank-folder-empty strong {
+  color: #f0f1f4;
+  font-size: 13px;
+  font-weight: 650;
+}
+.rank-folder-empty small {
+  color: #aeb4c0;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 560px;
+}
