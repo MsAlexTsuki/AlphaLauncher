@@ -8166,3 +8166,21 @@ button:not(:disabled):active {
   line-height: 1.5;
   max-width: 560px;
 }
+
+.rank-permission-rank-section,
+.rank-client-folders-section {
+  margin-top: 18px;
+}
+.rank-permission-rank-section {
+  padding: 16px;
+  border: 1px solid rgba(184, 189, 200, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.018);
+}
+.rank-permission-rank-section .rank-folder-editor-heading,
+.rank-client-folders-section > .rank-folder-editor-heading {
+  margin-bottom: 12px;
+}
+.rank-client-folders-section {
+  padding-top: 4px;
+}
