@@ -16,7 +16,7 @@ alter table public.client_mods
       'alpha_plus',
       'trial_moderator',
       'moderator',
-      'sr_moderator',
+      'senior_moderator',
       'mod',
       'sr_mod',
       'admin',
