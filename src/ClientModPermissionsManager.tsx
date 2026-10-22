@@ -278,9 +278,11 @@ export default function ClientModPermissionsManager() {
         {selectedRank === "founder" && <p className="subtitle">Founder access is always enabled and cannot be disabled.</p>}
         {selectedRank === "owner" && <p className="subtitle">Owner always has access to every non-Founder mod. Founder-only modules remain exclusive.</p>}
         {selectedRankFolder === "management" && <p className="subtitle">Management contains the Platform Admin and Manager subfolders, matching the client menu.</p>}
-        {loading ? <p className="subtitle">Loading mod permissions…</p> : getFolderMods(selectedRankFolder).length === 0
-          ? <div className="rank-folder-empty"><span className="rank-folder-icon" aria-hidden="true">▱</span><strong>This folder is currently empty.</strong><small>When a mod is added to this AlphaClient folder and its catalog entry is registered, it will appear here automatically.</small></div>
-          : <div className="rank-mod-rows">
+        {loading ? <p className="subtitle">Loading mod permissions…</p> : selectedRankFolder === "management"
+          ? <div className="rank-folder-empty"><span className="rank-folder-icon" aria-hidden="true">▰</span><strong>Choose a management subfolder.</strong><small>Open Platform Admin or Manager above to configure its mods.</small></div>
+          : getFolderMods(selectedRankFolder).length === 0
+            ? <div className="rank-folder-empty"><span className="rank-folder-icon" aria-hidden="true">▱</span><strong>This folder is currently empty.</strong><small>When a mod is added to this AlphaClient folder and its catalog entry is registered, it will appear here automatically.</small></div>
+            : <div className="rank-mod-rows">
             {getFolderMods(selectedRankFolder).map(mod => {
               const founderOnly = mod.mod_id === "w-tap-assistance";
               const lockedForRank = founderOnly && selectedRank !== "founder";
