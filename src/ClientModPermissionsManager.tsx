@@ -27,9 +27,9 @@ function errorMessage(error: unknown): string {
 
 const RANKS = [
   ["founder", "Founder"], ["owner", "Owner"], ["developer", "Developer"], ["manager", "Manager"], ["plat_admin", "Platform Admin"],
-  ["management", "Management (legacy)"], ["senior_admin", "Senior Admin"], ["admin", "Admin"], ["senior_moderator", "Senior Moderator"],
-  ["moderator", "Moderator"], ["trial_moderator", "Trial Moderator"], ["partner", "Partner"], ["famous", "Famous"], ["media", "Media"], ["beta", "Beta"],
-  ["alpha_plus", "Alpha+"], ["alpha", "Alpha"], ["member", "Member"],
+  ["senior_admin", "Senior Admin"], ["admin", "Admin"], ["senior_moderator", "Senior Moderator"],
+  ["moderator", "Moderator"], ["trial_moderator", "Trial Moderator"], ["the_nibbler", "The Nibbler"],
+  ["beta", "Beta"], ["alpha_plus", "Alpha+"], ["alpha", "Alpha"], ["elite", "Elite"], ["rogue", "Rogue"], ["scout", "Scout"], ["member", "Member"],
 ] as const;
 const CATEGORIES = [
   ["general", "General"], ["staff", "Staff"], ["trial_moderator", "Trial Moderator"],
