@@ -3447,7 +3447,7 @@ function RankManagement() {
   const selectedMember = members.find((member) => member.id === selectedId) ?? null;
   const filteredMembers = members;
   const rankCategories: Record<typeof activeRankCategory, string[]> = {
-    "Community ranks": ["member", "beta", "the_nibbler"],
+    "Community ranks": ["beta", "the_nibbler"],
     "Donator Ranks": ["scout", "rogue", "elite", "alpha", "alpha_plus"],
     "Media Ranks": ["media", "famous", "partner"],
     "Staff Ranks": ["trial_moderator", "moderator", "senior_moderator", "admin", "senior_admin", "plat_admin", "manager", "developer", "owner", "founder"],
@@ -3582,7 +3582,7 @@ function RankManagement() {
                               setSelectedRank(ordered[0]);
                             }}
                           />
-                          <span style={{ color: rank.color }}>{rank.label}</span>
+                          <span style={{ color: rank.color }}>{key === "beta" ? "Beta Tester" : rank.label}</span>
                         </label>
                       );
                     })}
