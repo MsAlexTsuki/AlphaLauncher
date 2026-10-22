@@ -1,4 +1,5 @@
 ## Fixed
+- AlphaClient now installs OptiFine 1.8.9 HD U M5 from the official OptiFine website into the mods folder, validates the JAR, and leaves existing mods and profiles untouched.
 - The community rank is explicitly labeled beneath the fixed Profiles panel; Community Login and Exit remain in their existing top-right positions.
 - Fixed automatic Default profile creation so a newly added Default profile is immediately saved to disk and remains available after restarting the client.
 - Removed the module Details panel from the Mods menu; the Profiles panel with Create, Edit, and Delete stays visible when selecting any module.

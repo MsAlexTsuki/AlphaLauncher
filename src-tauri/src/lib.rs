@@ -73,6 +73,10 @@ const MINECRAFT_VERSION: &str = "1.8.9";
 
 const FORGE_VERSION: &str = "11.15.1.2318";
 
+// OptiFine is fetched directly from the official OptiFine website for each user.
+const OPTIFINE_FILE_NAME: &str = "OptiFine_1.8.9_HD_U_M5.jar";
+const OPTIFINE_DOWNLOAD_URL: &str = "https://optifine.net/downloadx?f=OptiFine_1.8.9_HD_U_M5.jar";
+
 const FORGE_INSTALLER_NAME: &str =
     "forge-1.8.9-11.15.1.2318-1.8.9-installer.jar";
 
@@ -4563,6 +4567,85 @@ fn update_alphaclient_internal()
     Ok(format!("AlphaClient updated from {} to {}.", current_version, manifest.version))
 }
 
+
+// ============================================================
+// OPTIFINE INSTALLATION
+// ============================================================
+
+// Download OptiFine from its official host and install it as a Forge mod.
+// OptiFine is not bundled with AlphaClient or redistributed by AlphaLauncher.
+fn ensure_optifine_installed(
+    root: &Path,
+    client: &Client
+) -> Result<(), String>
+{
+    let mods_dir = root.join("mods");
+    fs::create_dir_all(&mods_dir).map_err(|error| {
+        format!("Could not create mods directory: {}", error)
+    })?;
+
+    let installed = mods_dir.join(OPTIFINE_FILE_NAME);
+    if installed.is_file() && is_valid_optifine_jar(&installed) {
+        return Ok(());
+    }
+
+    let download_dir = root.join("downloads");
+    fs::create_dir_all(&download_dir).map_err(|error| {
+        format!("Could not create download directory: {}", error)
+    })?;
+    let temporary = download_dir.join(format!("{}.part", OPTIFINE_FILE_NAME));
+    let _ = fs::remove_file(&temporary);
+
+    if let Err(error) = download_file(client, OPTIFINE_DOWNLOAD_URL, &temporary) {
+        let _ = fs::remove_file(&temporary);
+        let _ = open_browser("https://optifine.net/downloads");
+        return Err(format!(
+            "OptiFine could not be downloaded automatically from its official website.              The official download page has been opened. Download OptiFine 1.8.9 HD U M5,              then place {} in {} and press Play again. Details: {}",
+            OPTIFINE_FILE_NAME,
+            mods_dir.display(),
+            error
+        ));
+    }
+
+    if !is_valid_optifine_jar(&temporary) {
+        let _ = fs::remove_file(&temporary);
+        let _ = open_browser("https://optifine.net/downloads");
+        return Err(
+            "The official OptiFine download did not return a valid JAR. The official download page has been opened; download OptiFine 1.8.9 HD U M5 and place the JAR in the AlphaClient mods folder, then press Play again.".to_string()
+        );
+    }
+
+    if installed.exists() {
+        fs::remove_file(&installed).map_err(|error| {
+            format!("Could not replace the invalid OptiFine file: {}", error)
+        })?;
+    }
+    fs::rename(&temporary, &installed).or_else(|_| {
+        fs::copy(&temporary, &installed).map(|_| ())
+    }).map_err(|error| {
+        format!("Could not install OptiFine into the mods folder: {}", error)
+    })?;
+    let _ = fs::remove_file(&temporary);
+
+    Ok(())
+}
+
+fn is_valid_optifine_jar(path: &Path) -> bool {
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(_) => return false,
+    };
+    let mut archive = match ZipArchive::new(file) {
+        Ok(archive) => archive,
+        Err(_) => return false,
+    };
+    (0..archive.len()).any(|index| {
+        archive.by_index(index)
+            .map(|entry| entry.name().starts_with("optifine/"))
+            .unwrap_or(false)
+    })
+}
+
 // ============================================================
 // INSTALLATION
 // ============================================================
@@ -4578,6 +4661,8 @@ fn install_alphaclient_internal()
 
     let client =
         http_client()?;
+
+    ensure_optifine_installed(&root, &client)?;
 
     download_minecraft_1_8_9(
         &root,
