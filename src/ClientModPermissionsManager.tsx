@@ -26,10 +26,11 @@ function errorMessage(error: unknown): string {
 }
 
 const RANKS = [
-  ["founder", "Founder"], ["owner", "Owner"], ["developer", "Developer"], ["manager", "Manager"], ["plat_admin", "Platform Admin"],
-  ["senior_admin", "Senior Admin"], ["admin", "Admin"], ["senior_moderator", "Senior Moderator"],
-  ["moderator", "Moderator"], ["trial_moderator", "Trial Moderator"], ["the_nibbler", "The Nibbler"],
-  ["beta", "Beta"], ["alpha_plus", "Alpha+"], ["alpha", "Alpha"], ["elite", "Elite"], ["rogue", "Rogue"], ["scout", "Scout"], ["member", "Member"],
+  ["founder", "Founder"], ["owner", "Owner"], ["manager", "Manager"], ["developer", "Developer"], ["plat_admin", "Platform Admin"],
+  ["senior_admin", "Sr Admin"], ["admin", "Admin"], ["senior_moderator", "Sr Mod"], ["moderator", "Moderator"],
+  ["trial_moderator", "T-Mod"], ["donator", "Donator"], ["beta", "Beta"], ["alpha_plus", "Alpha+"], ["alpha", "Alpha"],
+  ["elite", "Elite"], ["rogue", "Rogue"], ["scout", "Scout"], ["the_nibbler", "The Nibbler"],
+  ["media", "Media"], ["famous", "Famous"], ["partner", "Partner"], ["member", "Member"],
 ] as const;
 const CATEGORIES = [
   ["general", "General"], ["staff", "Staff"], ["trial_moderator", "Trial Moderator"],
@@ -172,31 +173,61 @@ export default function ClientModPermissionsManager() {
     </>}
     {activeTab === "rank" && <section className="section-card developer-card">
       <div className="section-header"><div><span className="card-label">ALPHACLIENT</span><h3>Mod permission defaults</h3></div><button className="small-button" onClick={() => void load()} disabled={loading || busy}>Refresh</button></div>
-      <p className="subtitle">Configure each rank's default access per mod. Founder always has all mod permissions. Individual player grants can override these defaults without changing their community rank.</p>
-      <label className="developer-input-label">Rank defaults</label>
-      <select className="developer-text-input" value={selectedRank} onChange={e => setSelectedRank(e.target.value)}>
-        {RANKS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-      </select>
-      {loading ? <p className="subtitle">Loading mod permissions…</p> : groupedMods.map(group => <div className="client-mod-group" key={group.key}>
-        <h4>{group.label}</h4>
-        {group.mods.map(mod => <label className="setting-line developer-setting-line" key={mod.mod_id}>
-          <span><strong>{mod.display_name}</strong><small>{mod.description} · {mod.mod_id}</small></span>
-          <button
+      <p className="subtitle">Choose a rank folder, then configure exactly which mods that rank can access. Each rank has its own saved defaults. Founder access is always enabled.</p>
+      <div className="rank-folder-grid" aria-label="Rank folders">
+        {RANKS.map(([key, label]) => {
+          const enabledCount = key === "founder"
+            ? mods.length
+            : mods.filter(mod => permissions.find(permission => permission.rank_key === key && permission.mod_id === mod.mod_id)?.enabled ?? false).length;
+          const active = selectedRank === key;
+          return <button
             type="button"
-            className="mods-permission-switch"
-            role="switch"
-            aria-label={`${mod.display_name} permission`}
-            aria-checked={selectedRank === "founder" || (permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false)}
-            disabled={selectedRank === "founder"}
-            onClick={() => setPermissions(old => {
-              const current = selectedRank === "founder" || (old.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false);
-              const rest = old.filter(p => !(p.rank_key === selectedRank && p.mod_id === mod.mod_id));
-              return [...rest, { rank_key: selectedRank, mod_id: mod.mod_id, enabled: !current }];
-            })}
-          ><span /></button>
-        </label>)}
-      </div>)}
-      <button className="large-play-button developer-start-button" onClick={() => void saveRankDefaults()} disabled={busy || loading}>{busy ? "SAVING…" : "SAVE RANK DEFAULTS"}</button>
+            key={key}
+            className={`rank-folder-card${active ? " is-selected" : ""}`}
+            aria-pressed={active}
+            onClick={() => setSelectedRank(key)}
+          >
+            <span className="rank-folder-icon" aria-hidden="true">▰</span>
+            <span className="rank-folder-copy"><strong>{label}</strong><small>{enabledCount} / {mods.length} mods enabled</small></span>
+            <span className="rank-folder-chevron" aria-hidden="true">›</span>
+          </button>;
+        })}
+      </div>
+      <div className="rank-folder-editor">
+        <div className="rank-folder-editor-heading">
+          <div><span className="card-label">RANK FOLDER</span><h4>{RANKS.find(([key]) => key === selectedRank)?.[1] ?? selectedRank}</h4></div>
+          <span className="rank-folder-count">{selectedRank === "founder" ? `${mods.length} / ${mods.length} enabled · always on` : `${mods.filter(mod => permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false).length} / ${mods.length} enabled`}</span>
+        </div>
+        {selectedRank === "founder" && <p className="subtitle">Founder always has access to every enabled mod. These permissions cannot be disabled.</p>}
+        {loading ? <p className="subtitle">Loading mod permissions…</p> : groupedMods.map(group => {
+          const groupEnabled = group.mods.filter(mod => selectedRank === "founder" || (permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false)).length;
+          return <div className="rank-mod-group" key={group.key}>
+            <div className="rank-mod-group-heading"><h5>{group.label}</h5><span>{groupEnabled} / {group.mods.length}</span></div>
+            <div className="rank-mod-rows">
+              {group.mods.map(mod => {
+                const enabled = selectedRank === "founder" || (permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false);
+                return <div className={`rank-mod-row${enabled ? " is-enabled" : ""}`} key={mod.mod_id}>
+                  <span className="rank-mod-copy"><strong>{mod.display_name}</strong><small>{mod.description} · {mod.mod_id}</small></span>
+                  <button
+                    type="button"
+                    className="mods-permission-switch"
+                    role="switch"
+                    aria-label={`${mod.display_name} permission`}
+                    aria-checked={enabled}
+                    disabled={selectedRank === "founder"}
+                    onClick={() => setPermissions(old => {
+                      const current = old.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false;
+                      const rest = old.filter(p => !(p.rank_key === selectedRank && p.mod_id === mod.mod_id));
+                      return [...rest, { rank_key: selectedRank, mod_id: mod.mod_id, enabled: !current }];
+                    })}
+                  ><span /></button>
+                </div>;
+              })}
+            </div>
+          </div>;
+        })}
+        <button className="large-play-button developer-start-button" onClick={() => void saveRankDefaults()} disabled={busy || loading || selectedRank === "founder"}>{busy ? "SAVING…" : `SAVE ${(RANKS.find(([key]) => key === selectedRank)?.[1] ?? selectedRank).toUpperCase()} PERMISSIONS`}</button>
+      </div>
     </section>}
 
     {activeTab === "player" && <section className="section-card developer-card">
