@@ -35,9 +35,9 @@ const RANKS = [
 const CATEGORIES = [
   ["general", "General"], ["staff", "Staff"], ["trial_moderator", "Trial Moderator"],
   ["moderator", "Moderator"], ["senior_moderator", "Senior Moderator"], ["admin", "Admin"],
-  ["senior_admin", "Senior Admin"], ["management", "Management"], ["plat_admin", "Platform Admin"], ["manager", "Manager"], ["owner", "Owner"],
-  ["beta", "Beta"], ["alpha", "Alpha"], ["alpha_plus", "Alpha+"], ["plat_admin", "Platform Admin"],
-  ["manager", "Manager"], ["founder", "Founder"], ["donator", "Donator"], ["mod", "Mod"], ["sr_mod", "Sr Mod"],
+  ["senior_admin", "Senior Admin"], ["management", "Management"], ["plat_admin", "Platform Admin"],
+  ["manager", "Manager"], ["owner", "Owner"], ["founder", "Founder"], ["beta", "Beta"],
+  ["donator", "Donator"], ["alpha", "Alpha"], ["alpha_plus", "Alpha+"], ["mod", "Mod"], ["sr_mod", "Sr Mod"],
 ] as const;
 
 // Mirrors the actual StaffMods folder tree in AlphaClient. Management contains two subfolders.
