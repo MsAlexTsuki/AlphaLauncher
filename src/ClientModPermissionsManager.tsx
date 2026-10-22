@@ -86,9 +86,22 @@ export default function ClientModPermissionsManager() {
 
   useEffect(() => { void load(""); }, []);
   const chosenPlayer = players.find(p => p.user_id === selectedPlayer);
-  const groupedMods = useMemo(() => CATEGORIES.map(([key, label]) => ({
-    key, label, mods: mods.filter(m => m.category_key === key),
-  })).filter(g => g.mods.length), [mods]);
+  const groupedMods = useMemo(() => {
+    const categoryKeys = Array.from(new Set(mods.map(mod => mod.category_key))).sort((a, b) => {
+      const aIndex = CATEGORIES.findIndex(([key]) => key === a);
+      const bIndex = CATEGORIES.findIndex(([key]) => key === b);
+      if (aIndex < 0 && bIndex < 0) return a.localeCompare(b);
+      if (aIndex < 0) return 1;
+      if (bIndex < 0) return -1;
+      return aIndex - bIndex;
+    });
+    return categoryKeys.map(key => ({
+      key,
+      label: CATEGORIES.find(([categoryKey]) => categoryKey === key)?.[1]
+        ?? key.split("_").map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" "),
+      mods: mods.filter(mod => mod.category_key === key),
+    }));
+  }, [mods]);
 
   const saveRankDefaults = async () => {
     setBusy(true); setError(""); setMessage("");
