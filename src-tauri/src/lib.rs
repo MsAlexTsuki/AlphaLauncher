@@ -4649,23 +4649,27 @@ fn download_optifine_from_official_page(
     let html = page.text()
         .map_err(|error| format!("Could not read official OptiFine download page: {}", error))?;
 
-    let mut search_from = 0;
+    // The official page's link markup can use either quote style and HTML-escaped
+    // query separators. Search the page itself rather than assuming href="...".
+    let needle = "downloadx?f=OptiFine_1.8.9_HD_U_M5.jar";
     let mut download_url: Option<String> = None;
-    while let Some(relative) = html[search_from..].find("href=\"") {
-        let value_start = search_from + relative + 6;
-        let rest = &html[value_start..];
-        let Some(end) = rest.find('"') else { break };
-        let href = rest[..end].replace("&amp;", "&");
-        if href.contains("downloadx?f=OptiFine_1.8.9_HD_U_M5.jar") {
-            download_url = Some(
-                Url::parse(OPTIFINE_DOWNLOAD_PAGE_URL)
-                    .and_then(|base| base.join(&href))
-                    .map_err(|error| format!("Invalid official OptiFine download link: {}", error))?
-                    .to_string()
-            );
-            break;
-        }
-        search_from = value_start + end + 1;
+    if let Some(position) = html.find(needle) {
+        let link_start = html[..position].rfind(['"', '\''])
+            .map(|index| index + 1)
+            .unwrap_or(position);
+        let candidate = &html[link_start..];
+        let link_end = candidate.find(['"', '\'', '<', ' ', '\\r', '\\n'])
+            .unwrap_or(candidate.len());
+        let href = candidate[..link_end].replace("&amp;", "&");
+        let href = if href.starts_with("http://") || href.starts_with("https://") {
+            href
+        } else {
+            Url::parse(OPTIFINE_DOWNLOAD_PAGE_URL)
+                .and_then(|base| base.join(&href))
+                .map_err(|error| format!("Invalid official OptiFine download link: {}", error))?
+                .to_string()
+        };
+        download_url = Some(href);
     }
 
     let url = download_url.ok_or_else(|| {
