@@ -1,4 +1,3 @@
-- Updated the OptiFine page request to use browser-style headers so the official site can return its current download link.
 - Fixed Rust compilation in the OptiFine download-link parser by using valid carriage-return and newline character literals.
 - Improved OptiFine download-link detection to handle the official page's varying link markup and escaped URL parameters.
 - Fixed OptiFine downloads by retrieving the current, short-lived download link from the official OptiFine page before downloading the JAR.
