@@ -39,6 +39,7 @@ const CATEGORIES = [
 ] as const;
 
 export default function ClientModPermissionsManager() {
+  const [activeTab, setActiveTab] = useState<"rank" | "player" | "rules">("rank");
   const [mods, setMods] = useState<ModRecord[]>([]);
   const [permissions, setPermissions] = useState<RankPermission[]>([]);
   const [players, setPlayers] = useState<PlayerRecord[]>([]);
@@ -142,8 +143,17 @@ export default function ClientModPermissionsManager() {
     catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   };
 
-  return <div className="client-mod-manager">
-    <section className="section-card developer-card">
+  return <div className="client-mod-manager mods-permissions-page">
+    <div className="mods-permissions-heading">
+      <div><span className="card-label">ALPHACLIENT MODS</span><h2>Mod Permissions</h2><p className="subtitle">Manage mod access by rank, player, or individual access rule.</p></div>
+      <button className="small-button" onClick={() => void load()} disabled={loading || busy}>Refresh</button>
+    </div>
+    <nav className="mods-permission-tabs" aria-label="Mod permission sections">
+      <button type="button" className={activeTab === "rank" ? "mods-permission-tab active" : "mods-permission-tab"} aria-current={activeTab === "rank" ? "page" : undefined} onClick={() => setActiveTab("rank")}>Rank Permission</button>
+      <button type="button" className={activeTab === "player" ? "mods-permission-tab active" : "mods-permission-tab"} aria-current={activeTab === "player" ? "page" : undefined} onClick={() => setActiveTab("player")}>Player Permission</button>
+      <button type="button" className={activeTab === "rules" ? "mods-permission-tab active" : "mods-permission-tab"} aria-current={activeTab === "rules" ? "page" : undefined} onClick={() => setActiveTab("rules")}>Grants and Overrides</button>
+    </nav>
+    {activeTab === "rank" && <section className="section-card developer-card">
       <div className="section-header"><div><span className="card-label">ALPHACLIENT</span><h3>Mod permission defaults</h3></div><button className="small-button" onClick={() => void load()} disabled={loading || busy}>Refresh</button></div>
       <p className="subtitle">Configure each rank's default access per mod. Founder always has all mod permissions. Individual player grants can override these defaults without changing their community rank.</p>
       <label className="developer-input-label">Rank defaults</label>
@@ -165,8 +175,10 @@ export default function ClientModPermissionsManager() {
       <button className="large-play-button developer-start-button" onClick={() => void saveRankDefaults()} disabled={busy || loading}>{busy ? "SAVING…" : "SAVE RANK DEFAULTS"}</button>
     </section>
 
-    <section className="section-card developer-card">
-      <div className="section-header"><div><span className="card-label">PLAYER ACCESS</span><h3>Grant or revoke access</h3></div></div>
+    </section>}
+
+    {activeTab === "player" && <section className="section-card developer-card">
+      <div className="section-header"><div><span className="card-label">PLAYER ACCESS</span><h3>Player Permission</h3></div></div>
       <label className="developer-input-label">Search player</label>
       <div className="client-mod-search-row"><input className="developer-text-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Username or display name"/><button className="small-button" onClick={() => void load(search)} disabled={loading}>Search</button></div>
       <label className="developer-input-label">Player</label>
@@ -188,12 +200,14 @@ export default function ClientModPermissionsManager() {
       {error && <p className="launch-error" role="alert">{error}</p>}
     </section>
 
-    <section className="section-card developer-card">
-      <div className="section-header"><div><span className="card-label">ACTIVE RULES</span><h3>Player grants and overrides</h3></div></div>
+    </section>}
+
+    {activeTab === "rules" && <section className="section-card developer-card">
+      <div className="section-header"><div><span className="card-label">ACTIVE RULES</span><h3>Grants and Overrides</h3></div></div>
       <h4>Category grants</h4>
       {grants.length === 0 ? <p className="subtitle">No active category grants.</p> : grants.map(g => <div className="client-mod-rule" key={g.id}><span><strong>{g.username || g.user_id}</strong><small>{g.category_key} · {g.expires_at ? "Expires " + new Date(g.expires_at).toLocaleString() : "Permanent"}{g.reason ? " · " + g.reason : ""}</small></span><button className="small-button" disabled={busy} onClick={() => void revokeGrant(g.id)}>Revoke</button></div>)}
       <h4>Individual mod overrides</h4>
       {overrides.length === 0 ? <p className="subtitle">No active individual overrides.</p> : overrides.map(o => <div className="client-mod-rule" key={o.id}><span><strong>{o.username || o.user_id}</strong><small>{o.mod_id} · {o.effect} · {o.expires_at ? "Expires " + new Date(o.expires_at).toLocaleString() : "Permanent"}{o.reason ? " · " + o.reason : ""}</small></span><button className="small-button" disabled={busy} onClick={() => void revokeOverride(o.id)}>Revoke</button></div>)}
-    </section>
+    </section>}
   </div>;
 }
