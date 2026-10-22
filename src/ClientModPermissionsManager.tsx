@@ -37,7 +37,8 @@ const CATEGORIES = [
   ["moderator", "Moderator"], ["senior_moderator", "Senior Moderator"], ["admin", "Admin"],
   ["senior_admin", "Senior Admin"], ["management", "Management"], ["plat_admin", "Platform Admin"],
   ["manager", "Manager"], ["owner", "Owner"], ["founder", "Founder"], ["beta", "Beta"],
-  ["donator", "Donator"], ["alpha", "Alpha"], ["alpha_plus", "Alpha+"], ["mod", "Mod"], ["sr_mod", "Sr Mod"],
+  ["donator", "Donator"], ["scout", "Scout"], ["rogue", "Rogue"], ["elite", "Elite"],
+  ["alpha", "Alpha"], ["alpha_plus", "Alpha+"], ["mod", "Mod"], ["sr_mod", "Sr Mod"],
 ] as const;
 
 // Mirrors the actual StaffMods folder tree in AlphaClient. Management contains two subfolders.
@@ -57,6 +58,13 @@ const CLIENT_RANK_FOLDERS = [
 const MANAGEMENT_SUBFOLDERS = [
   { key: "plat_admin", label: "Platform Admin", description: "Platform Admin permissions." },
   { key: "manager", label: "Manager", description: "Manager permissions." },
+] as const;
+const DONATOR_SUBFOLDERS = [
+  { key: "scout", label: "Scout", description: "Scout donor-rank permissions." },
+  { key: "rogue", label: "Rogue", description: "Rogue donor-rank permissions." },
+  { key: "elite", label: "Elite", description: "Elite donor-rank permissions." },
+  { key: "alpha", label: "Alpha", description: "Alpha donor-rank permissions." },
+  { key: "alpha_plus", label: "Alpha+", description: "Alpha+ donor-rank permissions." },
 ] as const;
 
 export default function ClientModPermissionsManager() {
@@ -239,7 +247,9 @@ export default function ClientModPermissionsManager() {
           const folderMods = getFolderMods(folder.key);
           const countMods = folder.key === "management"
             ? [...getFolderMods("management"), ...getFolderMods("plat_admin"), ...getFolderMods("manager")]
-            : folderMods;
+            : folder.key === "donator"
+              ? [...getFolderMods("donator"), ...DONATOR_SUBFOLDERS.flatMap(subfolder => getFolderMods(subfolder.key))]
+              : folderMods;
           const enabledCount = countMods.filter(isModEnabledForSelectedRank).length;
           const active = selectedRankFolder === folder.key;
           return <button type="button" key={folder.key}
@@ -252,6 +262,21 @@ export default function ClientModPermissionsManager() {
           </button>;
         })}
       </div>
+      {selectedRankFolder === "donator" && <div className="rank-management-subfolders">
+        <div className="rank-folder-editor-heading"><div><span className="card-label">DONATOR</span><h4>Choose a Donator rank</h4></div></div>
+        <div className="rank-folder-grid" aria-label="Donator rank subfolders">
+          {DONATOR_SUBFOLDERS.map(folder => {
+            const folderMods = getFolderMods(folder.key);
+            const enabledCount = folderMods.filter(isModEnabledForSelectedRank).length;
+            return <button type="button" key={folder.key} className={`rank-folder-card${selectedRankFolder === folder.key ? " is-selected" : ""}`}
+              aria-pressed={selectedRankFolder === folder.key} onClick={() => setSelectedRankFolder(folder.key)}>
+              <span className="rank-folder-icon" aria-hidden="true">▰</span>
+              <span className="rank-folder-copy"><strong>{folder.label}</strong><small>{enabledCount} / {folderMods.length} mods enabled</small></span>
+              <span className="rank-folder-chevron" aria-hidden="true">›</span>
+            </button>;
+          })}
+        </div>
+      </div>}
       {selectedRankFolder === "management" && <div className="rank-management-subfolders">
         <div className="rank-folder-editor-heading"><div><span className="card-label">MANAGEMENT</span><h4>Choose a subfolder</h4></div></div>
         <div className="rank-folder-grid" aria-label="Management subfolders">
@@ -268,18 +293,22 @@ export default function ClientModPermissionsManager() {
         </div>
       </div>}
       {(selectedRankFolder === "plat_admin" || selectedRankFolder === "manager") && <button type="button" className="mods-permissions-back" onClick={() => setSelectedRankFolder("management")}><span aria-hidden="true">‹</span> Back to Management</button>}
+      {DONATOR_SUBFOLDERS.some(folder => folder.key === selectedRankFolder) && <button type="button" className="mods-permissions-back" onClick={() => setSelectedRankFolder("donator")}><span aria-hidden="true">‹</span> Back to Donator</button>}
       <div className="rank-folder-editor">
         <div className="rank-folder-editor-heading">
-          <div><span className="card-label">{selectedRankFolder === "plat_admin" || selectedRankFolder === "manager" ? "MANAGEMENT SUBFOLDER" : "CLIENT FOLDER"}</span>
-            <h4>{[...CLIENT_RANK_FOLDERS, ...MANAGEMENT_SUBFOLDERS].find(folder => folder.key === selectedRankFolder)?.label ?? selectedRankFolder}</h4>
+          <div><span className="card-label">{selectedRankFolder === "plat_admin" || selectedRankFolder === "manager" ? "MANAGEMENT SUBFOLDER" : DONATOR_SUBFOLDERS.some(folder => folder.key === selectedRankFolder) ? "DONATOR SUBFOLDER" : "CLIENT FOLDER"}</span>
+            <h4>{[...CLIENT_RANK_FOLDERS, ...MANAGEMENT_SUBFOLDERS, ...DONATOR_SUBFOLDERS].find(folder => folder.key === selectedRankFolder)?.label ?? selectedRankFolder}</h4>
           </div>
           <span className="rank-folder-count">{getFolderEnabledCount(selectedRankFolder)} / {getFolderMods(selectedRankFolder).length} enabled</span>
         </div>
         {selectedRank === "founder" && <p className="subtitle">Founder access is always enabled and cannot be disabled.</p>}
         {selectedRank === "owner" && <p className="subtitle">Owner always has access to every non-Founder mod. Founder-only modules remain exclusive.</p>}
         {selectedRankFolder === "management" && <p className="subtitle">Management contains the Platform Admin and Manager subfolders, matching the client menu.</p>}
+        {selectedRankFolder === "donator" && <p className="subtitle">Donator contains the Scout, Rogue, Elite, Alpha, and Alpha+ subfolders.</p>}
         {loading ? <p className="subtitle">Loading mod permissions…</p> : selectedRankFolder === "management"
           ? <div className="rank-folder-empty"><span className="rank-folder-icon" aria-hidden="true">▰</span><strong>Choose a management subfolder.</strong><small>Open Platform Admin or Manager above to configure its mods.</small></div>
+          : selectedRankFolder === "donator"
+            ? <div className="rank-folder-empty"><span className="rank-folder-icon" aria-hidden="true">▰</span><strong>Choose a Donator rank.</strong><small>Open Scout, Rogue, Elite, Alpha, or Alpha+ above to configure its mods.</small></div>
           : getFolderMods(selectedRankFolder).length === 0
             ? <div className="rank-folder-empty"><span className="rank-folder-icon" aria-hidden="true">▱</span><strong>This folder is currently empty.</strong><small>When a mod is added to this AlphaClient folder and its catalog entry is registered, it will appear here automatically.</small></div>
             : <div className="rank-mod-rows">
