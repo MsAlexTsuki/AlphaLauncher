@@ -1,3 +1,4 @@
+- Improved OptiFine download-link detection to handle the official page's varying link markup and escaped URL parameters.
 - Fixed OptiFine downloads by retrieving the current, short-lived download link from the official OptiFine page before downloading the JAR.
 ## Fixed
 - AlphaClient now installs OptiFine 1.8.9 HD U M5 from the official OptiFine website into the mods folder, validates the JAR, and leaves existing mods and profiles untouched.
