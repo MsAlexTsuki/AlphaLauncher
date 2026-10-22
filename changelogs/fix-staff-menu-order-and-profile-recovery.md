@@ -1,4 +1,5 @@
 ## Fixed
+- Fixed automatic Default profile creation so a newly added Default profile is immediately saved to disk and remains available after restarting the client.
 - Removed the module Details panel from the Mods menu; the Profiles panel with Create, Edit, and Delete stays visible when selecting any module.
 - Fixed profile switching so BHOP settings load from the same active profile as the Mods menu; BHOP settings are saved to the current profile before switching, preventing profiles from sharing or reverting settings.
 - Staff rank folders now appear from lowest rank to highest rank, with General first and Founder last.
