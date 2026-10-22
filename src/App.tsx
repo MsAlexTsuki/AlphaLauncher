@@ -3447,11 +3447,11 @@ function RankManagement() {
   const selectedMember = members.find((member) => member.id === selectedId) ?? null;
   const filteredMembers = members;
   const rankCategories: Record<typeof activeRankCategory, string[]> = {
-    "Community ranks": ["beta", "the_nibbler"],
-    "Donator Ranks": ["scout", "rogue", "elite", "alpha", "alpha_plus"],
-    "Media Ranks": ["media", "famous", "partner"],
-    "Staff Ranks": ["trial_moderator", "moderator", "senior_moderator", "admin", "senior_admin", "plat_admin", "manager", "developer", "owner", "founder"],
-    "All Ranks": ["member", "scout", "rogue", "elite", "alpha", "alpha_plus", "beta", "the_nibbler", "media", "famous", "partner", "trial_moderator", "moderator", "senior_moderator", "admin", "senior_admin", "plat_admin", "manager", "developer", "owner", "founder"],
+    "Community ranks": ["the_nibbler", "beta"],
+    "Donator Ranks": ["alpha_plus", "alpha", "elite", "rogue", "scout"],
+    "Media Ranks": ["partner", "famous", "media"],
+    "Staff Ranks": ["founder", "owner", "developer", "manager", "plat_admin", "senior_admin", "admin", "senior_moderator", "moderator", "trial_moderator"],
+    "All Ranks": ["founder", "owner", "developer", "manager", "plat_admin", "senior_admin", "admin", "senior_moderator", "moderator", "trial_moderator", "partner", "famous", "media", "the_nibbler", "beta", "alpha_plus", "alpha", "elite", "rogue", "scout", "member"],
   };
   const rankEntries = rankCategories[activeRankCategory]
     .filter((key) => Boolean(COMMUNITY_RANKS[key]))
