@@ -3347,6 +3347,7 @@ function RankManagement() {
   const [selectedId, setSelectedId] = useState("");
   const [selectedRank, setSelectedRank] = useState("member");
   const [selectedRanks, setSelectedRanks] = useState<string[]>(["member"]);
+  const [activeRankCategory, setActiveRankCategory] = useState<"Community ranks" | "Donator Ranks" | "Media Ranks" | "Staff Ranks" | "All Ranks">("Community ranks");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -3445,10 +3446,16 @@ function RankManagement() {
 
   const selectedMember = members.find((member) => member.id === selectedId) ?? null;
   const filteredMembers = members;
-  const rankEntries = Object.entries(COMMUNITY_RANKS).filter(([key]) => key !== "founder").sort(([a], [b]) =>
-    COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) -
-    COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number]),
-  );
+  const rankCategories: Record<typeof activeRankCategory, string[]> = {
+    "Community ranks": ["member", "beta", "the_nibbler"],
+    "Donator Ranks": ["scout", "rogue", "elite", "alpha", "alpha_plus"],
+    "Media Ranks": ["media", "famous", "partner"],
+    "Staff Ranks": ["trial_moderator", "moderator", "senior_moderator", "admin", "senior_admin", "plat_admin", "manager", "developer", "owner", "founder"],
+    "All Ranks": ["member", "scout", "rogue", "elite", "alpha", "alpha_plus", "beta", "the_nibbler", "media", "famous", "partner", "trial_moderator", "moderator", "senior_moderator", "admin", "senior_admin", "plat_admin", "manager", "developer", "owner", "founder"],
+  };
+  const rankEntries = rankCategories[activeRankCategory]
+    .filter((key) => Boolean(COMMUNITY_RANKS[key]))
+    .map((key) => [key, COMMUNITY_RANKS[key]] as [string, { label: string; color: string }]);
 
   const assignRank = async () => {
     if (!selectedMember) return;
@@ -3535,12 +3542,26 @@ function RankManagement() {
                 </div>
                 <div className="setting-line developer-setting-line rank-checkbox-setting">
                   <span>Assign their rank</span>
+                  <div className="rank-category-tabs" role="tablist" aria-label="Rank categories">
+                    {(["Community ranks", "Donator Ranks", "Media Ranks", "Staff Ranks", "All Ranks"] as const).map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeRankCategory === category}
+                        className={`rank-category-tab${activeRankCategory === category ? " active" : ""}`}
+                        onClick={() => setActiveRankCategory(category)}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
                   <div className="rank-checkbox-grid">
                     {rankEntries.map(([key, rank]) => {
                       const rankIndex = COMMUNITY_RANK_ORDER.indexOf(
                         key as (typeof COMMUNITY_RANK_ORDER)[number],
                       );
-                      const cannotAssign = (key === "founder" && (!isFounder || selectedMember.rank_key === "founder")) ||
+                      const cannotAssign = key === "founder" ||
                         (!isFounder && rankIndex <= actorRankIndex);
                       return (
                         <label key={key} className="rank-checkbox-option">
