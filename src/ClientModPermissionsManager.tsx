@@ -6,7 +6,7 @@ type RankPermission = { rank_key: string; mod_id: string; enabled: boolean };
 type PlayerRecord = { user_id: string; username: string; display_name: string | null; rank_key: string };
 type GrantRecord = { id: string; user_id: string; category_key: string; expires_at: string | null; reason: string; username?: string };
 type OverrideRecord = { id: string; user_id: string; mod_id: string; effect: "allow" | "deny"; expires_at: string | null; reason: string; username?: string };
-type RankSearchPlayer = { id: string; username: string; display_name: string | null; rank_key: string };
+type RankSearchPlayer = { user_id: string; username: string; display_name: string | null; rank_key: string };
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
