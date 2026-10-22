@@ -125,11 +125,11 @@ export default function ClientModPermissionsManager() {
   }, [mods]);
 
   const getFolderMods = (folderKey: string) => mods.filter(mod => mod.category_key === folderKey);
-  const isModEnabledForSelectedRank = (mod: ModRecord) => {
-    if (selectedRank === "founder") return true;
+  const isModEnabledForSelectedRank = (mod: ModRecord, rankKey = selectedRank) => {
+    if (rankKey === "founder") return true;
     if (mod.mod_id === "w-tap-assistance") return false;
-    if (selectedRank === "owner") return true;
-    return permissions.find(permission => permission.rank_key === selectedRank && permission.mod_id === mod.mod_id)?.enabled ?? false;
+    if (rankKey === "owner") return true;
+    return permissions.find(permission => permission.rank_key === rankKey && permission.mod_id === mod.mod_id)?.enabled ?? false;
   };
   const getFolderEnabledCount = (folderKey: string) =>
     getFolderMods(folderKey).filter(isModEnabledForSelectedRank).length;
@@ -216,7 +216,24 @@ export default function ClientModPermissionsManager() {
     </>}
     {activeTab === "rank" && <section className="section-card developer-card">
       <div className="section-header"><div><span className="card-label">ALPHACLIENT FOLDERS</span><h3>Rank permission folders</h3></div><button className="small-button" onClick={() => void load()} disabled={loading || busy}>Refresh</button></div>
-      <p className="subtitle">Choose a rank above, then use the same folder structure as AlphaClient → StaffMods. Every current client folder is listed, including empty folders, so new modules can be assigned without redesigning this screen.</p>
+      <p className="subtitle">Choose a community rank, then use the same folder structure as AlphaClient → StaffMods. Every current client folder is listed, including empty folders, so new modules can be assigned without redesigning this screen.</p>
+      <div className="rank-permission-rank-section">
+        <div className="rank-folder-editor-heading"><div><span className="card-label">COMMUNITY RANKS</span><h4>Select a rank to configure</h4></div><span className="rank-folder-count">{RANKS.length} ranks</span></div>
+        <div className="rank-folder-grid" aria-label="Community ranks">
+          {RANKS.map(([key, label]) => {
+            const enabledCount = mods.filter(mod => isModEnabledForSelectedRank(mod, key)).length;
+            const active = selectedRank === key;
+            return <button type="button" key={key} className={`rank-folder-card${active ? " is-selected" : ""}`}
+              aria-pressed={active} onClick={() => setSelectedRank(key)}>
+              <span className="rank-folder-icon" aria-hidden="true">▰</span>
+              <span className="rank-folder-copy"><strong>{label}</strong><small>{enabledCount} / {mods.length} mods enabled</small></span>
+              <span className="rank-folder-chevron" aria-hidden="true">›</span>
+            </button>;
+          })}
+        </div>
+      </div>
+      <div className="rank-client-folders-section">
+        <div className="rank-folder-editor-heading"><div><span className="card-label">CLIENT FOLDERS</span><h4>{RANKS.find(([key]) => key === selectedRank)?.[1] ?? selectedRank} · Mod access</h4></div></div>
       <div className="rank-folder-grid" aria-label="AlphaClient rank folders">
         {CLIENT_RANK_FOLDERS.map(folder => {
           const folderMods = getFolderMods(folder.key);
@@ -250,6 +267,7 @@ export default function ClientModPermissionsManager() {
           })}
         </div>
       </div>}
+      {(selectedRankFolder === "plat_admin" || selectedRankFolder === "manager") && <button type="button" className="mods-permissions-back" onClick={() => setSelectedRankFolder("management")}><span aria-hidden="true">‹</span> Back to Management</button>}
       <div className="rank-folder-editor">
         <div className="rank-folder-editor-heading">
           <div><span className="card-label">{selectedRankFolder === "plat_admin" || selectedRankFolder === "manager" ? "MANAGEMENT SUBFOLDER" : "CLIENT FOLDER"}</span>
@@ -283,6 +301,7 @@ export default function ClientModPermissionsManager() {
         <button className="large-play-button developer-start-button" onClick={() => void saveRankDefaults()} disabled={busy || loading || selectedRank === "founder" || selectedRank === "owner"}>
           {busy ? "SAVING…" : `SAVE ${(RANKS.find(([key]) => key === selectedRank)?.[1] ?? selectedRank).toUpperCase()} PERMISSIONS`}
         </button>
+      </div>
       </div>
     </section>}
 
