@@ -36,7 +36,27 @@ const CATEGORIES = [
   ["general", "General"], ["staff", "Staff"], ["trial_moderator", "Trial Moderator"],
   ["moderator", "Moderator"], ["senior_moderator", "Senior Moderator"], ["admin", "Admin"],
   ["senior_admin", "Senior Admin"], ["management", "Management"], ["plat_admin", "Platform Admin"], ["manager", "Manager"], ["owner", "Owner"],
-  ["beta", "Beta"], ["alpha", "Alpha"], ["alpha_plus", "Alpha+"],
+  ["beta", "Beta"], ["alpha", "Alpha"], ["alpha_plus", "Alpha+"], ["plat_admin", "Platform Admin"],
+  ["manager", "Manager"], ["founder", "Founder"], ["donator", "Donator"], ["mod", "Mod"], ["sr_mod", "Sr Mod"],
+] as const;
+
+// Mirrors the actual StaffMods folder tree in AlphaClient. Management contains two subfolders.
+const CLIENT_RANK_FOLDERS = [
+  { key: "general", label: "General", description: "Public client modules and Bhop." },
+  { key: "beta", label: "Beta", description: "Beta rank modules." },
+  { key: "donator", label: "Donator", description: "Donator and supporter modules." },
+  { key: "trial_moderator", label: "T-Mod", description: "Trial Moderator modules." },
+  { key: "moderator", label: "Mod", description: "Moderator modules." },
+  { key: "senior_moderator", label: "Sr Mod", description: "Senior Moderator modules." },
+  { key: "admin", label: "Admin", description: "Admin modules." },
+  { key: "senior_admin", label: "Sr Admin", description: "Senior Admin modules." },
+  { key: "management", label: "Management", description: "Platform Admin and Manager subfolders." },
+  { key: "owner", label: "Owner", description: "Owner folder." },
+  { key: "founder", label: "Founder", description: "Founder-only client modules." },
+] as const;
+const MANAGEMENT_SUBFOLDERS = [
+  { key: "plat_admin", label: "Platform Admin", description: "Platform Admin permissions." },
+  { key: "manager", label: "Manager", description: "Manager permissions." },
 ] as const;
 
 export default function ClientModPermissionsManager() {
@@ -49,6 +69,7 @@ export default function ClientModPermissionsManager() {
   const [search, setSearch] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState("");
   const [selectedRank, setSelectedRank] = useState("member");
+  const [selectedRankFolder, setSelectedRankFolder] = useState("general");
   const [selectedCategory, setSelectedCategory] = useState("general");
   const [selectedMod, setSelectedMod] = useState("");
   const [effect, setEffect] = useState<"allow" | "deny">("allow");
@@ -103,6 +124,12 @@ export default function ClientModPermissionsManager() {
     }));
   }, [mods]);
 
+  const getFolderMods = (folderKey: string) => mods.filter(mod => mod.category_key === folderKey);
+  const getFolderEnabledCount = (folderKey: string) => {
+    const folderMods = getFolderMods(folderKey);
+    return folderMods.filter(mod => selectedRank === "founder"
+      || (permissions.find(permission => permission.rank_key === selectedRank && permission.mod_id === mod.mod_id)?.enabled ?? false)).length;
+  };
   const saveRankDefaults = async () => {
     setBusy(true); setError(""); setMessage("");
     try {
@@ -185,61 +212,76 @@ export default function ClientModPermissionsManager() {
       {activeTab === "rules" && <div className="mods-permissions-section-title"><h3>Grants and Overrides</h3><p className="subtitle">Review and revoke category grants and individual overrides.</p></div>}
     </>}
     {activeTab === "rank" && <section className="section-card developer-card">
-      <div className="section-header"><div><span className="card-label">ALPHACLIENT</span><h3>Mod permission defaults</h3></div><button className="small-button" onClick={() => void load()} disabled={loading || busy}>Refresh</button></div>
-      <p className="subtitle">Choose a rank folder, then configure exactly which mods that rank can access. Each rank has its own saved defaults. Founder access is always enabled.</p>
-      <div className="rank-folder-grid" aria-label="Rank folders">
-        {RANKS.map(([key, label]) => {
-          const enabledCount = key === "founder"
-            ? mods.length
-            : mods.filter(mod => permissions.find(permission => permission.rank_key === key && permission.mod_id === mod.mod_id)?.enabled ?? false).length;
-          const active = selectedRank === key;
-          return <button
-            type="button"
-            key={key}
+      <div className="section-header"><div><span className="card-label">ALPHACLIENT FOLDERS</span><h3>Rank permission folders</h3></div><button className="small-button" onClick={() => void load()} disabled={loading || busy}>Refresh</button></div>
+      <p className="subtitle">Choose a rank above, then use the same folder structure as AlphaClient → StaffMods. Every current client folder is listed, including empty folders, so new modules can be assigned without redesigning this screen.</p>
+      <div className="rank-folder-grid" aria-label="AlphaClient rank folders">
+        {CLIENT_RANK_FOLDERS.map(folder => {
+          const folderMods = getFolderMods(folder.key);
+          const countMods = folder.key === "management"
+            ? [...getFolderMods("management"), ...getFolderMods("plat_admin"), ...getFolderMods("manager")]
+            : folderMods;
+          const enabledCount = countMods.filter(mod => selectedRank === "founder"
+            || (permissions.find(permission => permission.rank_key === selectedRank && permission.mod_id === mod.mod_id)?.enabled ?? false)).length;
+          const active = selectedRankFolder === folder.key;
+          return <button type="button" key={folder.key}
             className={`rank-folder-card${active ? " is-selected" : ""}`}
             aria-pressed={active}
-            onClick={() => setSelectedRank(key)}
-          >
+            onClick={() => setSelectedRankFolder(folder.key)}>
             <span className="rank-folder-icon" aria-hidden="true">▰</span>
-            <span className="rank-folder-copy"><strong>{label}</strong><small>{enabledCount} / {mods.length} mods enabled</small></span>
+            <span className="rank-folder-copy"><strong>{folder.label}</strong><small>{enabledCount} / {countMods.length} mods enabled</small></span>
             <span className="rank-folder-chevron" aria-hidden="true">›</span>
           </button>;
         })}
       </div>
+      {selectedRankFolder === "management" && <div className="rank-management-subfolders">
+        <div className="rank-folder-editor-heading"><div><span className="card-label">MANAGEMENT</span><h4>Choose a subfolder</h4></div></div>
+        <div className="rank-folder-grid" aria-label="Management subfolders">
+          {MANAGEMENT_SUBFOLDERS.map(folder => {
+            const folderMods = getFolderMods(folder.key);
+            const enabledCount = folderMods.filter(mod => selectedRank === "founder"
+              || (permissions.find(permission => permission.rank_key === selectedRank && permission.mod_id === mod.mod_id)?.enabled ?? false)).length;
+            return <button type="button" key={folder.key} className={`rank-folder-card${selectedRankFolder === folder.key ? " is-selected" : ""}`}
+              onClick={() => setSelectedRankFolder(folder.key)}>
+              <span className="rank-folder-icon" aria-hidden="true">▰</span>
+              <span className="rank-folder-copy"><strong>{folder.label}</strong><small>{enabledCount} / {folderMods.length} mods enabled</small></span>
+              <span className="rank-folder-chevron" aria-hidden="true">›</span>
+            </button>;
+          })}
+        </div>
+      </div>}
       <div className="rank-folder-editor">
         <div className="rank-folder-editor-heading">
-          <div><span className="card-label">RANK FOLDER</span><h4>{RANKS.find(([key]) => key === selectedRank)?.[1] ?? selectedRank}</h4></div>
-          <span className="rank-folder-count">{selectedRank === "founder" ? `${mods.length} / ${mods.length} enabled · always on` : `${mods.filter(mod => permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false).length} / ${mods.length} enabled`}</span>
+          <div><span className="card-label">{selectedRankFolder === "plat_admin" || selectedRankFolder === "manager" ? "MANAGEMENT SUBFOLDER" : "CLIENT FOLDER"}</span>
+            <h4>{[...CLIENT_RANK_FOLDERS, ...MANAGEMENT_SUBFOLDERS].find(folder => folder.key === selectedRankFolder)?.label ?? selectedRankFolder}</h4>
+          </div>
+          <span className="rank-folder-count">{getFolderEnabledCount(selectedRankFolder)} / {getFolderMods(selectedRankFolder).length} enabled</span>
         </div>
-        {selectedRank === "founder" && <p className="subtitle">Founder always has access to every enabled mod. These permissions cannot be disabled.</p>}
-        {loading ? <p className="subtitle">Loading mod permissions…</p> : groupedMods.map(group => {
-          const groupEnabled = group.mods.filter(mod => selectedRank === "founder" || (permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false)).length;
-          return <div className="rank-mod-group" key={group.key}>
-            <div className="rank-mod-group-heading"><h5>{group.label}</h5><span>{groupEnabled} / {group.mods.length}</span></div>
-            <div className="rank-mod-rows">
-              {group.mods.map(mod => {
-                const enabled = selectedRank === "founder" || (permissions.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false);
-                return <div className={`rank-mod-row${enabled ? " is-enabled" : ""}`} key={mod.mod_id}>
-                  <span className="rank-mod-copy"><strong>{mod.display_name}</strong><small>{mod.description} · {mod.mod_id}</small></span>
-                  <button
-                    type="button"
-                    className="mods-permission-switch"
-                    role="switch"
-                    aria-label={`${mod.display_name} permission`}
-                    aria-checked={enabled}
-                    disabled={selectedRank === "founder"}
-                    onClick={() => setPermissions(old => {
-                      const current = old.find(p => p.rank_key === selectedRank && p.mod_id === mod.mod_id)?.enabled ?? false;
-                      const rest = old.filter(p => !(p.rank_key === selectedRank && p.mod_id === mod.mod_id));
-                      return [...rest, { rank_key: selectedRank, mod_id: mod.mod_id, enabled: !current }];
-                    })}
-                  ><span /></button>
-                </div>;
-              })}
-            </div>
-          </div>;
-        })}
-        <button className="large-play-button developer-start-button" onClick={() => void saveRankDefaults()} disabled={busy || loading || selectedRank === "founder"}>{busy ? "SAVING…" : `SAVE ${(RANKS.find(([key]) => key === selectedRank)?.[1] ?? selectedRank).toUpperCase()} PERMISSIONS`}</button>
+        {selectedRank === "founder" && <p className="subtitle">Founder access is always enabled and cannot be disabled.</p>}
+        {selectedRankFolder === "management" && <p className="subtitle">Management contains the Platform Admin and Manager subfolders, matching the client menu.</p>}
+        {loading ? <p className="subtitle">Loading mod permissions…</p> : getFolderMods(selectedRankFolder).length === 0
+          ? <div className="rank-folder-empty"><span className="rank-folder-icon" aria-hidden="true">▱</span><strong>This folder is currently empty.</strong><small>When a mod is added to this AlphaClient folder and its catalog entry is registered, it will appear here automatically.</small></div>
+          : <div className="rank-mod-rows">
+            {getFolderMods(selectedRankFolder).map(mod => {
+              const founderOnly = mod.mod_id === "w-tap-assistance";
+              const lockedForRank = founderOnly && selectedRank !== "founder";
+              const enabled = selectedRank === "founder" || (!lockedForRank
+                && (permissions.find(permission => permission.rank_key === selectedRank && permission.mod_id === mod.mod_id)?.enabled ?? false));
+              return <div className={`rank-mod-row${enabled ? " is-enabled" : ""}`} key={mod.mod_id}>
+                <span className="rank-mod-copy"><strong>{mod.display_name}{founderOnly ? " · Founder only" : ""}</strong><small>{mod.description} · {mod.mod_id}</small></span>
+                <button type="button" className="mods-permission-switch" role="switch"
+                  aria-label={`${mod.display_name} permission`} aria-checked={enabled}
+                  disabled={selectedRank === "founder" || lockedForRank}
+                  onClick={() => setPermissions(old => {
+                    const current = old.find(permission => permission.rank_key === selectedRank && permission.mod_id === mod.mod_id)?.enabled ?? false;
+                    const rest = old.filter(permission => !(permission.rank_key === selectedRank && permission.mod_id === mod.mod_id));
+                    return [...rest, { rank_key: selectedRank, mod_id: mod.mod_id, enabled: !current }];
+                  })}><span /></button>
+              </div>;
+            })}
+          </div>}
+        <button className="large-play-button developer-start-button" onClick={() => void saveRankDefaults()} disabled={busy || loading || selectedRank === "founder"}>
+          {busy ? "SAVING…" : `SAVE ${(RANKS.find(([key]) => key === selectedRank)?.[1] ?? selectedRank).toUpperCase()} PERMISSIONS`}
+        </button>
       </div>
     </section>}
 
