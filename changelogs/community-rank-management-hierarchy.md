@@ -1,3 +1,4 @@
+- Restored Beta to Developer → Rank Management so community members can be assigned the Beta rank again.
 # Community Rank Management Hierarchy
 
 - Updated the Rank Management order to match the requested Alpha hierarchy.
