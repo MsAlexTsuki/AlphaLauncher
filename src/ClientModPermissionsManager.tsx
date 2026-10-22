@@ -173,8 +173,6 @@ export default function ClientModPermissionsManager() {
         </label>)}
       </div>)}
       <button className="large-play-button developer-start-button" onClick={() => void saveRankDefaults()} disabled={busy || loading}>{busy ? "SAVING…" : "SAVE RANK DEFAULTS"}</button>
-    </section>
-
     </section>}
 
     {activeTab === "player" && <section className="section-card developer-card">
@@ -198,8 +196,6 @@ export default function ClientModPermissionsManager() {
       <button className="large-play-button developer-start-button" onClick={() => void saveGrant()} disabled={busy || !selectedPlayer || (effect === "deny" && !selectedMod)}>{busy ? "SAVING…" : "APPLY ACCESS RULE"}</button>
       {message && <p className="launch-success" role="status">{message}</p>}
       {error && <p className="launch-error" role="alert">{error}</p>}
-    </section>
-
     </section>}
 
     {activeTab === "rules" && <section className="section-card developer-card">
