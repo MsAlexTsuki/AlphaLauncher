@@ -44,7 +44,6 @@ type ChangelogDraft = {
 const LAST_PLAYED_STORAGE_KEY = "alphaclient.lastPlayed";
 const MAX_LAUNCH_HISTORY = 3;
 
-type ModItem = { name: string; description: string; enabled: boolean };
 type ModalContent = {
   title: string;
   body: string;
@@ -101,29 +100,6 @@ const DEFAULT_SETTINGS: Settings = {
   ramGb: 2,
   gameDirectory: "",
 };
-
-const INITIAL_MODS: ModItem[] = [
-  {
-    name: "AlphaCore",
-    description: "Core systems for AlphaClient",
-    enabled: true,
-  },
-  {
-    name: "PerformanceCore",
-    description: "FPS and rendering optimizations",
-    enabled: true,
-  },
-  {
-    name: "HUD",
-    description: "Customizable AlphaClient HUD",
-    enabled: true,
-  },
-  {
-    name: "StaffCore",
-    description: "Staff tools and investigation systems",
-    enabled: false,
-  },
-];
 
 function readSettings(): Settings {
   try {
@@ -305,7 +281,6 @@ function LauncherApp() {
   const [activeChangelogTab, setActiveChangelogTab] =
     useState<ChangelogProduct>("client");
   const [settings, setSettings] = useState<Settings>(readSettings);
-  const [mods, setMods] = useState<ModItem[]>(INITIAL_MODS);
   const [versionFilter, setVersionFilter] = useState("All");
   const [selectedVersion, setSelectedVersion] = useState("UNKNOWN");
   const [clientVersion, setClientVersion] = useState("UNKNOWN");
@@ -1264,20 +1239,7 @@ console.error("Developer permission check failed:", errorMessage);
             />
           )}
 
-          {page === "Mods" && (
-            <ModsPage
-              mods={mods}
-              onToggle={(name) =>
-                setMods((old) =>
-                  old.map((mod) =>
-                    mod.name === name
-                      ? { ...mod, enabled: !mod.enabled }
-                      : mod,
-                  ),
-                )
-              }
-            />
-          )}
+          {page === "Mods" && <ClientModPermissionsManager />}
 
           {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
@@ -3281,52 +3243,6 @@ function VersionsPage(props: {
             ? "INSTALLING..."
             : "INSTALL / REPAIR CLIENT"}
       </button>
-    </div>
-  );
-}
-
-function ModsPage({
-  mods,
-  onToggle,
-}: {
-  mods: ModItem[];
-  onToggle: (name: string) => void;
-}) {
-  return (
-    <div className="page">
-      <PageTitle
-        eyebrow="CUSTOMIZATION"
-        title="AlphaClient Mods"
-        description="Manage module preferences for your client."
-      />
-
-      <div className="mods-list">
-        {mods.map((mod) => (
-          <div className="mod-row" key={mod.name}>
-            <div className="mod-icon">◆</div>
-            <div className="mod-info">
-              <strong>{mod.name}</strong>
-              <span>{mod.description}</span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={mod.enabled}
-              aria-label={`Toggle ${mod.name}`}
-              title={mod.enabled ? "Disable preference" : "Enable preference"}
-              className={`toggle ${mod.enabled ? "enabled" : ""}`}
-              onClick={() => onToggle(mod.name)}
-            >
-              <span />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <p className="backend-note">
-        These switches currently save state only in this React session. They do
-        not yet enable or disable the actual Minecraft mod files.
-      </p>
     </div>
   );
 }
