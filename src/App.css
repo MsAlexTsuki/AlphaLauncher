@@ -7977,3 +7977,47 @@ button:not(:disabled):active {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Accessible gold toggle switches for mod permission defaults */
+.mods-permission-switch {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 42px;
+  align-items: center;
+  width: 42px;
+  height: 24px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: #30323a;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.mods-permission-switch > span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #a2a4ad;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transform: translateX(0);
+  transition: transform 160ms ease, background 160ms ease;
+}
+.mods-permission-switch[aria-checked="true"] {
+  border-color: rgba(255, 200, 61, 0.75);
+  background: rgba(255, 200, 61, 0.3);
+  box-shadow: inset 0 0 8px rgba(255, 200, 61, 0.08);
+}
+.mods-permission-switch[aria-checked="true"] > span {
+  background: #ffc83d;
+  transform: translateX(17px);
+}
+.mods-permission-switch:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 3px;
+}
+.mods-permission-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
