@@ -1,4 +1,5 @@
 ## Fixed
+- The community rank is explicitly labeled beneath the fixed Profiles panel; Community Login and Exit remain in their existing top-right positions.
 - Fixed automatic Default profile creation so a newly added Default profile is immediately saved to disk and remains available after restarting the client.
 - Removed the module Details panel from the Mods menu; the Profiles panel with Create, Edit, and Delete stays visible when selecting any module.
 - Fixed profile switching so BHOP settings load from the same active profile as the Mods menu; BHOP settings are saved to the current profile before switching, preventing profiles from sharing or reverting settings.
