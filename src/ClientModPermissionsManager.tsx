@@ -128,7 +128,7 @@ export default function ClientModPermissionsManager() {
       setMessage("Access rule saved.");
       setReason("");
       await load();
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    } catch (e) { setError(errorMessage(e)); }
     finally { setBusy(false); }
   };
 
