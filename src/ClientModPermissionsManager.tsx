@@ -121,7 +121,7 @@ export default function ClientModPermissionsManager() {
         if (effect !== "allow") throw new Error("Category grants only grant access. Use an individual mod override to deny access.");
         const { error: rpcError } = await supabase.rpc("grant_client_mod_category", {
           p_user_id: selectedPlayer, p_category_key: selectedCategory,
-          p_expires_at: expiresAt, p_reason: reason.trim(),
+          p_expires_at: expiresAt, p_reason: reason.trim() || "Manual access rule via AlphaLauncher Mods",
         });
         if (rpcError) throw rpcError;
       }
