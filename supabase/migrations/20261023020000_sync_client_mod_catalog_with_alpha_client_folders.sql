@@ -39,11 +39,12 @@ set category_key = 'general',
     end
 where mod_id in ('public.custom_hud', 'public.performance_monitor');
 
+-- Ensure every existing rank has a row for every catalogued module.
+-- Missing rank/module pairs start disabled and can be changed in Rank Permission.
 insert into public.client_mod_rank_permissions (rank_key, mod_id, enabled)
 select r.rank_key, m.mod_id, (r.rank_key = 'founder')
 from public.community_ranks r
 cross join public.client_mods m
-where m.mod_id in ('quality', 'name-viewer', 'legacy-pvp', 'w-tap-assistance')
 on conflict (rank_key, mod_id) do nothing;
 
 commit;
