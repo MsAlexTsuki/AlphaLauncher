@@ -26,7 +26,17 @@ set category_key = 'general',
 where mod_id = 'staff.bhop';
 
 update public.client_mods
-set category_key = 'general'
+set category_key = 'general',
+    display_name = case mod_id
+      when 'public.custom_hud' then 'CPS'
+      when 'public.performance_monitor' then 'FPS'
+      else display_name
+    end,
+    description = case mod_id
+      when 'public.custom_hud' then 'Clicks per second HUD with selectable mouse buttons and appearance settings.'
+      when 'public.performance_monitor' then 'Compact FPS counter and performance monitor.'
+      else description
+    end
 where mod_id in ('public.custom_hud', 'public.performance_monitor');
 
 insert into public.client_mod_rank_permissions (rank_key, mod_id, enabled)
