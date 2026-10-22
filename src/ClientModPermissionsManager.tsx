@@ -114,7 +114,7 @@ export default function ClientModPermissionsManager() {
       if (selectedMod) {
         const { error: rpcError } = await supabase.rpc("set_client_mod_user_override", {
           p_user_id: selectedPlayer, p_mod_id: selectedMod, p_effect: effect,
-          p_expires_at: expiresAt, p_reason: reason.trim(),
+          p_expires_at: expiresAt, p_reason: reason.trim() || "Manual access rule via AlphaLauncher Mods",
         });
         if (rpcError) throw rpcError;
       } else {
