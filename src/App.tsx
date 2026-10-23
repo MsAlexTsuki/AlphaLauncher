@@ -2177,7 +2177,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
 
 type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; rank_keys?: string[]; avatar_url?: string | null; bio?: string | null; created_at?: string | null; last_played_at?: string | null; last_played_version?: string | null };
 
-function ChatsPage({ onOpenAlphaAuth, initialFriendId, onInitialFriendHandled }: { onOpenAlphaAuth: () => void; initialFriendId: string | null; onInitialFriendHandled: () => void }) {
+function ChatsPage({ onOpenAlphaAuth, initialFriendId, onInitialFriendHandled, onOpenProfile }: { onOpenAlphaAuth: () => void; initialFriendId: string | null; onInitialFriendHandled: () => void; onOpenProfile: (profileId: string) => void }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [friends, setFriends] = useState<CommunityProfile[]>([]);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
@@ -2234,13 +2234,13 @@ function ChatsPage({ onOpenAlphaAuth, initialFriendId, onInitialFriendHandled }:
     {!loading && !userId && <section className="section-card friends-signin"><div className="friends-empty-icon">✉</div><h2>Sign in to Alpha Community</h2><p>Sign in to your Alpha Account to open private chats with your friends.</p><button className="friends-primary" onClick={onOpenAlphaAuth}>Sign in to Alpha Account</button></section>}
     {loading && <section className="section-card"><div className="friends-loading">Loading your chats…</div></section>}
     {error && <section className="section-card"><p className="friends-notice error" role="alert">{error}</p></section>}
-    {userId && !loading && !error && <PrivateChatPanel userId={userId} friends={friends} selectedFriendId={selectedFriendId} onSelectFriend={setSelectedFriendId} />}
+    {userId && !loading && !error && <PrivateChatPanel userId={userId} friends={friends} selectedFriendId={selectedFriendId} onSelectFriend={setSelectedFriendId} onOpenProfile={onOpenProfile} />}
   </div>;
 }
 
 type CommunityFriendRequest = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string };
 
-function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => void; onOpenChat: (friendId: string) => void }) {
+function FriendsPage({ onOpenAlphaAuth, onOpenChat, initialProfileId, onInitialProfileHandled }: { onOpenAlphaAuth: () => void; onOpenChat: (friendId: string) => void; initialProfileId: string | null; onInitialProfileHandled: () => void }) {
   const [onlineFriendIds, setOnlineFriendIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -2394,6 +2394,17 @@ function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => v
     } else if (profileError) setError(errorText(profileError));
     setProfileLoading(false);
   };
+
+  useEffect(() => {
+    if (!initialProfileId || loading) return;
+    const person = friends.find(item => item.id === initialProfileId)
+      ?? incoming.find(item => item.profile?.id === initialProfileId)?.profile
+      ?? outgoing.find(item => item.profile?.id === initialProfileId)?.profile
+      ?? results.find(item => item.id === initialProfileId)
+      ?? { id: initialProfileId, username: "Player", display_name: "Player", is_founder: false };
+    void openPublicProfile(person);
+    onInitialProfileHandled();
+  }, [initialProfileId, loading]);
 
   const sendRequest = async (profile: CommunityProfile) => {
     setBusyId(profile.id); setError(""); setMessage("");
