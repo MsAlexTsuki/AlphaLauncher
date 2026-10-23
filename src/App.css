@@ -8309,3 +8309,30 @@ button:not(:disabled):active {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Scroll long permission results inside the inspector instead of expanding the entire page */
+.developer-inspected-permission-list {
+  max-height: min(52vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #555862 rgba(255, 255, 255, 0.035);
+}
+.developer-inspected-permission-list::-webkit-scrollbar {
+  width: 8px;
+}
+.developer-inspected-permission-list::-webkit-scrollbar-track {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.developer-inspected-permission-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #555862;
+  background-clip: padding-box;
+}
+.developer-inspected-permission-list::-webkit-scrollbar-thumb:hover {
+  background: #777b86;
+  background-clip: padding-box;
+}
