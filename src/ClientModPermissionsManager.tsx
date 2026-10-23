@@ -132,7 +132,21 @@ export default function ClientModPermissionsManager() {
     }));
   }, [mods]);
 
-  const getFolderMods = (folderKey: string) => mods.filter(mod => mod.category_key === folderKey);
+  // Keep the complete Rank Permission folder tree visible, including empty folders.
+  const PLAYER_PERMISSION_FOLDERS = [
+    ...CLIENT_RANK_FOLDERS,
+    ...MANAGEMENT_SUBFOLDERS,
+    ...DONATOR_SUBFOLDERS,
+  ];
+  const getFolderCategoryKeys = (folderKey: string): string[] => {
+    if (folderKey === "management") return ["management", ...MANAGEMENT_SUBFOLDERS.map(folder => folder.key)];
+    if (folderKey === "donator") return ["donator", ...DONATOR_SUBFOLDERS.map(folder => folder.key)];
+    return [folderKey];
+  };
+  const getFolderMods = (folderKey: string) => {
+    const keys = getFolderCategoryKeys(folderKey);
+    return mods.filter(mod => keys.includes(mod.category_key));
+  };
   const isModEnabledForSelectedRank = (mod: ModRecord, rankKey = selectedRank) => {
     if (rankKey === "founder") return true;
     if (mod.mod_id === "w-tap-assistance") return false;
@@ -171,11 +185,13 @@ export default function ClientModPermissionsManager() {
         if (rpcError) throw rpcError;
       } else {
         if (effect !== "allow") throw new Error("Category grants only grant access. Use an individual mod override to deny access.");
-        const { error: rpcError } = await supabase.rpc("grant_client_mod_category", {
-          p_user_id: selectedPlayer, p_category_key: selectedCategory,
-          p_expires_at: expiresAt, p_reason: reason.trim() || "Manual access rule via AlphaLauncher Mods",
-        });
-        if (rpcError) throw rpcError;
+        for (const categoryKey of getFolderCategoryKeys(selectedCategory)) {
+          const { error: rpcError } = await supabase.rpc("grant_client_mod_category", {
+            p_user_id: selectedPlayer, p_category_key: categoryKey,
+            p_expires_at: expiresAt, p_reason: reason.trim() || "Manual access rule via AlphaLauncher Mods",
+          });
+          if (rpcError) throw rpcError;
+        }
       }
       setMessage("Access rule saved.");
       setReason("");
@@ -374,14 +390,15 @@ export default function ClientModPermissionsManager() {
       </div>
 
       <div className="rank-client-folders-section">
-        <div className="rank-folder-editor-heading"><div><span className="card-label">CLIENT FOLDERS</span><h4>Choose a folder</h4></div><span className="rank-folder-count">{groupedMods.length} folders</span></div>
+        <div className="rank-folder-editor-heading"><div><span className="card-label">CLIENT FOLDERS</span><h4>Choose a folder</h4></div><span className="rank-folder-count">{PLAYER_PERMISSION_FOLDERS.length} folders</span></div>
         <div className="rank-folder-grid" aria-label="Client folders for player access">
-          {groupedMods.map(folder => {
+          {PLAYER_PERMISSION_FOLDERS.map(folder => {
+            const folderMods = getFolderMods(folder.key);
             const active = selectedCategory === folder.key;
-            const grantedCount = folder.mods.filter(mod => overrides.some(rule => rule.user_id === selectedPlayer && rule.mod_id === mod.mod_id && rule.effect === "allow" && (!rule.expires_at || new Date(rule.expires_at).getTime() > Date.now()))).length;
+            const grantedCount = folderMods.filter(mod => overrides.some(rule => rule.user_id === selectedPlayer && rule.mod_id === mod.mod_id && rule.effect === "allow" && (!rule.expires_at || new Date(rule.expires_at).getTime() > Date.now()))).length;
             return <button type="button" key={folder.key} className={`rank-folder-card${active ? " is-selected" : ""}`} aria-pressed={active} onClick={() => setSelectedCategory(folder.key)}>
               <span className="rank-folder-icon" aria-hidden="true">▰</span>
-              <span className="rank-folder-copy"><strong>{folder.label}</strong><small>{folder.mods.length} modules · {grantedCount} individual grants</small></span>
+              <span className="rank-folder-copy"><strong>{folder.label}</strong><small>{folderMods.length} modules · {grantedCount} individual grants</small></span>
               <span className="rank-folder-chevron" aria-hidden="true">›</span>
             </button>;
           })}
@@ -397,14 +414,14 @@ export default function ClientModPermissionsManager() {
           <div><label className="developer-input-label">Reason (optional)</label><input className="developer-text-input" value={reason} onChange={e => setReason(e.target.value)} maxLength={300} placeholder="Reason for this access rule"/></div>
         </div>
         <button className="large-play-button developer-start-button" onClick={() => { setSelectedMod(""); setEffect("allow"); void saveGrant(); }} disabled={busy || loading || !selectedPlayer || !getFolderMods(selectedCategory).length}>
-          {busy ? "SAVING…" : `GRANT ENTIRE ${groupedMods.find(folder => folder.key === selectedCategory)?.label.toUpperCase() ?? "FOLDER"} FOLDER`}
+          {busy ? "SAVING…" : `GRANT ENTIRE ${PLAYER_PERMISSION_FOLDERS.find(folder => folder.key === selectedCategory)?.label.toUpperCase() ?? "FOLDER"} FOLDER`}
         </button>
         <p className="subtitle">The folder grant applies to every module in this category. Use the module controls below to add a specific allow or deny override.</p>
       </div>
 
       <div className="rank-folder-editor">
         <div className="rank-folder-editor-heading">
-          <div><span className="card-label">INDIVIDUAL MODULES</span><h4>{groupedMods.find(folder => folder.key === selectedCategory)?.label ?? selectedCategory} · Module access</h4></div>
+          <div><span className="card-label">INDIVIDUAL MODULES</span><h4>{PLAYER_PERMISSION_FOLDERS.find(folder => folder.key === selectedCategory)?.label ?? selectedCategory} · Module access</h4></div>
           <span className="rank-folder-count">{getFolderMods(selectedCategory).length} modules</span>
         </div>
         {!selectedPlayer
