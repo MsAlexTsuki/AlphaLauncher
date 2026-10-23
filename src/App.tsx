@@ -7,6 +7,7 @@ import PrivateChatPanel from "./PrivateChatPanel";
 import InboxButton from "./InboxButton";
 import RankPermissionsManager from "./RankPermissionsManager";
 import ClientModPermissionsManager from "./ClientModPermissionsManager";
+import ModsPage from "./ModsPage";
 import "./App.css";
 
 type Page =
@@ -1240,7 +1241,7 @@ console.error("Developer permission check failed:", errorMessage);
             />
           )}
 
-          {page === "Mods" && <ClientModPermissionsManager />}
+          {page === "Mods" && <ModsPage />}
 
           {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
