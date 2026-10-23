@@ -9,13 +9,17 @@ type PermissionRow = { scope: string; rank_key: string; permission_key: string; 
 const RANKS: Rank[] = [
   { key: "founder", label: "Founder" },
   { key: "owner", label: "Owner" },
-  { key: "management", label: "Management" },
+  { key: "developer", label: "Developer" },
+  { key: "manager", label: "Manager" },
+  { key: "plat_admin", label: "Platform Admin" },
   { key: "senior_admin", label: "Senior Admin" },
   { key: "admin", label: "Admin" },
   { key: "senior_moderator", label: "Senior Moderator" },
   { key: "moderator", label: "Moderator" },
   { key: "trial_moderator", label: "Trial Moderator" },
-  { key: "beta", label: "Beta" },
+  { key: "partner", label: "Partner" },
+  { key: "famous", label: "Famous" },
+  { key: "media", label: "Media" },
 ];
 
 const PERMISSIONS: Permission[] = [
@@ -54,6 +58,9 @@ export default function RankPermissionsManager() {
       ((data ?? []) as PermissionRow[]).forEach(row => {
         if (row.rank_key === selectedRank) next[row.permission_key] = row.enabled;
       });
+      if (selectedRank === "founder") {
+        PERMISSIONS.forEach(permission => { next[permission.key] = true; });
+      }
       setPermissions(next);
     }
     setLoading(false);
@@ -68,7 +75,7 @@ export default function RankPermissionsManager() {
     const rows = PERMISSIONS.map(permission => ({
       rank_key: selectedRank,
       permission_key: permission.key,
-      enabled: Boolean(permissions[permission.key]),
+      enabled: selectedRank === "founder" || Boolean(permissions[permission.key]),
     }));
     const { error: saveError } = await supabase.rpc("save_rank_permissions", {
       p_scope: scope,
@@ -89,7 +96,7 @@ export default function RankPermissionsManager() {
       <div>
         <span className="card-label">ACCESS CONTROL</span>
         <h3>Rank Permissions</h3>
-        <p>Choose a product area, select a staff rank, and configure its access.</p>
+        <p>Choose a product area and configure access by rank. Founder always has every permission.</p>
       </div>
       <span className="rank-permissions-secure"><span aria-hidden="true">●</span> Server protected</span>
     </div>
@@ -112,9 +119,9 @@ export default function RankPermissionsManager() {
     <div className="rank-permission-summary">
       <div>
         <span className="rank-permission-summary-label">PERMISSIONS</span>
-        <strong>{selectedRank === "beta" ? "Beta access" : RANKS.find(rank => rank.key === selectedRank)?.label}</strong>
+        <strong>{RANKS.find(rank => rank.key === selectedRank)?.label}</strong>
       </div>
-      <span className="rank-permission-count">{enabledCount} of {PERMISSIONS.length} enabled</span>
+      <span className="rank-permission-count">{selectedRank === "founder" ? PERMISSIONS.length + " of " + PERMISSIONS.length + " enabled · always on" : enabledCount + " of " + PERMISSIONS.length + " enabled"}</span>
     </div>
 
     {error && <div className="friends-notice error" role="alert">{error}</div>}
@@ -136,6 +143,7 @@ export default function RankPermissionsManager() {
             type="checkbox"
             aria-label={permission.label}
             checked={enabled}
+            disabled={selectedRank === "founder"}
             onChange={event => setPermissions(old => ({ ...old, [permission.key]: event.target.checked }))}
           />
         </label>;

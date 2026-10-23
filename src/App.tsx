@@ -6,6 +6,7 @@ import { supabase } from "./lib/supabase";
 import PrivateChatPanel from "./PrivateChatPanel";
 import InboxButton from "./InboxButton";
 import RankPermissionsManager from "./RankPermissionsManager";
+import ClientModPermissionsManager from "./ClientModPermissionsManager";
 import "./App.css";
 
 type Page =
@@ -20,7 +21,7 @@ type Page =
   | "Settings"
   | "Account";
 
-type MicrosoftAccount = { name: string; email: string };
+type MicrosoftAccount = { name: string; email: string; uuid?: string };
 type LastPlayed = { timestamp: number; version: string };
 type ChangelogProduct = "launcher" | "client";
 type ChangelogEntry = {
@@ -43,7 +44,6 @@ type ChangelogDraft = {
 const LAST_PLAYED_STORAGE_KEY = "alphaclient.lastPlayed";
 const MAX_LAUNCH_HISTORY = 3;
 
-type ModItem = { name: string; description: string; enabled: boolean };
 type ModalContent = {
   title: string;
   body: string;
@@ -65,6 +65,35 @@ type AlphaClientUpdateInfo = {
   changelog: string;
 };
 
+// Treat an update as available only when the release is newer than the
+// installed version. The initial backend check can race the installed-version
+// lookup and briefly report UNKNOWN even when a valid client is installed.
+function isClientUpdateAvailable(latestVersion: string, installedVersion: string): boolean {
+  const latest = latestVersion.trim().replace(/^v/i, "");
+  const installed = installedVersion.trim().replace(/^v/i, "");
+
+  if (!latest || latest === "UNKNOWN") return false;
+  if (!installed || installed === "UNKNOWN") return false;
+  if (installed === "Niet geïnstalleerd") return true;
+
+  const latestParts = latest.split(".").map((part) => Number.parseInt(part, 10));
+  const installedParts = installed.split(".").map((part) => Number.parseInt(part, 10));
+  if (
+    latestParts.some((part) => !Number.isFinite(part)) ||
+    installedParts.some((part) => !Number.isFinite(part))
+  ) {
+    return latest !== installed;
+  }
+
+  const length = Math.max(latestParts.length, installedParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const next = latestParts[index] ?? 0;
+    const current = installedParts[index] ?? 0;
+    if (next !== current) return next > current;
+  }
+  return false;
+}
+
 const DEFAULT_SETTINGS: Settings = {
   closeToTray: false,
   showNews: true,
@@ -72,35 +101,36 @@ const DEFAULT_SETTINGS: Settings = {
   gameDirectory: "",
 };
 
-const INITIAL_MODS: ModItem[] = [
-  {
-    name: "AlphaCore",
-    description: "Core systems for AlphaClient",
-    enabled: true,
-  },
-  {
-    name: "PerformanceCore",
-    description: "FPS and rendering optimizations",
-    enabled: true,
-  },
-  {
-    name: "HUD",
-    description: "Customizable AlphaClient HUD",
-    enabled: true,
-  },
-  {
-    name: "StaffCore",
-    description: "Staff tools and investigation systems",
-    enabled: false,
-  },
-];
-
 function readSettings(): Settings {
   try {
     const saved = localStorage.getItem("alphaclient.settings");
     return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
   } catch {
     return DEFAULT_SETTINGS;
+  }
+}
+
+const SAVED_MICROSOFT_ACCOUNTS_KEY = "alphaclient.microsoftAccounts";
+const MAX_SAVED_MICROSOFT_ACCOUNTS = 5;
+
+function readSavedMicrosoftAccounts(): MicrosoftAccount[] {
+  try {
+    const saved = localStorage.getItem(SAVED_MICROSOFT_ACCOUNTS_KEY);
+    if (!saved) return [];
+    const parsed: unknown = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((entry): entry is MicrosoftAccount =>
+        entry !== null && typeof entry === "object" &&
+        typeof (entry as MicrosoftAccount).name === "string" &&
+        typeof (entry as MicrosoftAccount).email === "string" &&
+        ((entry as MicrosoftAccount).uuid === undefined ||
+          (typeof (entry as MicrosoftAccount).uuid === "string" && (entry as MicrosoftAccount).uuid.trim().length > 0))
+      )
+      .filter((entry, index, accounts) => accounts.findIndex((candidate) => candidate.email.toLowerCase() === entry.email.toLowerCase()) === index)
+      .slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS);
+  } catch {
+    return [];
   }
 }
 
@@ -240,6 +270,7 @@ function LauncherApp() {
   const [changelogs, setChangelogs] = useState<ChangelogEntry[]>([]);
 
   const [account, setAccount] = useState<MicrosoftAccount | null>(null);
+  const [savedAccounts, setSavedAccounts] = useState<MicrosoftAccount[]>(readSavedMicrosoftAccounts);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isMinecraftRunning, setIsMinecraftRunning] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -250,10 +281,9 @@ function LauncherApp() {
   const [activeChangelogTab, setActiveChangelogTab] =
     useState<ChangelogProduct>("client");
   const [settings, setSettings] = useState<Settings>(readSettings);
-  const [mods, setMods] = useState<ModItem[]>(INITIAL_MODS);
   const [versionFilter, setVersionFilter] = useState("All");
-  const [selectedVersion, setSelectedVersion] = useState("0.3.79");
-  const [clientVersion, setClientVersion] = useState("0.3.79");
+  const [selectedVersion, setSelectedVersion] = useState("UNKNOWN");
+  const [clientVersion, setClientVersion] = useState("UNKNOWN");
   const [updateInfo, setUpdateInfo] =
     useState<AlphaClientUpdateInfo | null>(null);
   const [isUpdatingClient, setIsUpdatingClient] = useState(false);
@@ -329,7 +359,12 @@ function LauncherApp() {
 
   useEffect(() => {
     invoke<MicrosoftAccount | null>("get_microsoft_account")
-      .then(setAccount)
+      .then((restoredAccount) => {
+        setAccount(restoredAccount);
+        if (restoredAccount) {
+          setSavedAccounts((current) => [restoredAccount, ...current.filter((saved) => saved.uuid !== restoredAccount.uuid && saved.email.toLowerCase() !== restoredAccount.email.toLowerCase())].slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS));
+        }
+      })
       .catch((error) =>
         console.warn("Could not restore Microsoft account:", error),
       );
@@ -343,7 +378,11 @@ function LauncherApp() {
         setClientVersion(version);
         setSelectedVersion(version);
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.warn("Could not read AlphaClient version:", error);
+        setClientVersion("UNKNOWN");
+        setSelectedVersion("UNKNOWN");
+      });
 
     invoke<AlphaClientUpdateInfo>("check_alphaclient_update")
       .then(setUpdateInfo)
@@ -351,6 +390,29 @@ function LauncherApp() {
         console.warn("Could not check AlphaClient updates:", error),
       );
   }, []);
+
+  useEffect(() => {
+    setUpdateInfo((current) =>
+      current
+        ? {
+            ...current,
+            current_version: clientVersion,
+            update_available: isClientUpdateAvailable(
+              current.latest_version,
+              clientVersion,
+            ),
+          }
+        : current,
+    );
+  }, [clientVersion, updateInfo?.latest_version, updateInfo?.update_available]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SAVED_MICROSOFT_ACCOUNTS_KEY, JSON.stringify(savedAccounts));
+    } catch (error) {
+      console.warn("Could not save Microsoft account list:", error);
+    }
+  }, [savedAccounts]);
 
   useEffect(() => {
     try {
@@ -717,15 +779,19 @@ console.error("Developer permission check failed:", errorMessage);
 
   const handlePlay = async (partnerServer = false) => {
     if (isLaunching || isUpdatingClient) return;
-    if (partnerServer && isMinecraftRunning) {
-      setLaunchError("Minecraft is already running. Close it before joining the partner server.");
+    if (isMinecraftRunning) {
+      setLaunchError(
+        partnerServer
+          ? "Minecraft is already running. Close it before joining the partner server."
+          : "Minecraft is already running. Close it before launching or updating AlphaClient.",
+      );
       return;
     }
 
     setIsLaunching(true);
     setLaunchError(null);
     setLaunchMessage(
-      partnerServer ? "Starting AlphaClient and connecting to alpha.rip…" : null,
+      partnerServer ? "Starting AlphaClient…" : null,
     );
 
     try {
@@ -733,13 +799,29 @@ console.error("Developer permission check failed:", errorMessage);
         const checked = await invoke<AlphaClientUpdateInfo>(
           "check_alphaclient_update",
         );
-        setUpdateInfo(checked);
+        const installedVersion = await invoke<string>("get_alphaclient_version");
+        const reconciledCheck = {
+          ...checked,
+          current_version: installedVersion,
+          update_available: isClientUpdateAvailable(
+            checked.latest_version,
+            installedVersion,
+          ),
+        };
+        setClientVersion(installedVersion);
+        setSelectedVersion(installedVersion);
+        setUpdateInfo(reconciledCheck);
 
-        if (checked.update_available) {
+        if (reconciledCheck.update_available) {
           setIsUpdatingClient(true);
           const updateMessage = await invoke<string>("update_alphaclient");
           setClientVersion(checked.latest_version);
           setSelectedVersion(checked.latest_version);
+          setUpdateInfo({
+            ...reconciledCheck,
+            current_version: checked.latest_version,
+            update_available: false,
+          });
           setLaunchMessage(updateMessage);
           setIsUpdatingClient(false);
         }
@@ -788,7 +870,12 @@ console.error("Developer permission check failed:", errorMessage);
   };
 
   const handleUpdateClient = async () => {
-    if (isUpdatingClient || isLaunching) return;
+    if (isUpdatingClient || isLaunching || isMinecraftRunning) {
+      if (isMinecraftRunning) {
+        setLaunchError("Close Minecraft before updating AlphaClient.");
+      }
+      return;
+    }
 
     setIsUpdatingClient(true);
     setLaunchError(null);
@@ -813,7 +900,12 @@ console.error("Developer permission check failed:", errorMessage);
   };
 
   const handleInstall = async () => {
-    if (isInstalling) return;
+    if (isInstalling || isMinecraftRunning) {
+      if (isMinecraftRunning) {
+        setLaunchError("Close Minecraft before installing or repairing AlphaClient.");
+      }
+      return;
+    }
 
     setIsInstalling(true);
     setInstallMessage(null);
@@ -834,15 +926,23 @@ console.error("Developer permission check failed:", errorMessage);
     }
   };
 
-  const handleMicrosoftLogin = async () => {
+  const handleMicrosoftLogin = async (accountToSwitch?: MicrosoftAccount) => {
     if (isLoggingIn || isMinecraftRunning) return;
+
+    if (!accountToSwitch && savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS) {
+      setLoginError("You can save up to 5 Minecraft accounts. Select a saved account to switch, or remove one before adding another.");
+      return;
+    }
 
     setIsLoggingIn(true);
     setLoginError(null);
 
     try {
-      const result = await invoke<MicrosoftAccount>("start_microsoft_login");
+      const result = await invoke<MicrosoftAccount>("start_microsoft_login", {
+        loginHint: accountToSwitch?.email ?? null,
+      });
       setAccount(result);
+      setSavedAccounts((current) => [result, ...current.filter((saved) => saved.uuid !== result.uuid && saved.email.toLowerCase() !== result.email.toLowerCase())].slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS));
     } catch (error) {
       setLoginError(errorText(error));
     } finally {
@@ -1071,16 +1171,20 @@ console.error("Developer permission check failed:", errorMessage);
           {page === "Home" && (
             <HomePage
               account={account}
+              savedAccounts={savedAccounts}
+              onSwitchAccount={(savedAccount) => void handleMicrosoftLogin(savedAccount)}
+              onAddAccount={() => void handleMicrosoftLogin()}
+              isLoggingIn={isLoggingIn}
+              isMinecraftRunning={isMinecraftRunning}
               clientVersion={clientVersion}
               launchHistory={launchHistory}
               changelogs={changelogs.filter((entry) => entry.published)}
               updateInfo={updateInfo}
               showNews={settings.showNews}
-              onPlay={handlePlay}
+              onPlay={() => void handlePlay()}
               isLaunching={isLaunching || isUpdatingClient}
               launchError={launchError}
               launchMessage={launchMessage}
-              onAccount={() => navigate("Account")}
               onOpenAlphaAuth={() => void handleOpenAlphaAuth()}
               onChangelog={() => {
                 setActiveChangelogTab("client");
@@ -1103,7 +1207,7 @@ console.error("Developer permission check failed:", errorMessage);
 
           {page === "Play" && (
             <PlayPage
-              onPlay={handlePlay}
+              onPlay={() => void handlePlay()}
               isLaunching={isLaunching || isUpdatingClient}
               launchError={launchError}
               launchMessage={launchMessage}
@@ -1115,6 +1219,7 @@ console.error("Developer permission check failed:", errorMessage);
               updateInfo={updateInfo}
               onUpdate={handleUpdateClient}
               isUpdating={isUpdatingClient}
+              isMinecraftRunning={isMinecraftRunning}
             />
           )}
 
@@ -1130,23 +1235,11 @@ console.error("Developer permission check failed:", errorMessage);
               isInstalling={isInstalling}
               onUpdate={handleUpdateClient}
               isUpdating={isUpdatingClient}
+              isMinecraftRunning={isMinecraftRunning}
             />
           )}
 
-          {page === "Mods" && (
-            <ModsPage
-              mods={mods}
-              onToggle={(name) =>
-                setMods((old) =>
-                  old.map((mod) =>
-                    mod.name === name
-                      ? { ...mod, enabled: !mod.enabled }
-                      : mod,
-                  ),
-                )
-              }
-            />
-          )}
+          {page === "Mods" && <ClientModPermissionsManager />}
 
           {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
@@ -1205,6 +1298,8 @@ console.error("Developer permission check failed:", errorMessage);
             <div className="account-profile-layout">
               <AccountPage
                 account={account}
+                savedAccounts={savedAccounts}
+                onSwitchAccount={(savedAccount) => void handleMicrosoftLogin(savedAccount)}
                 isLoggingIn={isLoggingIn}
                 isMinecraftRunning={isMinecraftRunning}
                 loginError={loginError}
@@ -1498,50 +1593,82 @@ type EditableCommunityProfile = {
   avatar_url: string | null;
   is_founder: boolean;
   rank_key?: string | null;
+  rank_keys?: string[];
 };
 
 const COMMUNITY_RANK_ORDER = [
   "founder",
   "owner",
-  "management",
+  "developer",
+  "manager",
+  "plat_admin",
   "senior_admin",
   "admin",
   "senior_moderator",
   "moderator",
   "trial_moderator",
+  "partner",
+  "famous",
+  "media",
+  "the_nibbler",
   "beta",
   "alpha_plus",
   "alpha",
+  "elite",
+  "rogue",
+  "scout",
   "member",
 ] as const;
 
 const COMMUNITY_RANKS: Record<string, { label: string; color: string }> = {
   founder: { label: "FOUNDER", color: "#FFD866" },
   owner: { label: "OWNER", color: "#FF2D00" },
-  management: { label: "MANAGEMENT", color: "#5C0303" },
-  senior_admin: { label: "SENIOR ADMIN", color: "#D67020" },
+  developer: { label: "DEVELOPER", color: "#87CEFA" },
+  manager: { label: "MANAGER", color: "#5C0303" },
+  plat_admin: { label: "PLAT ADMIN", color: "#5C0303" },
+  senior_admin: { label: "SR ADMIN", color: "#D67020" },
   admin: { label: "ADMIN", color: "#E08D16" },
-  senior_moderator: { label: "SENIOR MODERATOR", color: "#8C17D1" },
-  moderator: { label: "MODERATOR", color: "#29AFCC" },
-  trial_moderator: { label: "TRIAL MODERATOR", color: "#166534" },
-  beta: { label: "BETA", color: "#00FF52" },
+  senior_moderator: { label: "SR MOD", color: "#8C17D1" },
+  moderator: { label: "MOD", color: "#29AFCC" },
+  trial_moderator: { label: "T-MOD", color: "#166534" },
+  partner: { label: "PARTNER", color: "#FF69B4" },
+  famous: { label: "FAMOUS", color: "#FF69B4" },
+  media: { label: "MEDIA", color: "#FF69B4" },
+  the_nibbler: { label: "THE NIBBLER", color: "#A855F7" },
   alpha_plus: { label: "ALPHA+", color: "#FFF300" },
   alpha: { label: "ALPHA", color: "#F300FF" },
+  beta: { label: "BETA", color: "#00FF52" },
+  elite: { label: "ELITE", color: "#00D9FF" },
+  rogue: { label: "ROGUE", color: "#A855F7" },
+  scout: { label: "SCOUT", color: "#FFD700" },
   member: { label: "MEMBER", color: "#C3BFE0" },
 };
 
 const COMMUNITY_RANK_ICONS: Record<string, string> = {
-  founder: "🌸", owner: "♛", management: "◆", senior_admin: "⬟", admin: "✦",
-  senior_moderator: "✚", moderator: "✧", trial_moderator: "◇", beta: "β",
-  alpha_plus: "A+", alpha: "A", member: "●",
+  founder: "🌸", owner: "♛", manager: "⬟", plat_admin: "◆", senior_admin: "⬟", admin: "✦",
+  senior_moderator: "✚", moderator: "✧", trial_moderator: "◇", the_nibbler: "N",
+  alpha_plus: "A+", alpha: "A", beta: "β", elite: "E", rogue: "R", scout: "S", member: "●",
 };
+
+const NIBBLER_RANK_IMAGE_URL = "https://raw.githubusercontent.com/MsAlexTsuki/AlphaClient---Mod/development/src/main/resources/assets/alphastaffmod/textures/ranks/the_nibbler.png";
+const MANAGEMENT_RANK_IMAGE_URL = "https://raw.githubusercontent.com/MsAlexTsuki/AlphaClient---Mod/development/src/main/resources/assets/alphastaffmod/textures/ranks/management.png";
+
+function CommunityRankIcon({ rankKey, className }: { rankKey: string | null | undefined; className: string }) {
+  const key = rankKey || "member";
+  if (key === "the_nibbler") {
+    return <img className={className + " rank-image-icon"} src={NIBBLER_RANK_IMAGE_URL} alt="" aria-hidden="true" draggable={false} />;
+  }
+  if (key === "manager") {
+    return <img className={className + " rank-image-icon"} src={MANAGEMENT_RANK_IMAGE_URL} alt="" aria-hidden="true" draggable={false} />;
+  }
+  return <span className={className} aria-hidden="true">{COMMUNITY_RANK_ICONS[key] || COMMUNITY_RANK_ICONS.member}</span>;
+}
 
 function CommunityRankBadge({ rankKey }: { rankKey: string | null | undefined }) {
   const key = rankKey || "member";
   const rank = COMMUNITY_RANKS[key] || COMMUNITY_RANKS.member;
-  const icon = COMMUNITY_RANK_ICONS[key] || COMMUNITY_RANK_ICONS.member;
   if (key === "founder") return <span className="community-rank-badge community-rank-founder"><span className="community-rank-icon community-rank-icon-founder" aria-hidden="true">🌸</span>{rank.label}</span>;
-  return <span className="community-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="community-rank-icon" aria-hidden="true">{icon}</span>{rank.label}</span>;
+  return <span className="community-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><CommunityRankIcon rankKey={key} className="community-rank-icon" />{rank.label}</span>;
 }
 
 
@@ -1762,7 +1889,7 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
         <div className="community-avatar" aria-hidden="true">{communityAvatarUrl ? <img src={communityAvatarUrl} alt="" onError={() => setCommunityAvatarUrl(null)} /> : (identityLoading ? "…" : displayName.trim().charAt(0).toUpperCase() || "A")}</div>
         <div className="community-welcome-copy">
           <span className="community-kicker">{signedIn ? "YOUR ALPHA ACCOUNT" : "ALPHA ACCOUNT"}</span>
-          <div className="community-name-rank"><h2>{identityLoading ? "Loading profile…" : signedIn ? displayName : "Welcome to the community"}</h2>{signedIn && !identityLoading && <span className={`community-menu-rank ${communityRank === "founder" ? "is-founder" : ""}`} style={{ "--rank-color": COMMUNITY_RANKS[communityRank]?.color ?? COMMUNITY_RANKS.member.color } as React.CSSProperties}>{COMMUNITY_RANKS[communityRank]?.label ?? "MEMBER"}</span>}</div>
+          <div className="community-name-rank"><h2>{identityLoading ? "Loading profile…" : signedIn ? displayName : "Welcome to the community"}</h2>{signedIn && !identityLoading && <span className={`community-menu-rank ${communityRank === "founder" ? "is-founder" : ""}`} style={{ "--rank-color": COMMUNITY_RANKS[communityRank]?.color ?? COMMUNITY_RANKS.member.color } as React.CSSProperties}><CommunityRankIcon rankKey={communityRank} className="community-rank-icon" />{COMMUNITY_RANKS[communityRank]?.label ?? "MEMBER"}</span>}</div>
           <p>{identityLoading ? "Loading your community account…" : signedIn ? (email || "Your AlphaClient profile") : "Sign in to your community account to use your profile and display name."}</p>
         </div>
         <div className="community-account-actions">
@@ -1882,7 +2009,9 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
         setProfile(null);
         return;
       }
-      const loaded = data as EditableCommunityProfile;
+      const { data: rankRows, error: rankError } = await supabase.rpc("get_profile_ranks", { p_profile_ids: [user.id] });
+      if (rankError) throw rankError;
+      const loaded = { ...(data as EditableCommunityProfile), rank_keys: (rankRows ?? []).map((row: { rank_key: string }) => row.rank_key) };
       setProfile(loaded);
       setDisplayName(loaded.username || "");
       setBio(loaded.bio || "");
@@ -1940,7 +2069,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
         .select("id, username, display_name, bio, avatar_url, is_founder, rank_key")
         .single();
       if (updateError) throw updateError;
-      setProfile(data as EditableCommunityProfile);
+      setProfile({ ...(data as EditableCommunityProfile), rank_keys: profile.rank_keys });
       setDisplayName(data.username || profile.username); setBio(cleanBio); setAvatarUrl(nextAvatarUrl);
       setIsEditing(false);
       setSelectedAvatar(null);
@@ -1983,32 +2112,44 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
       <div className="profile-preview-glow" />
       <div className="eyebrow profile-account-label">ALPHA ACCOUNT</div>
       <div className="profile-avatar-large">{profile.avatar_url ? <img src={profile.avatar_url} alt="Your profile avatar" /> : <span>{profile.username.slice(0, 1).toUpperCase()}</span>}</div>
-      <h2 className="profile-name-row">{(() => { const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; return rankKey === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-rank-icon" aria-hidden="true">{COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member}</span>{rank.label}</span>; })()}{profile.username}</h2>
+      <h2 className="profile-name-row">{(() => { const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; return rankKey === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><CommunityRankIcon rankKey={rankKey} className="profile-rank-icon" />{rank.label}</span>; })()}{profile.username}</h2>
       <div className="profile-username">@{profile.username}</div>
       <p className="profile-bio-preview">{profile.bio?.trim() || "You haven't added a bio yet."}</p>
       <div className="profile-preview-divider" />
       <div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>
       {(() => {
-        const rankKey = profile.rank_key || (profile.is_founder ? "founder" : "member");
         const rankLabels: Record<string, string> = {
-          founder: "Founder of Alpha",
+          founder: "Founder of Alpha Client",
           owner: "Owner of Alpha",
-          management: "Manager of Alpha",
+          developer: "Developer on Alpha",
+          manager: "Manager on Alpha",
+  plat_admin: "Plat Admin on Alpha",
           senior_admin: "Senior Admin on Alpha",
           admin: "Admin on Alpha",
           senior_moderator: "Senior Moderator on Alpha",
           moderator: "Moderator on Alpha",
           trial_moderator: "Trial Moderator on Alpha",
+          partner: "Partner on Alpha",
+          famous: "Famous on Alpha",
+          media: "Media on Alpha",
           beta: "Beta Tester on Alpha",
           alpha_plus: "Alpha+ on Alpha",
           alpha: "Alpha on Alpha",
           member: "Member on Alpha",
+          the_nibbler: "Nibbling them balls",
         };
-        const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member;
-        const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member);
-        return <div className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}>
-          <span className="profile-founder-crown" aria-hidden="true">{icon}</span>
-          {rankLabels[rankKey] || rankLabels.member}
+        const rankKeys = profile.rank_keys?.length
+          ? profile.rank_keys
+          : [profile.rank_key || (profile.is_founder ? "founder" : "member")];
+        return <div className="profile-rank-list">
+          {rankKeys.map((rankKey) => {
+            const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member;
+            const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member);
+            return <div key={rankKey} className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}>
+              {rankKey === "the_nibbler" ? <CommunityRankIcon rankKey={rankKey} className="profile-founder-crown" /> : <span className="profile-founder-crown" aria-hidden="true">{icon}</span>}
+              {rankLabels[rankKey] || rank.label}
+            </div>;
+          })}
         </div>;
       })()}
     </section>}
@@ -2034,7 +2175,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
   </div>;
 }
 
-type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; avatar_url?: string | null; bio?: string | null; created_at?: string | null; last_played_at?: string | null; last_played_version?: string | null };
+type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; rank_keys?: string[]; avatar_url?: string | null; bio?: string | null; created_at?: string | null; last_played_at?: string | null; last_played_version?: string | null };
 
 function ChatsPage({ onOpenAlphaAuth, initialFriendId, onInitialFriendHandled }: { onOpenAlphaAuth: () => void; initialFriendId: string | null; onInitialFriendHandled: () => void }) {
   const [userId, setUserId] = useState<string | null>(null);
@@ -2235,16 +2376,20 @@ function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => v
     setProfileLoading(true);
     const { data, error: profileError } = await supabase.from("profiles").select("id, username, display_name, is_founder, rank_key, avatar_url, bio, created_at").eq("id", person.id).maybeSingle();
     if (!profileError && data) {
-      const { data: activity, error: activityError } = await supabase
-        .from("profile_activity")
-        .select("last_played_at, last_played_version")
-        .eq("user_id", person.id)
-        .maybeSingle();
-      setPublicProfile({
-        ...(data as CommunityProfile),
-        last_played_at: activityError ? null : activity?.last_played_at ?? null,
-        last_played_version: activityError ? null : activity?.last_played_version ?? null,
-      });
+      const [{ data: rankRows, error: rankError }, { data: activity, error: activityError }] = await Promise.all([
+        supabase.rpc("get_profile_ranks", { p_profile_ids: [person.id] }),
+        supabase.from("profile_activity").select("last_played_at, last_played_version").eq("user_id", person.id).maybeSingle(),
+      ]);
+      if (rankError) {
+        setError(errorText(rankError));
+      } else {
+        setPublicProfile({
+          ...(data as CommunityProfile),
+          rank_keys: (rankRows ?? []).map((row: { rank_key: string }) => row.rank_key),
+          last_played_at: activityError ? null : activity?.last_played_at ?? null,
+          last_played_version: activityError ? null : activity?.last_played_version ?? null,
+        });
+      }
       if (activityError) console.warn("Could not load profile Last played:", activityError);
     } else if (profileError) setError(errorText(profileError));
     setProfileLoading(false);
@@ -2318,7 +2463,7 @@ function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => v
         </section>
       </div>
     </>}
-    {publicProfile && <div className="public-profile-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setPublicProfile(null); }}><section className="section-card profile-preview-card profile-view-card public-profile-modal" role="dialog" aria-modal="true" aria-labelledby="public-profile-name"><button type="button" className="public-profile-close" aria-label="Close profile" onClick={() => setPublicProfile(null)}>×</button><div className="profile-preview-glow" /><div className="eyebrow profile-account-label">ALPHA ACCOUNT</div><div className="profile-avatar-large">{publicProfile.avatar_url ? <img src={publicProfile.avatar_url} alt={publicProfile.username + " avatar"} /> : <span>{publicProfile.username.slice(0, 1).toUpperCase()}</span>}</div><h2 className="profile-name-row" id="public-profile-name">{(() => { const key = publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[key] || COMMUNITY_RANKS.member; return key === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-rank-icon" aria-hidden="true">{COMMUNITY_RANK_ICONS[key] || COMMUNITY_RANK_ICONS.member}</span>{rank.label}</span>; })()}{publicProfile.username}</h2><div className="profile-username">@{publicProfile.username}</div><p className="profile-bio-preview">{publicProfile.bio?.trim() || "This player hasn't added a bio yet."}</p><div className="profile-preview-divider" /><div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>{(() => { const rankKey = publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member"); const rankLabels: Record<string, string> = { founder: "Founder of Alpha Client", owner: "Owner of Alpha", management: "Manager of Alpha", senior_admin: "Senior Admin on Alpha", admin: "Admin on Alpha", senior_moderator: "Senior Moderator on Alpha", moderator: "Moderator on Alpha", trial_moderator: "Trial Moderator on Alpha", beta: "Beta Tester on Alpha", alpha_plus: "Alpha+ on Alpha", alpha: "Alpha on Alpha", member: "Member on Alpha" }; const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member); return <div className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}><span className="profile-founder-crown" aria-hidden="true">{icon}</span>{rankLabels[rankKey] || rankLabels.member}</div>; })()}{publicProfile.last_played_at ? <div className="public-profile-meta">Last played: {new Date(publicProfile.last_played_at).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}{publicProfile.last_played_version ? ` · ${publicProfile.last_played_version}` : ""}</div> : <div className="public-profile-meta">Last played: Not recorded yet</div>}{publicProfile.created_at && <div className="public-profile-meta">Member since {new Date(publicProfile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</div>}{profileLoading && <div className="public-profile-meta">Refreshing profile…</div>}<div className="public-profile-actions">{friends.some(friend => friend.id === publicProfile.id) ? <><span className="friends-connected"><i /> Friend</span><button className="friends-secondary" type="button" onClick={() => { setPublicProfile(null); onOpenChat(publicProfile.id); }}>Message</button><button className="friends-danger" type="button" disabled={busyId === publicProfile.id} onClick={() => setFriendToRemove(publicProfile)}>Remove friend</button></> : incoming.find(request => request.profile?.id === publicProfile.id) ? <><button className="friends-primary" type="button" disabled={busyId === incoming.find(request => request.profile?.id === publicProfile.id)?.id} onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, true); }}>Accept request</button><button className="friends-secondary" type="button" onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, false); }}>Decline</button></> : outgoing.find(request => request.profile?.id === publicProfile.id) ? <button className="friends-secondary" type="button" onClick={() => { const request = outgoing.find(item => item.profile?.id === publicProfile.id); if (request) void cancelRequest(request); }}>Request sent · Cancel</button> : <button className="friends-primary" type="button" disabled={busyId === publicProfile.id} onClick={() => void sendRequest(publicProfile)}>{busyId === publicProfile.id ? "Sending…" : "Add friend"}</button>}</div></section></div>}
+    {publicProfile && <div className="public-profile-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setPublicProfile(null); }}><section className="section-card profile-preview-card profile-view-card public-profile-modal" role="dialog" aria-modal="true" aria-labelledby="public-profile-name"><button type="button" className="public-profile-close" aria-label="Close profile" onClick={() => setPublicProfile(null)}>×</button><div className="profile-preview-glow" /><div className="eyebrow profile-account-label">ALPHA ACCOUNT</div><div className="profile-avatar-large">{publicProfile.avatar_url ? <img src={publicProfile.avatar_url} alt={publicProfile.username + " avatar"} /> : <span>{publicProfile.username.slice(0, 1).toUpperCase()}</span>}</div><h2 className="profile-name-row" id="public-profile-name">{(() => { const key = publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member"); const rank = COMMUNITY_RANKS[key] || COMMUNITY_RANKS.member; return key === "founder" ? <span className="profile-founder-badge"><span className="profile-founder-icon" aria-hidden="true">🌸</span>FOUNDER</span> : <span className="profile-rank-badge" style={{ "--rank-color": rank.color } as React.CSSProperties}><CommunityRankIcon rankKey={key} className="profile-rank-icon" />{rank.label}</span>; })()}{publicProfile.username}</h2><div className="profile-username">@{publicProfile.username}</div><p className="profile-bio-preview">{publicProfile.bio?.trim() || "This player hasn't added a bio yet."}</p><div className="profile-preview-divider" /><div className="profile-preview-foot"><span className="profile-status-dot" /> Alpha Account</div>{(() => { const rankLabels: Record<string, string> = { founder: "Founder of Alpha Client", owner: "Owner of Alpha", developer: "Developer on Alpha", management: "Manager of Alpha", senior_admin: "Senior Admin on Alpha", admin: "Admin on Alpha", senior_moderator: "Senior Moderator on Alpha", moderator: "Moderator on Alpha", trial_moderator: "Trial Moderator on Alpha", partner: "Partner on Alpha", famous: "Famous on Alpha", media: "Media on Alpha", beta: "Beta Tester on Alpha", alpha_plus: "Alpha+ on Alpha", alpha: "Alpha on Alpha", member: "Member on Alpha", the_nibbler: "The Nibbler on Alpha" }; const rankKeys = publicProfile.rank_keys?.length ? publicProfile.rank_keys : [publicProfile.rank_key || (publicProfile.is_founder ? "founder" : "member")]; return <div className="profile-rank-list">{rankKeys.map(rankKey => { const rank = COMMUNITY_RANKS[rankKey] || COMMUNITY_RANKS.member; const icon = rankKey === "founder" ? "♛" : (COMMUNITY_RANK_ICONS[rankKey] || COMMUNITY_RANK_ICONS.member); return <div key={rankKey} className="profile-founder-status" style={{ "--rank-color": rank.color } as React.CSSProperties}>{rankKey === "the_nibbler" ? <CommunityRankIcon rankKey={rankKey} className="profile-founder-crown" /> : <span className="profile-founder-crown" aria-hidden="true">{icon}</span>}{rankLabels[rankKey] || rank.label}</div>; })}</div>; })()}{publicProfile.last_played_at ? <div className="public-profile-meta">Last played: {new Date(publicProfile.last_played_at).toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}{publicProfile.last_played_version ? ` · ${publicProfile.last_played_version}` : ""}</div> : <div className="public-profile-meta">Last played: Not recorded yet</div>}{publicProfile.created_at && <div className="public-profile-meta">Member since {new Date(publicProfile.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</div>}{profileLoading && <div className="public-profile-meta">Refreshing profile…</div>}<div className="public-profile-actions">{friends.some(friend => friend.id === publicProfile.id) ? <><span className="friends-connected"><i /> Friend</span><button className="friends-secondary" type="button" onClick={() => { setPublicProfile(null); onOpenChat(publicProfile.id); }}>Message</button><button className="friends-danger" type="button" disabled={busyId === publicProfile.id} onClick={() => setFriendToRemove(publicProfile)}>Remove friend</button></> : incoming.find(request => request.profile?.id === publicProfile.id) ? <><button className="friends-primary" type="button" disabled={busyId === incoming.find(request => request.profile?.id === publicProfile.id)?.id} onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, true); }}>Accept request</button><button className="friends-secondary" type="button" onClick={() => { const request = incoming.find(item => item.profile?.id === publicProfile.id); if (request) void respond(request, false); }}>Decline</button></> : outgoing.find(request => request.profile?.id === publicProfile.id) ? <button className="friends-secondary" type="button" onClick={() => { const request = outgoing.find(item => item.profile?.id === publicProfile.id); if (request) void cancelRequest(request); }}>Request sent · Cancel</button> : <button className="friends-primary" type="button" disabled={busyId === publicProfile.id} onClick={() => void sendRequest(publicProfile)}>{busyId === publicProfile.id ? "Sending…" : "Add friend"}</button>}</div></section></div>}
     {friendToRemove && <div className="action-confirm-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !busyId) setFriendToRemove(null); }}><section className="action-confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="remove-friend-title" aria-describedby="remove-friend-description"><div className="action-confirm-icon danger">!</div><h2 id="remove-friend-title">Remove friend?</h2><p id="remove-friend-description">Are you sure you want to remove <strong>@{friendToRemove.username}</strong> from your friends? You can send a new friend request later.</p><div className="action-confirm-actions"><button type="button" className="friends-secondary" disabled={!!busyId} onClick={() => setFriendToRemove(null)}>Cancel</button><button type="button" className="friends-danger" disabled={!!busyId} onClick={() => void removeFriend(friendToRemove)}>{busyId === friendToRemove.id ? "Removing…" : "Remove friend"}</button></div></section></div>}
     {loading && <div className="friends-loading">Loading community…</div>}
   </div>;
@@ -2513,6 +2658,11 @@ function AlphaAccountAuthModal({ onClose }: { onClose: () => void }) {
 
 function HomePage(props: {
   account: MicrosoftAccount | null;
+  savedAccounts: MicrosoftAccount[];
+  onSwitchAccount: (account: MicrosoftAccount) => void;
+  onAddAccount: () => void;
+  isLoggingIn: boolean;
+  isMinecraftRunning: boolean;
   clientVersion: string;
   launchHistory: LastPlayed[];
   changelogs: ChangelogEntry[];
@@ -2522,13 +2672,17 @@ function HomePage(props: {
   isLaunching: boolean;
   launchError: string | null;
   launchMessage: string | null;
-  onAccount: () => void;
   onOpenAlphaAuth: () => void;
   onChangelog: () => void;
   onNews: () => void;
 }) {
   const {
     account,
+    savedAccounts,
+    onSwitchAccount,
+    onAddAccount,
+    isLoggingIn,
+    isMinecraftRunning,
     clientVersion,
     launchHistory,
     changelogs,
@@ -2538,11 +2692,27 @@ function HomePage(props: {
     isLaunching,
     launchError,
     launchMessage,
-    onAccount,
     onOpenAlphaAuth,
     onChangelog,
     onNews,
   } = props;
+  const [accountsExpanded, setAccountsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!accountsExpanded) return;
+
+    const closeAccountsOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".home-account-dropdown-wrap")) return;
+      setAccountsExpanded(false);
+    };
+
+    document.addEventListener("pointerdown", closeAccountsOnOutsideClick);
+    return () => {
+      document.removeEventListener("pointerdown", closeAccountsOnOutsideClick);
+    };
+  }, [accountsExpanded]);
 
   return (
     <div className="page">
@@ -2639,10 +2809,14 @@ function HomePage(props: {
         </div>
 
         <div className="side-cards">
+          <div className="home-account-dropdown-wrap">
           <button
             type="button"
-            className="info-card info-card-button"
-            onClick={onAccount}
+            className={`info-card info-card-button home-account-toggle${accountsExpanded ? " is-expanded" : ""}`}
+            onClick={() => setAccountsExpanded((expanded) => !expanded)}
+            aria-expanded={accountsExpanded}
+            aria-controls="home-saved-accounts-panel"
+            title={accountsExpanded ? "Hide saved Minecraft accounts" : "Show saved Minecraft accounts"}
           >
             <div className="card-label">ACCOUNT</div>
             <div className="account-row">
@@ -2664,8 +2838,35 @@ function HomePage(props: {
                 <span>{account?.email ?? "Click to connect"}</span>
               </div>
               <div className={`online-dot ${account ? "" : "offline"}`} />
+              <span className="home-account-chevron" aria-hidden="true">{accountsExpanded ? "⌃" : "⌄"}</span>
             </div>
           </button>
+          <div id="home-saved-accounts-panel" className={`saved-accounts-collapse${accountsExpanded ? " is-expanded" : ""}`} aria-hidden={!accountsExpanded} onClick={(event) => { const target = event.target; if (target instanceof Element && target.closest("button, a, input, select, textarea")) return; setAccountsExpanded(false); }}>
+            <div className="saved-accounts-collapse-inner">
+              <div className="saved-accounts-inline-header">
+                <span className="card-label">SAVED ACCOUNTS</span>
+                <span className="saved-account-count">{savedAccounts.length}/{MAX_SAVED_MICROSOFT_ACCOUNTS}</span>
+              </div>
+              {savedAccounts.length === 0 ? <p className="subtitle">No Minecraft accounts saved yet. Add one below.</p> : (
+                <div className="saved-accounts-list">
+                  {savedAccounts.map((savedAccount) => (
+                    <div className="saved-account-row" key={savedAccount.uuid ?? savedAccount.email}>
+                      <img src={`https://mc-heads.net/avatar/${encodeURIComponent(savedAccount.name)}/48`} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                      <div className="saved-account-copy"><strong>{savedAccount.name}</strong><span>{savedAccount.email}</span></div>
+                      {(savedAccount.uuid && account?.uuid === savedAccount.uuid) || account?.email.toLowerCase() === savedAccount.email.toLowerCase() ? <span className="saved-account-current">Current</span> : (
+                        <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLoggingIn || isLaunching || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>{isLoggingIn ? "Signing in…" : "Switch"}</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="saved-accounts-footer">
+                <span className="saved-accounts-note">Select an account to sign in with it. Microsoft may ask you to confirm the account.</span>
+                <button type="button" className="small-button saved-account-add" onClick={onAddAccount} disabled={isLoggingIn || isMinecraftRunning || savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS} title={savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS ? "You can save up to 5 accounts." : isMinecraftRunning ? "Close Minecraft before adding an account." : undefined}>{isLoggingIn ? "Waiting for Microsoft…" : savedAccounts.length >= MAX_SAVED_MICROSOFT_ACCOUNTS ? "Limit reached (5/5)" : "+ Add account"}</button>
+              </div>
+            </div>
+          </div>
+          </div>
 
           <div className="info-card">
             <div className="card-label">CLIENT STATUS</div>
@@ -2709,6 +2910,8 @@ function HomePage(props: {
           </div>
         </div>
       </section>
+
+
 
       <section className="lower-grid">
         {showNews && (
@@ -2828,6 +3031,7 @@ function PlayPage(props: {
   updateInfo: AlphaClientUpdateInfo | null;
   onUpdate: () => void;
   isUpdating: boolean;
+  isMinecraftRunning: boolean;
 }) {
   return (
     <div className="page">
@@ -2847,13 +3051,15 @@ function PlayPage(props: {
           <p>Minecraft 1.8.9 • Forge 11.15.1.2318</p>
         </div>
         <span className="installed-badge">
-          {props.updateInfo?.update_available
-            ? `UPDATE ${props.updateInfo.latest_version}`
-            : "INSTALLED"}
+          {props.isMinecraftRunning
+            ? "MINECRAFT RUNNING"
+            : props.updateInfo?.update_available
+              ? `UPDATE ${props.updateInfo.latest_version}`
+              : "INSTALLED"}
         </span>
       </div>
 
-      {props.updateInfo?.update_available && (
+      {!props.isMinecraftRunning && props.updateInfo?.update_available && (
         <div className="section-card">
           <div className="section-header">
             <div>
@@ -2876,23 +3082,37 @@ function PlayPage(props: {
         </div>
       )}
 
+      {props.isMinecraftRunning && (
+        <p className="subtitle">
+          Minecraft is already running. Close the game before launching, updating, or repairing AlphaClient.
+        </p>
+      )}
+
       <button
         type="button"
         className="large-play-button"
         onClick={props.onPlay}
-        disabled={props.isLaunching || props.isUpdating}
+        disabled={props.isLaunching || props.isUpdating || props.isMinecraftRunning}
       >
         <span>▶</span>
-        {props.isLaunching ? "PREPARING..." : "LAUNCH ALPHACLIENT"}
+        {props.isMinecraftRunning
+          ? "MINECRAFT IS RUNNING"
+          : props.isLaunching
+            ? "PREPARING..."
+            : "LAUNCH ALPHACLIENT"}
       </button>
 
       <button
         type="button"
         className="secondary-button install-button"
         onClick={props.onInstall}
-        disabled={props.isInstalling || props.isUpdating}
+        disabled={props.isInstalling || props.isUpdating || props.isMinecraftRunning}
       >
-        {props.isInstalling ? "INSTALLING..." : "INSTALL / REPAIR FILES"}
+        {props.isMinecraftRunning
+          ? "CLOSE MINECRAFT TO REPAIR"
+          : props.isInstalling
+            ? "INSTALLING..."
+            : "INSTALL / REPAIR FILES"}
       </button>
 
       {props.launchError && (
@@ -2927,6 +3147,7 @@ function VersionsPage(props: {
   updateInfo: AlphaClientUpdateInfo | null;
   onUpdate: () => void;
   isUpdating: boolean;
+  isMinecraftRunning: boolean;
 }) {
   const versions = [
     {
@@ -2993,14 +3214,17 @@ function VersionsPage(props: {
                   ? props.onUpdate()
                   : props.setSelectedVersion(version.version)
               }
-              disabled={props.isUpdating}
+              disabled={props.isUpdating || props.isMinecraftRunning}
+              title={props.isMinecraftRunning ? "Close Minecraft before changing or updating versions." : undefined}
             >
-              {version.version === props.selectedVersion
-                ? "Selected"
-                : props.updateInfo?.update_available &&
-                    version.version === props.updateInfo.latest_version
-                  ? "Update"
-                  : "Select"}
+              {props.isMinecraftRunning
+                ? "Minecraft running"
+                : version.version === props.selectedVersion
+                  ? "Selected"
+                  : props.updateInfo?.update_available &&
+                      version.version === props.updateInfo.latest_version
+                    ? "Update"
+                    : "Select"}
             </button>
           </div>
         ))}
@@ -3010,56 +3234,15 @@ function VersionsPage(props: {
         type="button"
         className="large-play-button"
         onClick={props.onInstall}
-        disabled={props.isInstalling || props.isUpdating}
+        disabled={props.isInstalling || props.isUpdating || props.isMinecraftRunning}
+        title={props.isMinecraftRunning ? "Close Minecraft before installing or repairing AlphaClient." : undefined}
       >
-        {props.isInstalling ? "INSTALLING..." : "INSTALL / REPAIR CLIENT"}
+        {props.isMinecraftRunning
+          ? "CLOSE MINECRAFT TO REPAIR"
+          : props.isInstalling
+            ? "INSTALLING..."
+            : "INSTALL / REPAIR CLIENT"}
       </button>
-    </div>
-  );
-}
-
-function ModsPage({
-  mods,
-  onToggle,
-}: {
-  mods: ModItem[];
-  onToggle: (name: string) => void;
-}) {
-  return (
-    <div className="page">
-      <PageTitle
-        eyebrow="CUSTOMIZATION"
-        title="AlphaClient Mods"
-        description="Manage module preferences for your client."
-      />
-
-      <div className="mods-list">
-        {mods.map((mod) => (
-          <div className="mod-row" key={mod.name}>
-            <div className="mod-icon">◆</div>
-            <div className="mod-info">
-              <strong>{mod.name}</strong>
-              <span>{mod.description}</span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={mod.enabled}
-              aria-label={`Toggle ${mod.name}`}
-              title={mod.enabled ? "Disable preference" : "Enable preference"}
-              className={`toggle ${mod.enabled ? "enabled" : ""}`}
-              onClick={() => onToggle(mod.name)}
-            >
-              <span />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <p className="backend-note">
-        These switches currently save state only in this React session. They do
-        not yet enable or disable the actual Minecraft mod files.
-      </p>
     </div>
   );
 }
@@ -3069,6 +3252,7 @@ type ManagedCommunityProfile = {
   username: string;
   display_name: string | null;
   rank_key: string;
+  rank_keys: string[];
 };
 
 function RankManagement() {
@@ -3078,6 +3262,8 @@ function RankManagement() {
   const [members, setMembers] = useState<ManagedCommunityProfile[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [selectedRank, setSelectedRank] = useState("member");
+  const [selectedRanks, setSelectedRanks] = useState<string[]>(["member"]);
+  const [activeRankCategory, setActiveRankCategory] = useState<"Community ranks" | "Donator Ranks" | "Media Ranks" | "Staff Ranks" | "All Ranks">("Community ranks");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -3119,7 +3305,21 @@ function RankManagement() {
         { search_term: search.trim() },
       );
       if (membersError) throw membersError;
-      setMembers((data ?? []) as ManagedCommunityProfile[]);
+      const profileRows = (data ?? []) as Omit<ManagedCommunityProfile, "rank_keys">[];
+      const { data: rankRows, error: rankRowsError } = await supabase.rpc("get_profile_ranks", {
+        p_profile_ids: profileRows.map((member) => member.id),
+      });
+      if (rankRowsError) throw rankRowsError;
+      const rankMap = new Map<string, string[]>();
+      for (const rankRow of rankRows ?? []) {
+        const keys = rankMap.get(rankRow.profile_id) ?? [];
+        keys.push(rankRow.rank_key);
+        rankMap.set(rankRow.profile_id, keys);
+      }
+      setMembers(profileRows.map((member) => ({
+        ...member,
+        rank_keys: rankMap.get(member.id) ?? [member.rank_key || "member"],
+      })));
     } catch (loadError) {
       setError(errorText(loadError));
     } finally {
@@ -3138,7 +3338,21 @@ function RankManagement() {
           { search_term: search.trim() },
         );
         if (queryError) throw queryError;
-        setMembers((data ?? []) as ManagedCommunityProfile[]);
+        const profileRows = (data ?? []) as Omit<ManagedCommunityProfile, "rank_keys">[];
+      const { data: rankRows, error: rankRowsError } = await supabase.rpc("get_profile_ranks", {
+        p_profile_ids: profileRows.map((member) => member.id),
+      });
+      if (rankRowsError) throw rankRowsError;
+      const rankMap = new Map<string, string[]>();
+      for (const rankRow of rankRows ?? []) {
+        const keys = rankMap.get(rankRow.profile_id) ?? [];
+        keys.push(rankRow.rank_key);
+        rankMap.set(rankRow.profile_id, keys);
+      }
+      setMembers(profileRows.map((member) => ({
+        ...member,
+        rank_keys: rankMap.get(member.id) ?? [member.rank_key || "member"],
+      })));
       } catch (searchError) {
         setError(errorText(searchError));
       }
@@ -3148,7 +3362,16 @@ function RankManagement() {
 
   const selectedMember = members.find((member) => member.id === selectedId) ?? null;
   const filteredMembers = members;
-  const rankEntries = Object.entries(COMMUNITY_RANKS);
+  const rankCategories: Record<typeof activeRankCategory, string[]> = {
+    "Community ranks": ["the_nibbler", "beta"],
+    "Donator Ranks": ["alpha_plus", "alpha", "elite", "rogue", "scout"],
+    "Media Ranks": ["partner", "famous", "media"],
+    "Staff Ranks": ["founder", "owner", "developer", "manager", "plat_admin", "senior_admin", "admin", "senior_moderator", "moderator", "trial_moderator"],
+    "All Ranks": ["founder", "owner", "developer", "manager", "plat_admin", "senior_admin", "admin", "senior_moderator", "moderator", "trial_moderator", "partner", "famous", "media", "the_nibbler", "beta", "alpha_plus", "alpha", "elite", "rogue", "scout", "member"],
+  };
+  const rankEntries = rankCategories[activeRankCategory]
+    .filter((key) => Boolean(COMMUNITY_RANKS[key]))
+    .map((key) => [key, COMMUNITY_RANKS[key]] as [string, { label: string; color: string }]);
 
   const assignRank = async () => {
     if (!selectedMember) return;
@@ -3156,12 +3379,12 @@ function RankManagement() {
     setError("");
     setMessage("");
     try {
-      const { error: assignError } = await supabase.rpc("assign_community_rank", {
+      const { error: assignError } = await supabase.rpc("assign_community_ranks", {
         target_profile_id: selectedMember.id,
-        requested_rank_key: selectedRank,
+        requested_rank_keys: selectedRanks,
       });
       if (assignError) throw assignError;
-      setMessage(`Updated @${selectedMember.username} to ${COMMUNITY_RANKS[selectedRank]?.label ?? selectedRank}.`);
+      setMessage(`Updated @${selectedMember.username} to ${selectedRanks.map((key) => COMMUNITY_RANKS[key]?.label ?? key).join(", ")}.`);
       await loadMembers();
     } catch (saveError) {
       setError(errorText(saveError));
@@ -3185,10 +3408,10 @@ function RankManagement() {
   const protectedTarget = !isFounder && selectedMember !== null && targetRankIndex >= 0 &&
     actorRankIndex >= 0 && targetRankIndex <= actorRankIndex;
   const canManageTarget = canManageRanks && Boolean(selectedMember) &&
-    selectedMember?.id !== actorId &&
+    (selectedMember?.id !== actorId || (isFounder && selectedMember?.rank_key === "founder")) &&
     !protectedTarget &&
-    selectedRank !== "founder" &&
-    selectedRankIndex > actorRankIndex;
+    (selectedRank !== "founder" || (isFounder && selectedMember?.rank_key === "founder")) &&
+    (selectedRankIndex > actorRankIndex || (isFounder && selectedMember?.rank_key === "founder"));
 
   return (
     <section className="section-card developer-card">
@@ -3198,7 +3421,7 @@ function RankManagement() {
           <h3>Rank Management</h3>
         </div>
         <span className={`developer-status ${canManageRanks ? "active" : ""}`}>
-          {canManageRanks ? (actorRank === "founder" ? "Founder access" : actorRank === "owner" ? "Owner access" : actorRank === "management" ? "Management access" : "Rank management access") : "Restricted"}
+          {canManageRanks ? (actorRank === "founder" ? "Founder access" : actorRank === "owner" ? "Owner access" : actorRank === "plat_admin" ? "Plat Admin access" : "Rank management access") : "Restricted"}
         </span>
       </div>
       <p className="subtitle">Search for a community member, review their current rank, and assign a new rank or reset them to Member.</p>
@@ -3219,11 +3442,11 @@ function RankManagement() {
               <select className="developer-input" value={selectedId} onChange={(event) => {
                 setSelectedId(event.target.value);
                 const member = members.find((item) => item.id === event.target.value);
-                if (member) setSelectedRank(member.rank_key || "member");
+                if (member) { setSelectedRank(member.rank_key || "member"); setSelectedRanks(member.rank_keys?.length ? member.rank_keys : [member.rank_key || "member"]); }
               }}>
                 <option value="">Select a member…</option>
                 {filteredMembers.map((member) => (
-                  <option key={member.id} value={member.id}>@{member.username} · {COMMUNITY_RANKS[member.rank_key]?.label ?? member.rank_key}</option>
+                  <option key={member.id} value={member.id}>@{member.username} · {(member.rank_keys ?? [member.rank_key]).map((key) => COMMUNITY_RANKS[key]?.label ?? key).join(" + ")}</option>
                 ))}
               </select>
             </label>
@@ -3233,9 +3456,23 @@ function RankManagement() {
                   <div><span>Username</span><strong>@{selectedMember.username}</strong></div>
                   <div><span>Current rank</span><strong style={{ color: COMMUNITY_RANKS[selectedMember.rank_key]?.color ?? "#C3BFE0" }}>{COMMUNITY_RANKS[selectedMember.rank_key]?.label ?? selectedMember.rank_key}</strong></div>
                 </div>
-                <label className="setting-line developer-setting-line">
-                  <span>Assign rank</span>
-                  <select className="developer-input" value={selectedRank} onChange={(event) => setSelectedRank(event.target.value)}>
+                <div className="setting-line developer-setting-line rank-checkbox-setting">
+                  <span>Assign their rank</span>
+                  <div className="rank-category-tabs" role="tablist" aria-label="Rank categories">
+                    {(["Community ranks", "Donator Ranks", "Media Ranks", "Staff Ranks", "All Ranks"] as const).map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeRankCategory === category}
+                        className={`rank-category-tab${activeRankCategory === category ? " active" : ""}`}
+                        onClick={() => setActiveRankCategory(category)}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="rank-checkbox-grid">
                     {rankEntries.map(([key, rank]) => {
                       const rankIndex = COMMUNITY_RANK_ORDER.indexOf(
                         key as (typeof COMMUNITY_RANK_ORDER)[number],
@@ -3243,21 +3480,39 @@ function RankManagement() {
                       const cannotAssign = key === "founder" ||
                         (!isFounder && rankIndex <= actorRankIndex);
                       return (
-                        <option key={key} value={key} disabled={cannotAssign}>
-                          {rank.label}
-                        </option>
+                        <label key={key} className="rank-checkbox-option">
+                          <input
+                            type="checkbox"
+                            checked={selectedRanks.includes(key)}
+                            disabled={cannotAssign || (key === "the_nibbler" && !isFounder)}
+                            onChange={(event) => {
+                              const next = event.target.checked
+                                ? [...selectedRanks, key]
+                                : selectedRanks.filter((item) => item !== key);
+                              if (!next.length) return;
+                              const ordered = next.sort((a, b) =>
+                                COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) -
+                                COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])
+                              );
+                              setSelectedRanks(ordered);
+                              setSelectedRank(ordered[0]);
+                            }}
+                          />
+                          <span style={{ color: rank.color }}>{key === "beta" ? "Beta Tester" : rank.label}</span>
+                        </label>
                       );
                     })}
-                  </select>
-                </label>
+                  </div>
+                  <small className="subtitle">The highest rank becomes the primary rank. The Nibbler is Founder-only and limited to two accounts.</small>
+                </div>
                 <div className="developer-actions">
-                  <button className="friends-primary rank-save-button" type="button" disabled={saving || !canManageTarget || selectedRank === selectedMember.rank_key} onClick={() => void assignRank()}>
+                  <button className="friends-primary rank-save-button" type="button" disabled={saving || !canManageTarget || selectedRanks.slice().sort((a, b) => COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) - COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])).join(",") === (selectedMember.rank_keys ?? [selectedMember.rank_key]).slice().sort((a, b) => COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) - COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])).join(",")} onClick={() => void assignRank()}>
                     {saving ? "Saving…" : "Save rank"}
                   </button>
-                  <button className="friends-secondary" type="button" disabled={saving || !canManageTarget || selectedMember.rank_key === "member"} onClick={() => { setSelectedRank("member"); void (async () => {
+                  <button className="friends-secondary" type="button" disabled={saving || !canManageTarget || selectedMember.rank_key === "founder" || selectedMember.rank_key === "member"} onClick={() => { setSelectedRank("member"); setSelectedRanks(["member"]); void (async () => {
                     setSaving(true); setError(""); setMessage("");
                     try {
-                      const { error: assignError } = await supabase.rpc("assign_community_rank", { target_profile_id: selectedMember.id, requested_rank_key: "member" });
+                      const { error: assignError } = await supabase.rpc("assign_community_ranks", { target_profile_id: selectedMember.id, requested_rank_keys: ["member"] });
                       if (assignError) throw assignError;
                       setMessage(`Reset @${selectedMember.username} to Member.`);
                       await loadMembers();
@@ -3273,7 +3528,7 @@ function RankManagement() {
                     selectedRankIndex <= actorRankIndex ? "You cannot assign a rank equal to or higher than your own." :
                     "This rank change is not permitted."}
                 </p>}
-                {canManageTarget && selectedRank === selectedMember.rank_key && <p className="subtitle">Choose a different rank to enable Save rank.</p>}
+                {canManageTarget && selectedRanks.slice().sort((a, b) => COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) - COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])).join(",") === (selectedMember.rank_keys ?? [selectedMember.rank_key]).slice().sort((a, b) => COMMUNITY_RANK_ORDER.indexOf(a as (typeof COMMUNITY_RANK_ORDER)[number]) - COMMUNITY_RANK_ORDER.indexOf(b as (typeof COMMUNITY_RANK_ORDER)[number])).join(",") && <p className="subtitle">Choose a different rank to enable Save rank.</p>}
               </>
             )}
           </>
@@ -3414,6 +3669,7 @@ function AuditTimeline() {
 
 type DeveloperTool =
   | "Rank Management"
+  | "Mods"
   | "Permission Explorer"
   | "Audit Timeline"
   | "Change Review"
@@ -3430,6 +3686,11 @@ const developerTools: {
     name: "Rank Management",
     description: "Manage Alpha ranks and rank assignments.",
     icon: "◆",
+  },
+  {
+    name: "Mods",
+    description: "Manage AlphaClient mod access, rank defaults, and player grants.",
+    icon: "▦",
   },
   {
     name: "Permission Explorer",
@@ -3515,6 +3776,10 @@ function DeveloperPage({
   changelogMessage: string;
 }) {
   const [activeTool, setActiveTool] = useState<DeveloperTool | null>(null);
+  const [activeReleaseSection, setActiveReleaseSection] = useState<"Changelogs" | "Releases" | null>(null);
+  const [activeReleaseTool, setActiveReleaseTool] = useState<"Built JARs" | "Publish release" | "Official version" | "Test versions" | null>(null);
+  const [activeRolloutSection, setActiveRolloutSection] = useState<"Rollout plans" | "Audience targeting" | "Rollout schedule" | "Monitoring" | null>(null);
+  const [activeChangeReviewSection, setActiveChangeReviewSection] = useState<"Review Changelogs" | "Review Rank Management" | "Review Mod Changes" | "Review Audit Timeline" | null>(null);
   const [draftVersion, setDraftVersion] = useState("");
   const [draftTitle, setDraftTitle] = useState("");
   const [draftBody, setDraftBody] = useState("");
@@ -3822,6 +4087,7 @@ function DeveloperPage({
 
           <div className="developer-tool-content">
             {developerAuthorized && activeTool === "Rank Management" && <RankManagement />}
+            {developerAuthorized && activeTool === "Mods" && <ClientModPermissionsManager />}
 
             {developerAuthorized && activeTool === "Permission Explorer" &&
               renderPlaceholder(
@@ -3831,11 +4097,56 @@ function DeveloperPage({
 
             {developerAuthorized && activeTool === "Audit Timeline" && <AuditTimeline />}
 
-            {developerAuthorized && activeTool === "Change Review" &&
-              renderPlaceholder(
-                "Change Review",
-                "Review proposed changes and approve them before they are applied.",
-              )}
+            {developerAuthorized && activeTool === "Change Review" && (
+              <section className="section-card developer-card change-review-manager">
+                {activeChangeReviewSection === null ? (
+                  <>
+                    <div className="section-header">
+                      <div>
+                        <span className="card-label">CHANGE CONTROL</span>
+                        <h3>Change Review</h3>
+                      </div>
+                    </div>
+                    <p className="subtitle">Choose the area whose proposed changes you want to review.</p>
+                    <div className="release-overview-grid">
+                      <button type="button" className="release-overview-card" onClick={() => setActiveChangeReviewSection("Review Changelogs")}>
+                        <span className="release-overview-icon" aria-hidden="true">▤</span>
+                        <strong>Review Changelogs</strong>
+                        <small>Review proposed changelog edits before they are applied.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveChangeReviewSection("Review Rank Management")}>
+                        <span className="release-overview-icon" aria-hidden="true">◆</span>
+                        <strong>Review Rank Management</strong>
+                        <small>Review proposed rank and rank-assignment changes.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveChangeReviewSection("Review Mod Changes")}>
+                        <span className="release-overview-icon" aria-hidden="true">▦</span>
+                        <strong>Review Mod Changes</strong>
+                        <small>Review proposed AlphaClient mod permission changes.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveChangeReviewSection("Review Audit Timeline")}>
+                        <span className="release-overview-icon" aria-hidden="true">◷</span>
+                        <strong>Review Audit Timeline</strong>
+                        <small>Review audit history relevant to proposed changes.</small>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="release-tool-detail">
+                    <button type="button" className="release-manager-back" onClick={() => setActiveChangeReviewSection(null)}>
+                      <span aria-hidden="true">←</span> Back to Change Review
+                    </button>
+                    <div className="section-header">
+                      <div>
+                        <span className="card-label">CHANGE CONTROL</span>
+                        <h3>{activeChangeReviewSection}</h3>
+                      </div>
+                    </div>
+                    <p className="subtitle">This section is ready for navigation. Change review workflows are not connected yet.</p>
+                  </div>
+                )}
+              </section>
+            )}
 
             {developerAuthorized && activeTool === "Development Sandbox" && (
               <>
@@ -3931,14 +4242,113 @@ function DeveloperPage({
               </>
             )}
 
-            {developerAuthorized && activeTool === "Feature Rollout Manager" &&
-              renderPlaceholder(
-                "Feature Rollout Manager",
-                "Plan feature flags, target groups and staged rollouts. Publishing and remote targeting are not connected yet.",
-              )}
+            {developerAuthorized && activeTool === "Feature Rollout Manager" && (
+              <section className="section-card developer-card rollout-manager">
+                {activeRolloutSection === null ? (
+                  <>
+                    <div className="section-header">
+                      <div>
+                        <span className="card-label">CONTROLLED DEPLOYMENT</span>
+                        <h3>Feature Rollout Manager</h3>
+                      </div>
+                      <span className="developer-status">Not connected</span>
+                    </div>
+                    <p className="subtitle">
+                      Plan staged AlphaClient updates so they reach users in controlled groups instead of everyone at once.
+                    </p>
+                    <div className="release-overview-grid">
+                      <button type="button" className="release-overview-card" onClick={() => setActiveRolloutSection("Rollout plans")}>
+                        <span className="release-overview-icon" aria-hidden="true">▤</span>
+                        <strong>Rollout plans</strong>
+                        <small>Create and review staged rollout plans for a client version.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveRolloutSection("Audience targeting")}>
+                        <span className="release-overview-icon" aria-hidden="true">◎</span>
+                        <strong>Audience targeting</strong>
+                        <small>Plan how users are grouped and how many receive an update per wave.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveRolloutSection("Rollout schedule")}>
+                        <span className="release-overview-icon" aria-hidden="true">◷</span>
+                        <strong>Rollout schedule</strong>
+                        <small>Plan wave timing, pauses, and gradual percentage increases.</small>
+                      </button>
+                      <button type="button" className="release-overview-card" onClick={() => setActiveRolloutSection("Monitoring")}>
+                        <span className="release-overview-icon" aria-hidden="true">⌁</span>
+                        <strong>Monitoring</strong>
+                        <small>Review rollout progress and plan when to pause or continue.</small>
+                      </button>
+                    </div>
+                    <div className="developer-warning">
+                      <span className="developer-warning-icon">i</span>
+                      <div>
+                        <strong>Rollout execution is not connected yet</strong>
+                        <p>These sections are navigation and planning placeholders. They do not change who receives an update until rollout rules are connected to a secure backend and enforced by the launcher update flow.</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="release-tool-detail">
+                    <button type="button" className="release-manager-back" onClick={() => setActiveRolloutSection(null)}>
+                      <span aria-hidden="true">←</span> Back to Feature Rollout Manager
+                    </button>
+                    <div className="section-header">
+                      <div>
+                        <span className="card-label">CONTROLLED DEPLOYMENT</span>
+                        <h3>{activeRolloutSection}</h3>
+                      </div>
+                      <span className="developer-status">Not connected</span>
+                    </div>
+                    <p className="subtitle">This section is ready for navigation. Rollout configuration and update delivery are not connected yet.</p>
+                  </div>
+                )}
+              </section>
+            )}
 
             {activeTool === "Release Manager" && (
-              <section className="section-card developer-card changelog-editor">
+              <>
+                {activeReleaseSection === null && (
+                  <>
+                  <div className="release-manager-header">
+                    <div>
+                      <span className="card-label">RELEASE WORKSPACE</span>
+                      <h3>Release Manager</h3>
+                      <p>Choose whether to manage changelogs or client releases.</p>
+                    </div>
+                  </div>
+                  <div className="release-manager-nav" aria-label="Release Manager sections">
+                    <button
+                      type="button"
+                      className={`release-manager-nav-item ${activeReleaseSection === "Changelogs" ? "active" : ""}`}
+                      onClick={() => setActiveReleaseSection("Changelogs")}
+                    >
+                      <span className="release-manager-nav-icon release-folder-icon" aria-hidden="true">▰</span>
+                      <span>
+                        <strong>Changelogs</strong>
+                        <small>Edit and publish launcher/client changelogs</small>
+                      </span>
+                      <span className="release-manager-chevron" aria-hidden="true">›</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`release-manager-nav-item ${activeReleaseSection === "Releases" ? "active" : ""}`}
+                      onClick={() => setActiveReleaseSection("Releases")}
+                    >
+                      <span className="release-manager-nav-icon release-folder-icon" aria-hidden="true">▰</span>
+                      <span>
+                        <strong>Releases</strong>
+                        <small>Build selection and official version management</small>
+                      </span>
+                      <span className="release-manager-chevron" aria-hidden="true">›</span>
+                    </button>
+                  </div>
+                  </>
+                )}
+                {activeReleaseSection === "Changelogs" && (
+                  <>
+                    <button type="button" className="release-manager-back" onClick={() => setActiveReleaseSection(null)}>
+                      <span aria-hidden="true">←</span> Back to Release Manager
+                    </button>
+                    <section className="section-card developer-card changelog-editor">
                 <div className="section-header">
                   <div>
                     <span className="card-label">HOME PAGE CONTENT</span>
@@ -4136,7 +4546,83 @@ function DeveloperPage({
                     ))
                   )}
                 </div>
-              </section>
+                    </section>
+                  </>
+                )}
+                {activeReleaseSection === "Releases" && (
+                  <>
+                    <button type="button" className="release-manager-back" onClick={() => setActiveReleaseSection(null)}>
+                      <span aria-hidden="true">←</span> Back to Release Manager
+                    </button>
+                    <section className="section-card developer-card release-overview">
+                    <div className="section-header">
+                      <div>
+                        <span className="card-label">ALPHACLIENT RELEASES</span>
+                        <h3>Release management</h3>
+                      </div>
+                      <span className="developer-status">Not connected</span>
+                    </div>
+                    <p className="subtitle">
+                      This is the dedicated Releases workspace. The next step is connecting build discovery, JAR metadata reading,
+                      release publishing, and the official-version setting to the release backend.
+                    </p>
+                    {activeReleaseTool === null ? (
+                      <>
+                        <div className="release-overview-grid">
+                          <button type="button" className="release-overview-card" onClick={() => setActiveReleaseTool("Built JARs")}>
+                            <span className="release-overview-icon" aria-hidden="true">▣</span>
+                            <strong>Built JARs</strong>
+                            <small>Find local AlphaClient builds and read each JAR's actual version.</small>
+                          </button>
+                          <button type="button" className="release-overview-card" onClick={() => setActiveReleaseTool("Publish release")}>
+                            <span className="release-overview-icon" aria-hidden="true">↑</span>
+                            <strong>Publish release</strong>
+                            <small>Publish a selected build as an official AlphaClient release.</small>
+                          </button>
+                          <button type="button" className="release-overview-card" onClick={() => setActiveReleaseTool("Official version")}>
+                            <span className="release-overview-icon" aria-hidden="true">★</span>
+                            <strong>Official version</strong>
+                            <small>Choose the version ordinary launcher users receive by default.</small>
+                          </button>
+                          <button type="button" className="release-overview-card" onClick={() => setActiveReleaseTool("Test versions")}>
+                            <span className="release-overview-icon" aria-hidden="true">⌁</span>
+                            <strong>Test versions</strong>
+                            <small>Keep older or test builds available for your own development use.</small>
+                          </button>
+                        </div>
+                        <div className="developer-warning">
+                          <span className="developer-warning-icon">i</span>
+                          <div>
+                            <strong>Release actions are not enabled yet</strong>
+                            <p>
+                              No release has been published or changed by this screen. Publishing and official-version selection
+                              need a secure backend connection before these actions can be enabled.
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="release-tool-detail">
+                        <button type="button" className="release-manager-back" onClick={() => setActiveReleaseTool(null)}>
+                          <span aria-hidden="true">←</span> Back to Releases
+                        </button>
+                        <div className="section-header">
+                          <div>
+                            <span className="card-label">ALPHACLIENT RELEASES</span>
+                            <h3>{activeReleaseTool}</h3>
+                          </div>
+                          <span className="developer-status">Not connected</span>
+                        </div>
+                        <p className="subtitle">
+                          This section is ready for navigation. Its release-management functionality has not been connected yet.
+                        </p>
+                      </div>
+                    )}
+
+                    </section>
+                  </>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -4206,6 +4692,8 @@ function SettingsPage({
 
 function AccountPage({
   account,
+  savedAccounts,
+  onSwitchAccount,
   isLoggingIn,
   isMinecraftRunning,
   loginError,
@@ -4213,21 +4701,25 @@ function AccountPage({
   onLogout,
 }: {
   account: MicrosoftAccount | null;
+  savedAccounts: MicrosoftAccount[];
+  onSwitchAccount: (account: MicrosoftAccount) => void;
   isLoggingIn: boolean;
   isMinecraftRunning: boolean;
   loginError: string | null;
   onLogin: () => void;
   onLogout: () => void;
 }) {
+  const [savedAccountsExpanded, setSavedAccountsExpanded] = useState(false);
+
   return (
     <div className="page">
       <PageTitle
         eyebrow="MINECRAFT ACCOUNT"
-        title="Your account"
+        title="Your accounts"
         description="Manage the Microsoft account used by AlphaClient."
       />
 
-      <div className="account-large-card">
+      <div className={`account-large-card account-large-card-toggle${savedAccountsExpanded ? " is-expanded" : ""}`} role="button" tabIndex={0} onClick={() => setSavedAccountsExpanded((expanded) => !expanded)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSavedAccountsExpanded((expanded) => !expanded); } }} aria-expanded={savedAccountsExpanded} aria-controls="account-saved-microsoft-accounts-panel">
         <div className={`large-avatar${account ? " avatar-skin" : ""}`}>
           {account ? (
             <img
@@ -4252,9 +4744,39 @@ function AccountPage({
             Connected
           </div>
         )}
+        <span className="account-large-chevron" aria-hidden="true">{savedAccountsExpanded ? "⌃" : "⌄"}</span>
       </div>
 
-      {loginError && (
+        <div id="account-saved-microsoft-accounts-panel" className={`saved-accounts-collapse account-saved-accounts-panel${savedAccountsExpanded ? " is-expanded" : ""}`} aria-hidden={!savedAccountsExpanded}>
+          <div className="saved-accounts-collapse-inner">
+            {savedAccounts.length === 0 ? (
+              <p className="subtitle">No saved accounts yet. Log in with Microsoft to add one.</p>
+            ) : (
+              <div className="saved-accounts-list">
+                {savedAccounts.map((savedAccount) => (
+                  <div className="saved-account-row" key={savedAccount.uuid ?? savedAccount.email}>
+                    <img src={`https://mc-heads.net/avatar/${encodeURIComponent(savedAccount.name)}/48`} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                    <div className="saved-account-copy">
+                      <strong>{savedAccount.name}</strong>
+                      <span>{savedAccount.email}</span>
+                    </div>
+                    {(savedAccount.uuid && account?.uuid === savedAccount.uuid) || account?.email.toLowerCase() === savedAccount.email.toLowerCase() ? (
+                      <span className="saved-account-current">Current account</span>
+                    ) : (
+                      <button type="button" className="small-button" onClick={() => onSwitchAccount(savedAccount)} disabled={isLoggingIn || isMinecraftRunning} title={isMinecraftRunning ? "Close Minecraft before switching accounts." : undefined}>
+                        {isLoggingIn ? "Waiting…" : "Your Accounts"}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="saved-accounts-note">Account names are saved on this device. Choosing an account starts Microsoft sign-in with that email as a hint; the launcher does not store Microsoft passwords.</p>
+          </div>
+        </div>
+
+
+            {loginError && (
         <p className="launch-error" role="alert">
           {loginError}
         </p>
@@ -4294,6 +4816,8 @@ function AccountPage({
           </>
         )}
       </div>
+
+
     </div>
   );
 }

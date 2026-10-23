@@ -73,6 +73,10 @@ const MINECRAFT_VERSION: &str = "1.8.9";
 
 const FORGE_VERSION: &str = "11.15.1.2318";
 
+// OptiFine is fetched directly from the official OptiFine website for each user.
+const OPTIFINE_FILE_NAME: &str = "OptiFine_1.8.9_HD_U_M5.jar";
+const OPTIFINE_DOWNLOAD_PAGE_URL: &str = "https://optifine.net/adloadx?f=OptiFine_1.8.9_HD_U_M5.jar";
+
 const FORGE_INSTALLER_NAME: &str =
     "forge-1.8.9-11.15.1.2318-1.8.9-installer.jar";
 
@@ -529,7 +533,7 @@ fn clear_microsoft_auth_state() {
 // ============================================================
 
 #[tauri::command]
-async fn start_microsoft_login()
+async fn start_microsoft_login(login_hint: Option<String>)
     -> Result<MicrosoftAccount, String>
 {
     if minecraft_process_is_running() {
@@ -537,7 +541,7 @@ async fn start_microsoft_login()
     }
 
     tauri::async_runtime::spawn_blocking(
-        perform_microsoft_login
+        move || perform_microsoft_login(login_hint)
     )
     .await
     .map_err(|error| {
@@ -587,7 +591,7 @@ fn get_microsoft_account()
 // MICROSOFT LOGIN
 // ============================================================
 
-fn perform_microsoft_login()
+fn perform_microsoft_login(login_hint: Option<String>)
     -> Result<MicrosoftAccount, String>
 {
     if minecraft_process_is_running() {
@@ -701,6 +705,15 @@ fn perform_microsoft_login()
             "code_challenge_method",
             "S256"
         );
+
+    if let Some(email) = login_hint.as_deref().map(str::trim).filter(|email| !email.is_empty()) {
+        authorization_url.query_pairs_mut()
+            .append_pair("prompt", "login")
+            .append_pair("login_hint", email);
+    } else {
+        authorization_url.query_pairs_mut()
+            .append_pair("prompt", "select_account");
+    }
 
     // --------------------------------------------------------
     // Open browser
@@ -2300,6 +2313,25 @@ fn find_built_alphastaffmod_jar()
                 .join("libs")
         );
 
+        // Some project layouts keep the Gradle module one level below the repository.
+        build_directories.push(
+            profile
+                .join("Desktop")
+                .join("Staffmods")
+                .join("Staffmods_main")
+                .join("build")
+                .join("libs")
+        );
+
+        // Also support the renamed AlphaClient mod repository folder.
+        build_directories.push(
+            profile
+                .join("Desktop")
+                .join("AlphaClient---Mod")
+                .join("build")
+                .join("libs")
+        );
+
         build_directories.push(
             profile
                 .join("Desktop")
@@ -2356,14 +2388,37 @@ fn find_built_alphastaffmod_jar()
         }
     }
 
+    // Prefer the highest semantic mod version. File timestamps are unreliable
+    // when builds are copied between folders or restored from archives.
+    // If versions match, prefer the most recently modified JAR.
     candidates.sort_by(|a, b| {
-        let a_time = fs::metadata(a)
-            .and_then(|metadata| metadata.modified())
-            .ok();
-        let b_time = fs::metadata(b)
-            .and_then(|metadata| metadata.modified())
-            .ok();
+        let a_version = alphastaffmod_version_from_jar(a).unwrap_or_default();
+        let b_version = alphastaffmod_version_from_jar(b).unwrap_or_default();
 
+        let version_order = {
+            let a_parts = parse_version_parts(&a_version);
+            let b_parts = parse_version_parts(&b_version);
+            let length = a_parts.len().max(b_parts.len());
+            let mut ordering = std::cmp::Ordering::Equal;
+
+            for index in 0..length {
+                let a_part = *a_parts.get(index).unwrap_or(&0);
+                let b_part = *b_parts.get(index).unwrap_or(&0);
+                if a_part != b_part {
+                    ordering = b_part.cmp(&a_part);
+                    break;
+                }
+            }
+
+            ordering
+        };
+
+        if version_order != std::cmp::Ordering::Equal {
+            return version_order;
+        }
+
+        let a_time = fs::metadata(a).and_then(|metadata| metadata.modified()).ok();
+        let b_time = fs::metadata(b).and_then(|metadata| metadata.modified()).ok();
         b_time.cmp(&a_time)
     });
 
@@ -3936,8 +3991,7 @@ fn alpha_client_version_file(
 }
 
 
-// Read the version from the actual installed mod JAR. The JSON version marker
-// is only bookkeeping and must never override the version of the JAR Minecraft loads.
+// Read the version from the actual installed mod JAR.
 fn alphastaffmod_version_from_jar(path: &Path) -> Option<String>
 {
     let file = File::open(path).ok()?;
@@ -3974,6 +4028,28 @@ fn alphastaffmod_version_from_jar(path: &Path) -> Option<String>
     }
 
     None
+}
+
+
+// If JAR metadata is missing or invalid, use the version marker written by
+// the launcher during install/update. This prevents a valid installation from
+// briefly displaying UNKNOWN until the next update repairs its metadata.
+fn alphaclient_version_from_marker(root: &Path) -> Option<String>
+{
+    let contents = fs::read_to_string(alpha_client_version_file(root)).ok()?;
+    let metadata: Value = serde_json::from_str(&contents).ok()?;
+    let version = metadata.get("version")?.as_str()?.trim();
+
+    if version.is_empty()
+        || version.contains("${")
+        || !version.trim_start_matches('v').chars().next()
+            .map(|character| character.is_ascii_digit())
+            .unwrap_or(false)
+    {
+        return None;
+    }
+
+    Some(version.to_string())
 }
 
 
@@ -4017,7 +4093,7 @@ fn installed_alphaclient_version(
     }
 
     if found_alphastaffmod {
-        Ok("Onbekend".to_string())
+        Ok(alphaclient_version_from_marker(root).unwrap_or_else(|| "UNKNOWN".to_string()))
     } else {
         Ok("Niet geïnstalleerd".to_string())
     }
@@ -4221,7 +4297,7 @@ fn check_alphaclient_update_internal()
             current_version: current_version.clone(),
             latest_version: manifest.version.clone(),
             update_available: current_version == "Niet geïnstalleerd"
-                || current_version == "Onbekend"
+                || current_version == "UNKNOWN"
                 || version_is_newer(
                     &manifest.version,
                     &current_version
@@ -4375,64 +4451,60 @@ fn update_alphaclient_internal()
     fs::create_dir_all(&mods_dir).map_err(|error| format!("Could not create mods directory: {}", error))?;
     let destination = mods_dir.join(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME);
 
-    // Prefer a locally built Alpha Staff Mod when its version is at least as
-    // recent as the official release. The launch path calls the updater every
-    // time, so without this check a fresh local build would be overwritten by
-    // the GitHub release before Minecraft starts.
     let installed_jar_version = if destination.is_file() {
         alphastaffmod_version_from_jar(&destination)
     } else {
         None
     };
 
+    // Prefer a local development build when one is available. The local build
+    // must not be rejected just because the public release has a higher version.
+    // Compare the actual JAR bytes: two builds can share a version string while
+    // containing different bytecode, including a corrected reobfuscated method.
     if let Ok(local_jar) = find_built_alphastaffmod_jar() {
         if let Some(local_version) = alphastaffmod_version_from_jar(&local_jar) {
-            if !version_is_newer(&manifest.version, &local_version) {
-                let local_is_already_installed = installed_jar_version
-                    .as_deref()
-                    .map(|version| parse_version_parts(version) == parse_version_parts(&local_version))
-                    .unwrap_or(false);
+            let local_is_already_installed = destination.is_file()
+                && fs::read(&destination).ok() == fs::read(&local_jar).ok();
 
-                if !local_is_already_installed {
-                    let temporary_destination = mods_dir.join("AlphaClient.jar.new");
-                    fs::copy(&local_jar, &temporary_destination)
-                        .map_err(|error| format!(
-                            "Could not stage local AlphaClient build from {}: {}",
-                            local_jar.display(),
-                            error
-                        ))?;
-                    if destination.exists() {
-                        fs::remove_file(&destination)
-                            .map_err(|error| format!("Could not replace existing AlphaClient JAR: {}", error))?;
-                    }
-                    fs::rename(&temporary_destination, &destination)
-                        .map_err(|error| format!("Could not install local AlphaClient build: {}", error))?;
+            if !local_is_already_installed {
+                let temporary_destination = mods_dir.join("AlphaClient.jar.new");
+                fs::copy(&local_jar, &temporary_destination)
+                    .map_err(|error| format!(
+                        "Could not stage local AlphaClient build from {}: {}",
+                        local_jar.display(),
+                        error
+                    ))?;
+                if destination.exists() {
+                    fs::remove_file(&destination)
+                        .map_err(|error| format!("Could not replace existing AlphaClient JAR: {}", error))?;
                 }
-
-                // Remove legacy copies so Forge cannot load an older build alongside AlphaClient.jar.
-                if let Ok(entries) = fs::read_dir(&mods_dir) {
-                    for entry in entries.flatten() {
-                        let path = entry.path();
-                        if path == destination
-                            || path.extension().and_then(|ext| ext.to_str())
-                                .map(|ext| !ext.eq_ignore_ascii_case("jar"))
-                                .unwrap_or(true)
-                        {
-                            continue;
-                        }
-                        if jar_is_alphastaffmod(&path) {
-                            let _ = fs::remove_file(path);
-                        }
-                    }
-                }
-
-                write_installed_alphaclient_version(&root, &local_version)?;
-                return Ok(format!(
-                    "Using local AlphaClient build {} from {}.",
-                    local_version,
-                    local_jar.display()
-                ));
+                fs::rename(&temporary_destination, &destination)
+                    .map_err(|error| format!("Could not install local AlphaClient build: {}", error))?;
             }
+
+            // Remove legacy copies so Forge cannot load an older build alongside AlphaClient.jar.
+            if let Ok(entries) = fs::read_dir(&mods_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path == destination
+                        || path.extension().and_then(|ext| ext.to_str())
+                            .map(|ext| !ext.eq_ignore_ascii_case("jar"))
+                            .unwrap_or(true)
+                    {
+                        continue;
+                    }
+                    if jar_is_alphastaffmod(&path) {
+                        let _ = fs::remove_file(path);
+                    }
+                }
+            }
+
+            write_installed_alphaclient_version(&root, &local_version)?;
+            return Ok(format!(
+                "Using local AlphaClient build {} from {}.",
+                local_version,
+                local_jar.display()
+            ));
         }
     }
 
@@ -4495,6 +4567,150 @@ fn update_alphaclient_internal()
     Ok(format!("AlphaClient updated from {} to {}.", current_version, manifest.version))
 }
 
+
+// ============================================================
+// OPTIFINE INSTALLATION
+// ============================================================
+
+// Download OptiFine from its official host and install it as a Forge mod.
+// OptiFine is not bundled with AlphaClient or redistributed by AlphaLauncher.
+fn ensure_optifine_installed(
+    root: &Path,
+    client: &Client
+) -> Result<(), String>
+{
+    let mods_dir = root.join("mods");
+    fs::create_dir_all(&mods_dir).map_err(|error| {
+        format!("Could not create mods directory: {}", error)
+    })?;
+
+    let installed = mods_dir.join(OPTIFINE_FILE_NAME);
+    if installed.is_file() && is_valid_optifine_jar(&installed) {
+        return Ok(());
+    }
+
+    let download_dir = root.join("downloads");
+    fs::create_dir_all(&download_dir).map_err(|error| {
+        format!("Could not create download directory: {}", error)
+    })?;
+    let temporary = download_dir.join(format!("{}.part", OPTIFINE_FILE_NAME));
+    let _ = fs::remove_file(&temporary);
+
+    if let Err(error) = download_optifine_from_official_page(client, &temporary) {
+        let _ = fs::remove_file(&temporary);
+        let _ = open_browser("https://optifine.net/downloads");
+        return Err(format!(
+            "OptiFine could not be downloaded automatically from its official website.              The official download page has been opened. Download OptiFine 1.8.9 HD U M5,              then place {} in {} and press Play again. Details: {}",
+            OPTIFINE_FILE_NAME,
+            mods_dir.display(),
+            error
+        ));
+    }
+
+    if !is_valid_optifine_jar(&temporary) {
+        let _ = fs::remove_file(&temporary);
+        let _ = open_browser("https://optifine.net/downloads");
+        return Err(
+            "The official OptiFine download did not return a valid JAR. The official download page has been opened; download OptiFine 1.8.9 HD U M5 and place the JAR in the AlphaClient mods folder, then press Play again.".to_string()
+        );
+    }
+
+    if installed.exists() {
+        fs::remove_file(&installed).map_err(|error| {
+            format!("Could not replace the invalid OptiFine file: {}", error)
+        })?;
+    }
+    fs::rename(&temporary, &installed).or_else(|_| {
+        fs::copy(&temporary, &installed).map(|_| ())
+    }).map_err(|error| {
+        format!("Could not install OptiFine into the mods folder: {}", error)
+    })?;
+    let _ = fs::remove_file(&temporary);
+
+    Ok(())
+}
+
+fn download_optifine_from_official_page(
+    client: &Client,
+    destination: &Path
+) -> Result<(), String>
+{
+    // OptiFine's download endpoint requires a short-lived token generated by
+    // its download page. Fetch the page first and follow its current Download link.
+    let page = client.get(OPTIFINE_DOWNLOAD_PAGE_URL)
+        .header("Referer", "https://optifine.net/downloads")
+        .send()
+        .map_err(|error| format!("Could not open official OptiFine download page: {}", error))?;
+
+    if !page.status().is_success() {
+        return Err(format!("Official OptiFine page returned HTTP {}.", page.status()));
+    }
+
+    let html = page.text()
+        .map_err(|error| format!("Could not read official OptiFine download page: {}", error))?;
+
+    // The official page's link markup can use either quote style and HTML-escaped
+    // query separators. Search the page itself rather than assuming href="...".
+    let needle = "downloadx?f=OptiFine_1.8.9_HD_U_M5.jar";
+    let mut download_url: Option<String> = None;
+    if let Some(position) = html.find(needle) {
+        let link_start = html[..position].rfind(['"', '\''])
+            .map(|index| index + 1)
+            .unwrap_or(position);
+        let candidate = &html[link_start..];
+        let link_end = candidate.find(['"', '\'', '<', ' ', '\r', '\n'])
+            .unwrap_or(candidate.len());
+        let href = candidate[..link_end].replace("&amp;", "&");
+        let href = if href.starts_with("http://") || href.starts_with("https://") {
+            href
+        } else {
+            Url::parse(OPTIFINE_DOWNLOAD_PAGE_URL)
+                .and_then(|base| base.join(&href))
+                .map_err(|error| format!("Invalid official OptiFine download link: {}", error))?
+                .to_string()
+        };
+        download_url = Some(href);
+    }
+
+    let url = download_url.ok_or_else(|| {
+        "The official OptiFine page did not provide its current download link. The download may be temporarily unavailable.".to_string()
+    })?;
+
+    let mut response = client.get(&url)
+        .header("Referer", OPTIFINE_DOWNLOAD_PAGE_URL)
+        .send()
+        .map_err(|error| format!("OptiFine JAR download request failed: {}", error))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Official OptiFine download returned HTTP {}.", response.status()));
+    }
+
+    let mut file = File::create(destination)
+        .map_err(|error| format!("Could not create temporary OptiFine file: {}", error))?;
+    std::io::copy(&mut response, &mut file)
+        .map_err(|error| format!("Could not save OptiFine download: {}", error))?;
+    file.flush()
+        .map_err(|error| format!("Could not finish saving OptiFine download: {}", error))?;
+
+    Ok(())
+}
+
+fn is_valid_optifine_jar(path: &Path) -> bool {
+    let file = match File::open(path) {
+        Ok(file) => file,
+        Err(_) => return false,
+    };
+    let mut archive = match ZipArchive::new(file) {
+        Ok(archive) => archive,
+        Err(_) => return false,
+    };
+    (0..archive.len()).any(|index| {
+        archive.by_index(index)
+            .map(|entry| entry.name().starts_with("optifine/"))
+            .unwrap_or(false)
+    })
+}
+
 // ============================================================
 // INSTALLATION
 // ============================================================
@@ -4510,6 +4726,8 @@ fn install_alphaclient_internal()
 
     let client =
         http_client()?;
+
+    ensure_optifine_installed(&root, &client)?;
 
     download_minecraft_1_8_9(
         &root,
@@ -4678,7 +4896,8 @@ async fn launch_alphaclient() -> Result<String, String> {
 
 #[tauri::command]
 async fn launch_partner_server() -> Result<String, String> {
-    launch_alphaclient_for_server(Some("Alpha.Rip".to_string())).await
+    // Start at the Minecraft main menu; let the player choose when to join Alpha.rip.
+    launch_alphaclient_for_server(None).await
 }
 
 async fn launch_alphaclient_for_server(server: Option<String>)
@@ -4897,15 +5116,8 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                     })
                     .collect::<Vec<_>>();
 
-            // Optional direct-connect target used only by the Partner Server button.
-            let mut game_arguments = game_arguments;
-            if let Some(server_address) = server.as_deref() {
-                game_arguments.push("--server".to_string());
-                game_arguments.push(server_address.to_string());
-                game_arguments.push("--port".to_string());
-                game_arguments.push("25565".to_string());
-            }
-
+            // Partner launches pass a JVM property instead of Minecraft's early --server arguments.
+            // AlphaClient waits until its main menu is loaded before starting the connection.
             let mut command =
                 Command::new(
                     &java
@@ -4920,7 +5132,13 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                         "-Djava.library.path={}",
                         natives_path
                     )
-                )
+                );
+
+            if let Some(server_address) = server.as_deref() {
+                command.arg(format!("-Dalphaclient.partnerServer={}", server_address));
+            }
+
+            command
                 .arg("-cp")
                 .arg(classpath)
                 .arg(main_class)
