@@ -258,6 +258,7 @@ function LauncherApp() {
   }, []);
   const [page, setPage] = useState<Page>("Home");
   const [chatTargetFriendId, setChatTargetFriendId] = useState<string | null>(null);
+  const [chatProfileTargetId, setChatProfileTargetId] = useState<string | null>(null);
   const [communityLoginRequested, setCommunityLoginRequested] = useState(false);
   const [alphaAuthModalOpen, setAlphaAuthModalOpen] = useState(false);
   const [openProfileEditor, setOpenProfileEditor] = useState(false);
@@ -1243,9 +1244,9 @@ console.error("Developer permission check failed:", errorMessage);
 
           {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
-          {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} onOpenChat={(friendId) => { setChatTargetFriendId(friendId); navigate("Chats"); }} />}
+          {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} onOpenChat={(friendId) => { setChatTargetFriendId(friendId); navigate("Chats"); }} initialProfileId={chatProfileTargetId} onInitialProfileHandled={() => setChatProfileTargetId(null)} />}
 
-          {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} initialFriendId={chatTargetFriendId} onInitialFriendHandled={() => setChatTargetFriendId(null)} />}
+          {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} initialFriendId={chatTargetFriendId} onInitialFriendHandled={() => setChatTargetFriendId(null)} onOpenProfile={(profileId) => { setChatProfileTargetId(profileId); navigate("Friends"); }} />}
 
 
           {page === "Developer" && (
