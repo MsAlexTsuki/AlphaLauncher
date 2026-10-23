@@ -7,6 +7,7 @@ import PrivateChatPanel from "./PrivateChatPanel";
 import InboxButton from "./InboxButton";
 import RankPermissionsManager from "./RankPermissionsManager";
 import ClientModPermissionsManager from "./ClientModPermissionsManager";
+import DeveloperAccountTools from "./DeveloperAccountTools";
 import ModsPage from "./ModsPage";
 import "./App.css";
 
@@ -3684,6 +3685,10 @@ type DeveloperTool =
   | "Rank Management"
   | "Mods"
   | "Permission Explorer"
+  | "Rank Inspector"
+  | "Verification"
+  | "Module Inspector"
+  | "Permission Inspector"
   | "Audit Timeline"
   | "Change Review"
   | "Development Sandbox"
@@ -3708,6 +3713,26 @@ const developerTools: {
   {
     name: "Permission Explorer",
     description: "Explore permissions and access rules.",
+    icon: "◇",
+  },
+  {
+    name: "Rank Inspector",
+    description: "Inspect another Alpha account and its assigned ranks.",
+    icon: "♙",
+  },
+  {
+    name: "Verification",
+    description: "Review and manage another Alpha account’s verification status.",
+    icon: "✓",
+  },
+  {
+    name: "Module Inspector",
+    description: "Inspect module access and the source of each module permission.",
+    icon: "▦",
+  },
+  {
+    name: "Permission Inspector",
+    description: "Inspect effective account permissions and their sources.",
     icon: "◇",
   },
   {
@@ -4101,6 +4126,10 @@ function DeveloperPage({
           <div className="developer-tool-content">
             {developerAuthorized && activeTool === "Rank Management" && <RankManagement />}
             {developerAuthorized && activeTool === "Mods" && <ClientModPermissionsManager />}
+            {developerAuthorized && activeTool === "Rank Inspector" && <DeveloperAccountTools mode="rank" />}
+            {developerAuthorized && activeTool === "Verification" && <DeveloperAccountTools mode="verification" />}
+            {developerAuthorized && activeTool === "Module Inspector" && <DeveloperAccountTools mode="module" />}
+            {developerAuthorized && activeTool === "Permission Inspector" && <DeveloperAccountTools mode="permission" />}
 
             {developerAuthorized && activeTool === "Permission Explorer" &&
               renderPlaceholder(
