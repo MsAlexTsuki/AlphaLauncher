@@ -128,17 +128,12 @@ export default function DeveloperAccountTools({ mode }: { mode: InspectorMode })
         ? data.accounts.filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
         : [];
       setAccounts(usernames);
-      if (selectedUsername && !usernames.includes(selectedUsername)) {
-        setSelectedUsername("");
-        setAccount(null);
-        setPermissions([]);
-      }
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
       setLoadingAccounts(false);
     }
-  }, [invokeFounderAction, selectedUsername]);
+  }, [invokeFounderAction]);
 
   const inspectAccount = useCallback(async (username: string) => {
     setSelectedUsername(username);
@@ -173,8 +168,8 @@ export default function DeveloperAccountTools({ mode }: { mode: InspectorMode })
     setMessage("");
     try {
       await invokeFounderAction("set_verification", { username: selectedUsername, verified });
-      setMessage(verified ? `${selectedUsername} is now verified.` : `Verification removed for ${selectedUsername}.`);
       await inspectAccount(selectedUsername);
+      setMessage(verified ? `${selectedUsername} is now verified.` : `Verification removed for ${selectedUsername}.`);
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
