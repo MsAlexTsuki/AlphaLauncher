@@ -8336,3 +8336,26 @@ button:not(:disabled):active {
   background: #777b86;
   background-clip: padding-box;
 }
+
+
+/* Player Permission combines rank-style folder navigation with timed per-module access. */
+.player-permission-player-select {
+  margin-top: 10px;
+}
+.player-module-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.player-module-actions .small-button {
+  min-width: 72px;
+}
+@media (max-width: 700px) {
+  .player-module-actions {
+    width: 100%;
+  }
+  .player-module-actions .small-button {
+    flex: 1;
+  }
+}
