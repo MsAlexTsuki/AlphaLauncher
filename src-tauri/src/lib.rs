@@ -5517,6 +5517,122 @@ async fn install_alphaclient()
 }
 
 
+
+#[derive(Clone, Debug, Serialize)]
+struct LauncherMod {
+    file_name: String,
+    enabled: bool,
+    is_alphaclient: bool,
+    size_bytes: u64,
+}
+
+fn launcher_mods_directory() -> Result<PathBuf, String> {
+    Ok(alpha_client_directory()?.join("mods"))
+}
+
+#[tauri::command]
+fn list_launcher_mods() -> Result<Vec<LauncherMod>, String> {
+    let mods_dir = launcher_mods_directory()?;
+    let disabled_dir = mods_dir.parent()
+        .ok_or_else(|| "Could not determine the AlphaClient directory.".to_string())?
+        .join("mods-disabled");
+
+    fs::create_dir_all(&mods_dir)
+        .map_err(|error| format!("Could not open mods folder: {}", error))?;
+    fs::create_dir_all(&disabled_dir)
+        .map_err(|error| format!("Could not create disabled mods folder: {}", error))?;
+
+    let mut mods = Vec::<LauncherMod>::new();
+    for (directory, enabled) in [(&mods_dir, true), (&disabled_dir, false)] {
+        let entries = fs::read_dir(directory)
+            .map_err(|error| format!("Could not read {}: {}", directory.display(), error))?;
+        for entry in entries {
+            let entry = entry.map_err(|error| format!("Could not read a mod entry: {}", error))?;
+            let path = entry.path();
+            if !path.is_file()
+                || path.extension().and_then(|ext| ext.to_str())
+                    .map(|ext| ext.eq_ignore_ascii_case("jar")) != Some(true)
+            {
+                continue;
+            }
+            let file_name = match path.file_name().and_then(|name| name.to_str()) {
+                Some(name) => name.to_string(),
+                None => continue,
+            };
+            let metadata = fs::metadata(&path)
+                .map_err(|error| format!("Could not read {}: {}", file_name, error))?;
+            let is_alphaclient = file_name.eq_ignore_ascii_case(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME);
+            mods.push(LauncherMod {
+                file_name,
+                enabled: is_alphaclient || enabled,
+                is_alphaclient,
+                size_bytes: metadata.len(),
+            });
+        }
+    }
+
+    mods.sort_by(|a, b| {
+        b.is_alphaclient.cmp(&a.is_alphaclient)
+            .then_with(|| a.file_name.to_lowercase().cmp(&b.file_name.to_lowercase()))
+    });
+    Ok(mods)
+}
+
+#[tauri::command]
+fn set_launcher_mod_enabled(file_name: String, enabled: bool) -> Result<(), String> {
+    let file_path = Path::new(&file_name);
+    if file_path.file_name().and_then(|name| name.to_str()) != Some(file_name.as_str())
+        || file_path.extension().and_then(|ext| ext.to_str())
+            .map(|ext| !ext.eq_ignore_ascii_case("jar")) != Some(false)
+    {
+        return Err("Select a valid .jar mod file.".to_string());
+    }
+    if file_name.eq_ignore_ascii_case(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME) {
+        return Err("AlphaClient is managed by the launcher and cannot be disabled here.".to_string());
+    }
+
+    let mods_dir = launcher_mods_directory()?;
+    let parent = mods_dir.parent()
+        .ok_or_else(|| "Could not determine the AlphaClient directory.".to_string())?;
+    let disabled_dir = parent.join("mods-disabled");
+    fs::create_dir_all(&mods_dir)
+        .map_err(|error| format!("Could not create mods folder: {}", error))?;
+    fs::create_dir_all(&disabled_dir)
+        .map_err(|error| format!("Could not create disabled mods folder: {}", error))?;
+
+    let (source_dir, destination_dir) = if enabled {
+        (&disabled_dir, &mods_dir)
+    } else {
+        (&mods_dir, &disabled_dir)
+    };
+    let source = source_dir.join(&file_name);
+    let destination = destination_dir.join(&file_name);
+    if !source.is_file() {
+        return Err(format!("Could not find {} in the expected folder.", file_name));
+    }
+    if destination.exists() {
+        return Err(format!("A file named {} already exists in the destination folder.", file_name));
+    }
+    fs::rename(&source, &destination)
+        .map_err(|error| format!("Could not {} {}: {}", if enabled { "enable" } else { "disable" }, file_name, error))
+}
+
+#[tauri::command]
+fn open_launcher_mods_folder() -> Result<(), String> {
+    let mods_dir = launcher_mods_directory()?;
+    fs::create_dir_all(&mods_dir)
+        .map_err(|error| format!("Could not create mods folder: {}", error))?;
+
+    #[cfg(target_os = "windows")]
+    let result = Command::new("explorer").arg(&mods_dir).spawn();
+    #[cfg(target_os = "macos")]
+    let result = Command::new("open").arg(&mods_dir).spawn();
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    let result = Command::new("xdg-open").arg(&mods_dir).spawn();
+
+    result.map(|_| ()).map_err(|error| format!("Could not open mods folder: {}", error))
+}
+
 #[tauri::command]
 fn get_alphaclient_directory_path()
     -> Result<String, String>
@@ -5615,6 +5731,9 @@ pub fn run()
                 update_alphaclient,
                 install_alphaclient,
                 get_alphaclient_directory_path,
+                list_launcher_mods,
+                set_launcher_mod_enabled,
+                open_launcher_mods_folder,
                 start_microsoft_login,
                 logout_microsoft,
                 get_microsoft_account,
