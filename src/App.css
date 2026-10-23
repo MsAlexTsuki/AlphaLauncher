@@ -8184,3 +8184,128 @@ button:not(:disabled):active {
 .rank-client-folders-section {
   padding-top: 4px;
 }
+
+
+/* Founder-only account inspection tools */
+.developer-account-inspector-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.28fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+.developer-account-list,
+.developer-account-inspector-detail {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.developer-account-list-items,
+.developer-inspected-permission-list {
+  display: grid;
+  gap: 8px;
+}
+.developer-account-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px;
+  text-align: left;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.developer-account-list-item > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.developer-account-list-item strong,
+.developer-account-list-item small {
+  overflow-wrap: anywhere;
+}
+.developer-account-list-item small {
+  color: var(--text-muted, #a5a5a5);
+  font-size: 0.78rem;
+}
+.developer-account-list-item.is-selected {
+  border-color: rgba(255, 200, 61, 0.58);
+  background: rgba(255, 200, 61, 0.09);
+}
+.developer-account-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 200, 61, 0.13);
+  color: #ffc83d;
+  font-weight: 700;
+}
+.developer-account-empty {
+  display: grid;
+  min-height: 180px;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--text-muted, #a5a5a5);
+}
+.developer-verification-actions {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-top: 20px;
+}
+.developer-inspected-permissions {
+  margin-top: 18px;
+}
+.developer-inspected-permission-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.developer-permission-state {
+  flex: 0 0 auto;
+  min-width: 68px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.developer-permission-state.is-allowed {
+  color: #a5e6b0;
+  background: rgba(67, 190, 94, 0.12);
+}
+.developer-permission-state.is-denied {
+  color: #ffaaaa;
+  background: rgba(230, 76, 76, 0.12);
+}
+.developer-inspected-permission-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.developer-inspected-permission-copy small,
+.developer-inspected-permission-copy span {
+  color: var(--text-muted, #a5a5a5);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .developer-account-inspector-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
