@@ -1121,17 +1121,7 @@ console.error("Developer permission check failed:", errorMessage);
             {sidebarExpanded && (
               <div className="nav-partner">
                 <div className="nav-section-label">PARTNER</div>
-                <button
-                  type="button"
-                  className="partner-nav-item"
-                  onClick={() => void handlePlay(true)}
-                >
-                  <span className="nav-icon">◈</span>
-                  <span className="partner-nav-content">
-                    <strong>Alpha.rip</strong>
-                    <small>Partner Server · Join alpha.rip</small>
-                  </span>
-                </button>
+
               </div>
             )}
           </nav>
