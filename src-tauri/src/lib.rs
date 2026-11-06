@@ -28,6 +28,8 @@ use std::{
     fs,
     fs::File,
     io::{
+        BufRead,
+        BufReader,
         Read,
         Write,
     },
@@ -145,11 +147,39 @@ const MINECRAFT_PROFILE_URL: &str =
 // GLOBAL AUTH STATE
 // ============================================================
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct MicrosoftAccount {
     name: String,
     email: String,
+    #[serde(default)]
     uuid: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct AccountSwitchRequest {
+    secret: String,
+    email: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AccountSwitchResponse {
+    name: String,
+    email: String,
+    uuid: String,
+    access_token: String,
+}
+
+#[derive(Clone)]
+struct MicrosoftAuthSnapshot {
+    account: Option<MicrosoftAccount>,
+    microsoft_access_token: Option<String>,
+    microsoft_refresh_token: Option<String>,
+    xbox_live_token: Option<String>,
+    xsts_token: Option<String>,
+    xbox_user_hash: Option<String>,
+    minecraft_access_token: Option<String>,
+    minecraft_uuid: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -478,53 +508,38 @@ struct MinecraftEntitlement {
 // ============================================================
 
 fn clear_microsoft_auth_state() {
-    if let Ok(mut value) =
-        microsoft_account_state().lock()
-    {
-        *value = None;
-    }
+    if let Ok(mut value) = microsoft_account_state().lock() { *value = None; }
+    if let Ok(mut value) = microsoft_access_token_state().lock() { *value = None; }
+    if let Ok(mut value) = microsoft_refresh_token_state().lock() { *value = None; }
+    if let Ok(mut value) = xbox_live_token_state().lock() { *value = None; }
+    if let Ok(mut value) = xsts_token_state().lock() { *value = None; }
+    if let Ok(mut value) = xbox_user_hash_state().lock() { *value = None; }
+    if let Ok(mut value) = minecraft_access_token_state().lock() { *value = None; }
+    if let Ok(mut value) = minecraft_uuid_state().lock() { *value = None; }
+}
 
-    if let Ok(mut value) =
-        microsoft_access_token_state().lock()
-    {
-        *value = None;
+fn capture_microsoft_auth_state() -> MicrosoftAuthSnapshot {
+    MicrosoftAuthSnapshot {
+        account: microsoft_account_state().lock().ok().and_then(|value| value.clone()),
+        microsoft_access_token: microsoft_access_token_state().lock().ok().and_then(|value| value.clone()),
+        microsoft_refresh_token: microsoft_refresh_token_state().lock().ok().and_then(|value| value.clone()),
+        xbox_live_token: xbox_live_token_state().lock().ok().and_then(|value| value.clone()),
+        xsts_token: xsts_token_state().lock().ok().and_then(|value| value.clone()),
+        xbox_user_hash: xbox_user_hash_state().lock().ok().and_then(|value| value.clone()),
+        minecraft_access_token: minecraft_access_token_state().lock().ok().and_then(|value| value.clone()),
+        minecraft_uuid: minecraft_uuid_state().lock().ok().and_then(|value| value.clone()),
     }
+}
 
-    if let Ok(mut value) =
-        microsoft_refresh_token_state().lock()
-    {
-        *value = None;
-    }
-
-    if let Ok(mut value) =
-        xbox_live_token_state().lock()
-    {
-        *value = None;
-    }
-
-    if let Ok(mut value) =
-        xsts_token_state().lock()
-    {
-        *value = None;
-    }
-
-    if let Ok(mut value) =
-        xbox_user_hash_state().lock()
-    {
-        *value = None;
-    }
-
-    if let Ok(mut value) =
-        minecraft_access_token_state().lock()
-    {
-        *value = None;
-    }
-
-    if let Ok(mut value) =
-        minecraft_uuid_state().lock()
-    {
-        *value = None;
-    }
+fn restore_microsoft_auth_state(snapshot: MicrosoftAuthSnapshot) {
+    if let Ok(mut value) = microsoft_account_state().lock() { *value = snapshot.account; }
+    if let Ok(mut value) = microsoft_access_token_state().lock() { *value = snapshot.microsoft_access_token; }
+    if let Ok(mut value) = microsoft_refresh_token_state().lock() { *value = snapshot.microsoft_refresh_token; }
+    if let Ok(mut value) = xbox_live_token_state().lock() { *value = snapshot.xbox_live_token; }
+    if let Ok(mut value) = xsts_token_state().lock() { *value = snapshot.xsts_token; }
+    if let Ok(mut value) = xbox_user_hash_state().lock() { *value = snapshot.xbox_user_hash; }
+    if let Ok(mut value) = minecraft_access_token_state().lock() { *value = snapshot.minecraft_access_token; }
+    if let Ok(mut value) = minecraft_uuid_state().lock() { *value = snapshot.minecraft_uuid; }
 }
 
 
@@ -541,7 +556,7 @@ async fn start_microsoft_login(login_hint: Option<String>)
     }
 
     tauri::async_runtime::spawn_blocking(
-        move || perform_microsoft_login(login_hint)
+        move || perform_microsoft_login(login_hint, false)
     )
     .await
     .map_err(|error| {
@@ -588,16 +603,147 @@ fn get_microsoft_account()
 
 
 // ============================================================
+// LOCAL ACCOUNT-SWITCH BRIDGE
+// ============================================================
+
+fn create_account_switch_listener() -> Result<(TcpListener, u16, String), String> {
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .map_err(|error| format!("Could not start the local account-switch bridge: {}", error))?;
+    listener.set_nonblocking(true)
+        .map_err(|error| format!("Could not configure the local account-switch bridge: {}", error))?;
+    let port = listener.local_addr()
+        .map_err(|error| format!("Could not read the local account-switch port: {}", error))?
+        .port();
+    Ok((listener, port, random_string(64)))
+}
+
+fn serve_account_switch_requests(listener: TcpListener, secret: String) {
+    while minecraft_process_is_running() {
+        match listener.accept() {
+            Ok((stream, _)) => handle_account_switch_connection(stream, &secret),
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                std::thread::sleep(Duration::from_millis(200));
+            }
+            Err(_) => break,
+        }
+    }
+}
+
+fn handle_account_switch_connection(mut stream: TcpStream, secret: &str) {
+    let result = (|| -> Result<AccountSwitchResponse, String> {
+        stream.set_read_timeout(Some(Duration::from_secs(15)))
+            .map_err(|error| format!("Could not configure the account-switch request: {}", error))?;
+        let cloned = stream.try_clone()
+            .map_err(|error| format!("Could not read the account-switch request: {}", error))?;
+        let mut reader = BufReader::new(cloned);
+
+        let mut request_line = String::new();
+        reader.read_line(&mut request_line)
+            .map_err(|error| format!("Could not read the account-switch request: {}", error))?;
+        if !request_line.starts_with("POST /switch-account ") {
+            return Err("Unsupported account-switch request.".to_string());
+        }
+
+        let mut content_length = None;
+        let mut header_bytes = request_line.len();
+        loop {
+            let mut header = String::new();
+            let count = reader.read_line(&mut header)
+                .map_err(|error| format!("Could not read account-switch headers: {}", error))?;
+            header_bytes += count;
+            if header_bytes > 8192 {
+                return Err("Account-switch request headers are too large.".to_string());
+            }
+            if count == 0 || header == "\r\n" || header == "\n" {
+                break;
+            }
+            if let Some((name, value)) = header.split_once(':') {
+                if name.trim().eq_ignore_ascii_case("content-length") {
+                    content_length = value.trim().parse::<usize>().ok();
+                }
+            }
+        }
+
+        let length = content_length.ok_or_else(|| "Account-switch request is missing its content length.".to_string())?;
+        if length == 0 || length > 4096 {
+            return Err("Account-switch request body has an invalid size.".to_string());
+        }
+
+        let mut body = vec![0u8; length];
+        reader.read_exact(&mut body)
+            .map_err(|error| format!("Could not read account-switch request body: {}", error))?;
+        let request: AccountSwitchRequest = serde_json::from_slice(&body)
+            .map_err(|_| "Account-switch request was not valid JSON.".to_string())?;
+
+        if request.secret != secret {
+            return Err("The account-switch request was not authorized.".to_string());
+        }
+
+        let email = request.email.trim();
+        if email.is_empty() || email.len() > 320 {
+            return Err("Select a valid saved Microsoft account.".to_string());
+        }
+
+        let account = perform_microsoft_login(Some(email.to_string()), true)?;
+        let access_token = minecraft_access_token_state().lock()
+            .map_err(|_| "Could not access the new Minecraft session.".to_string())?
+            .clone()
+            .ok_or_else(|| "Microsoft authentication did not return a Minecraft session token.".to_string())?;
+
+        Ok(AccountSwitchResponse {
+            name: account.name,
+            email: account.email,
+            uuid: account.uuid,
+            access_token,
+        })
+    })();
+
+    let (status, response_body) = match result {
+        Ok(response) => (
+            "200 OK",
+            serde_json::to_string(&response).unwrap_or_else(|_| "{}".to_string())
+        ),
+        Err(error) => (
+            "400 Bad Request",
+            serde_json::json!({ "error": error }).to_string()
+        ),
+    };
+
+    let response = format!(
+        "HTTP/1.1 {}\r\nContent-Type: application/json; charset=utf-8\r\nCache-Control: no-store\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{}",
+        status,
+        response_body.as_bytes().len(),
+        response_body
+    );
+    let _ = stream.write_all(response.as_bytes());
+    let _ = stream.flush();
+}
+
+// ============================================================
 // MICROSOFT LOGIN
 // ============================================================
 
-fn perform_microsoft_login(login_hint: Option<String>)
-    -> Result<MicrosoftAccount, String>
-{
-    if minecraft_process_is_running() {
+fn perform_microsoft_login(
+    login_hint: Option<String>,
+    allow_minecraft_running: bool
+) -> Result<MicrosoftAccount, String> {
+    if !allow_minecraft_running && minecraft_process_is_running() {
         return Err(minecraft_running_error());
     }
 
+    let previous_state = capture_microsoft_auth_state();
+    match perform_microsoft_login_inner(login_hint) {
+        Ok(account) => Ok(account),
+        Err(error) => {
+            restore_microsoft_auth_state(previous_state);
+            Err(error)
+        }
+    }
+}
+
+fn perform_microsoft_login_inner(login_hint: Option<String>)
+    -> Result<MicrosoftAccount, String>
+{
     clear_microsoft_auth_state();
 
     // --------------------------------------------------------
@@ -4890,17 +5036,20 @@ fn greet(
 
 
 #[tauri::command]
-async fn launch_alphaclient() -> Result<String, String> {
-    launch_alphaclient_for_server(None).await
+async fn launch_alphaclient(saved_accounts: Vec<MicrosoftAccount>) -> Result<String, String> {
+    launch_alphaclient_for_server(None, saved_accounts).await
 }
 
 #[tauri::command]
-async fn launch_partner_server() -> Result<String, String> {
+async fn launch_partner_server(saved_accounts: Vec<MicrosoftAccount>) -> Result<String, String> {
     // Start at the Minecraft main menu; let the player choose when to join Alpha.rip.
-    launch_alphaclient_for_server(None).await
+    launch_alphaclient_for_server(None, saved_accounts).await
 }
 
-async fn launch_alphaclient_for_server(server: Option<String>)
+async fn launch_alphaclient_for_server(
+    server: Option<String>,
+    saved_accounts: Vec<MicrosoftAccount>
+)
     -> Result<String, String>
 {
     tauri::async_runtime::spawn_blocking(
@@ -4943,6 +5092,18 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                         "Minecraft-UUID ontbreekt. Log opnieuw in."
                             .to_string()
                     })?;
+
+            let mut client_accounts = saved_accounts;
+            if !client_accounts.iter().any(|saved| {
+                saved.email.eq_ignore_ascii_case(&account.email)
+                    || (!saved.uuid.is_empty() && saved.uuid.eq_ignore_ascii_case(&account.uuid))
+            }) {
+                client_accounts.insert(0, account.clone());
+            }
+            client_accounts.truncate(5);
+            let saved_accounts_json = serde_json::to_vec(&client_accounts)
+                .map_err(|error| format!("Could not prepare saved account metadata: {}", error))?;
+            let saved_accounts_encoded = URL_SAFE_NO_PAD.encode(saved_accounts_json);
 
             install_alphaclient_internal()?;
             update_alphaclient_internal()?;
@@ -5118,6 +5279,9 @@ async fn launch_alphaclient_for_server(server: Option<String>)
 
             // Partner launches pass a JVM property instead of Minecraft's early --server arguments.
             // AlphaClient waits until its main menu is loaded before starting the connection.
+            let (account_switch_listener, account_switch_port, account_switch_secret) =
+                create_account_switch_listener()?;
+
             let mut command =
                 Command::new(
                     &java
@@ -5139,6 +5303,9 @@ async fn launch_alphaclient_for_server(server: Option<String>)
             }
 
             command
+                .arg(format!("-Dalphaclient.accountSwitchPort={}", account_switch_port))
+                .arg(format!("-Dalphaclient.accountSwitchSecret={}", account_switch_secret))
+                .arg(format!("-Dalphaclient.savedAccounts={}", saved_accounts_encoded))
                 .arg("-cp")
                 .arg(classpath)
                 .arg(main_class)
@@ -5156,6 +5323,9 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                     })?;
 
             track_minecraft_process(child)?;
+            std::thread::spawn(move || {
+                serve_account_switch_requests(account_switch_listener, account_switch_secret);
+            });
 
             Ok(
                 format!(
