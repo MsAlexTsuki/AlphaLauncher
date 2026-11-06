@@ -299,8 +299,25 @@ function LauncherApp() {
       try {
         const running = await invoke<boolean>("get_minecraft_process_status");
         if (!disposed) setIsMinecraftRunning(running);
+
+        if (running) {
+          const activeAccount = await invoke<MicrosoftAccount | null>("get_microsoft_account");
+          if (!disposed && activeAccount) {
+            setAccount(activeAccount);
+            setSavedAccounts((current) => {
+              const first = current[0];
+              if (first && first.name === activeAccount.name
+                  && first.email.toLowerCase() === activeAccount.email.toLowerCase()) {
+                return current;
+              }
+              return [activeAccount, ...current.filter((saved) =>
+                saved.email.toLowerCase() !== activeAccount.email.toLowerCase()
+              )].slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS);
+            });
+          }
+        }
       } catch (error) {
-        console.warn("Could not check Minecraft process status:", error);
+        console.warn("Could not refresh Minecraft account status:", error);
       }
     };
 
