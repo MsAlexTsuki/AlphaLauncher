@@ -838,6 +838,7 @@ console.error("Developer permission check failed:", errorMessage);
 
       const message = await invoke<string>(
         partnerServer ? "launch_partner_server" : "launch_alphaclient",
+        { savedAccounts },
       );
       const launchedVersion = updateInfo?.update_available
         ? updateInfo.latest_version
