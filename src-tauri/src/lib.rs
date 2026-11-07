@@ -67,7 +67,7 @@ const ALPHACLIENT_UPDATE_MANIFEST_ENV: &str = "ALPHACLIENT_UPDATE_MANIFEST_URL";
 
 const ALPHACLIENT_VERSION_FILE: &str = "alpha-client-version.json";
 const ALPHACLIENT_UPDATE_ZIP_NAME: &str = "alphaclient-update.jar";
-const ALPHACLIENT_GITHUB_RELEASES_URL: &str = "https://api.github.com/repos/MsAlexTsuki/AlphaClient/releases?per_page=20";
+const ALPHACLIENT_GITHUB_RELEASE_URL: &str = "https://api.github.com/repos/MsAlexTsuki/AlphaClient/releases/tags/Release";
 const ALPHACLIENT_OFFICIAL_MOD_JAR_NAME: &str = "AlphaClient.jar";
 const ALPHACLIENT_0_3_81_SHA256: &str = "fb2451cb5ce671a6f5b2f5229374ff1df02f0164eef83367d692f74cbb97fec2";
 
@@ -4322,8 +4322,8 @@ fn fetch_alpha_client_manifest()
 {
     let client = http_client()?;
 
-    // Keep support for a custom manifest, but use GitHub Releases by default so
-    // end users do not need to configure an environment variable.
+    // Keep support for a custom manifest. Otherwise, check the official
+    // stable Release tag directly instead of downloading the full release list.
     if let Some(url) = update_manifest_url() {
         return client
             .get(&url)
@@ -4335,86 +4335,126 @@ fn fetch_alpha_client_manifest()
             .map_err(|error| format!("Could not parse AlphaClient update manifest: {}", error));
     }
 
-    let releases = client
-        .get(ALPHACLIENT_GITHUB_RELEASES_URL)
-        .header("Accept", "application/vnd.github+json")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .send()
-        .map_err(|error| format!("Could not contact GitHub Releases: {}", error))?
-        .error_for_status()
-        .map_err(|error| format!("GitHub Releases returned an error: {}", error))?
-        .json::<Vec<Value>>()
-        .map_err(|error| format!("Could not parse GitHub Releases response: {}", error))?;
+    // GitHub can temporarily return 5xx/429 responses or time out.
+    // Retry transient failures up to three times with a short backoff.
+    let mut release: Option<Value> = None;
+    let mut last_error = String::new();
 
-    // GitHub orders releases by publication date, which may not match semantic
-    // version order. Pick the highest AlphaClient JAR version, not the first asset.
-    let mut latest: Option<(Vec<u64>, String, String, String, String)> = None;
+    for attempt in 0..3 {
+        let response = client
+            .get(ALPHACLIENT_GITHUB_RELEASE_URL)
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .send();
 
-    for release in &releases {
-        let assets = match release.get("assets").and_then(Value::as_array) {
-            Some(assets) => assets,
+        match response {
+            Ok(response) if response.status().is_success() => {
+                release = Some(
+                    response
+                        .json::<Value>()
+                        .map_err(|error| format!("Could not parse the official AlphaClient Release response: {}", error))?
+                );
+                break;
+            }
+            Ok(response) => {
+                let status = response.status();
+                last_error = format!("GitHub Release lookup returned HTTP {}.", status);
+                if !(status.is_server_error() || status.as_u16() == 429) || attempt == 2 {
+                    return Err(last_error);
+                }
+            }
+            Err(error) => {
+                last_error = format!("Could not contact the official AlphaClient GitHub Release: {}", error);
+                if attempt == 2 {
+                    return Err(last_error);
+                }
+            }
+        }
+
+        std::thread::sleep(Duration::from_secs((attempt + 1) as u64));
+    }
+
+    let release = release.ok_or_else(|| {
+        if last_error.is_empty() {
+            "Could not retrieve the official AlphaClient Release.".to_string()
+        } else {
+            last_error
+        }
+    })?;
+
+    let assets = release
+        .get("assets")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "The official AlphaClient Release does not contain an asset list.".to_string())?;
+    let changelog = release
+        .get("body")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+
+    // The stable Release tag contains the current distributable AlphaClient JAR.
+    // Select the highest semantic version if the release contains more than one JAR.
+    let mut latest: Option<(Vec<u64>, String, String, String)> = None;
+
+    for asset in assets {
+        let asset_name = asset.get("name").and_then(Value::as_str).unwrap_or("");
+        let version = asset_name
+            .strip_prefix("AlphaClient-")
+            .and_then(|name| name.strip_suffix(".jar"))
+            .or_else(|| {
+                asset_name
+                    .strip_prefix("alphaclient-")
+                    .and_then(|name| name.strip_suffix(".jar"))
+            });
+
+        let version = match version {
+            Some(version) if version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) => version,
+            _ => continue,
+        };
+        let parts = parse_version_parts(version);
+        if parts.is_empty() {
+            continue;
+        }
+
+        let download_url = match asset.get("browser_download_url").and_then(Value::as_str) {
+            Some(url) => url.to_string(),
             None => continue,
         };
-        let changelog = release.get("body").and_then(Value::as_str).unwrap_or("").to_string();
 
-        for asset in assets {
-            let asset_name = asset.get("name").and_then(Value::as_str).unwrap_or("");
-            let lower = asset_name.to_ascii_lowercase();
-            if !lower.starts_with("alphaclient-") || !lower.ends_with(".jar") {
-                continue;
-            }
+        let mut sha256 = asset
+            .get("digest")
+            .and_then(Value::as_str)
+            .and_then(|digest| digest.strip_prefix("sha256:"))
+            .unwrap_or("")
+            .to_string();
 
-            let version = asset_name
-                .strip_prefix("AlphaClient-")
-                .and_then(|name| name.strip_suffix(".jar"))
-                .or_else(|| asset_name.strip_prefix("alphaclient-").and_then(|name| name.strip_suffix(".jar")));
-            let version = match version {
-                Some(version) if version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) => version,
-                _ => continue,
-            };
-            let parts = parse_version_parts(version);
-            if parts.is_empty() {
-                continue;
-            }
+        // GitHub does not populate asset digests for every older release.
+        if sha256.is_empty() && version == "0.3.81" {
+            sha256 = ALPHACLIENT_0_3_81_SHA256.to_string();
+        }
 
-            let download_url = match asset.get("browser_download_url").and_then(Value::as_str) {
-                Some(url) => url.to_string(),
-                None => continue,
-            };
+        let should_replace = latest.as_ref()
+            .map(|(latest_parts, _, _, _)| {
+                let length = parts.len().max(latest_parts.len());
+                (0..length).find_map(|index| {
+                    let candidate = *parts.get(index).unwrap_or(&0);
+                    let current = *latest_parts.get(index).unwrap_or(&0);
+                    if candidate != current { Some(candidate > current) } else { None }
+                }).unwrap_or(false)
+            })
+            .unwrap_or(true);
 
-            let mut sha256 = asset.get("digest").and_then(Value::as_str)
-                .and_then(|digest| digest.strip_prefix("sha256:"))
-                .unwrap_or("")
-                .to_string();
-
-            // GitHub does not populate asset digests for every existing release.
-            if sha256.is_empty() && version == "0.3.81" {
-                sha256 = ALPHACLIENT_0_3_81_SHA256.to_string();
-            }
-
-            let should_replace = latest.as_ref()
-                .map(|(latest_parts, _, _, _, _)| {
-                    let length = parts.len().max(latest_parts.len());
-                    (0..length).find_map(|index| {
-                        let candidate = *parts.get(index).unwrap_or(&0);
-                        let current = *latest_parts.get(index).unwrap_or(&0);
-                        if candidate != current { Some(candidate > current) } else { None }
-                    }).unwrap_or(false)
-                })
-                .unwrap_or(true);
-
-            if should_replace {
-                latest = Some((parts, version.to_string(), download_url, sha256, changelog.clone()));
-            }
+        if should_replace {
+            latest = Some((parts, version.to_string(), download_url, sha256));
         }
     }
 
-    let (_, version, download_url, sha256, changelog) = latest
-        .ok_or_else(|| "No GitHub release containing an AlphaClient-<version>.jar asset was found.".to_string())?;
+    let (_, version, download_url, sha256) = latest
+        .ok_or_else(|| "The official AlphaClient Release does not contain an AlphaClient-<version>.jar asset.".to_string())?;
 
     if sha256.trim().len() != 64 || !sha256.trim().chars().all(|character| character.is_ascii_hexdigit()) {
         return Err(format!(
-            "GitHub release asset AlphaClient-{}.jar has no valid SHA-256 digest. Add a SHA-256 digest/checksum to the release before publishing updates.",
+            "GitHub release asset AlphaClient-{}.jar has no valid SHA-256 digest. Add a SHA-256 digest/checksum to the Release before publishing updates.",
             version
         ));
     }
