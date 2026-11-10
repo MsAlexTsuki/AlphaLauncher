@@ -310,7 +310,7 @@ fn minecraft_process_is_running()
 
 fn minecraft_running_error() -> String
 {
-    "Je kunt niet uitloggen of van account wisselen zolang Minecraft actief is. Sluit Minecraft eerst af.".to_string()
+    "You cannot sign out or switch accounts while Minecraft is running. Please close Minecraft first.".to_string()
 }
 
 
@@ -4205,7 +4205,7 @@ fn installed_alphaclient_version(
 {
     let mods_dir = root.join("mods");
     if !mods_dir.is_dir() {
-        return Ok("Niet geïnstalleerd".to_string());
+        return Ok("Not installed".to_string());
     }
 
     let mut jars = Vec::<PathBuf>::new();
@@ -4241,7 +4241,7 @@ fn installed_alphaclient_version(
     if found_alphastaffmod {
         Ok(alphaclient_version_from_marker(root).unwrap_or_else(|| "UNKNOWN".to_string()))
     } else {
-        Ok("Niet geïnstalleerd".to_string())
+        Ok("Not installed".to_string())
     }
 }
 
@@ -4482,7 +4482,7 @@ fn check_alphaclient_update_internal()
         AlphaClientUpdateInfo {
             current_version: current_version.clone(),
             latest_version: manifest.version.clone(),
-            update_available: current_version == "Niet geïnstalleerd"
+            update_available: current_version == "Not installed"
                 || current_version == "UNKNOWN"
                 || version_is_newer(
                     &manifest.version,
@@ -5116,7 +5116,7 @@ async fn launch_alphaclient_for_server(
                     })?
                     .clone()
                     .ok_or_else(|| {
-                        "Minecraft-sessietoken ontbreekt. Log opnieuw in."
+                        "Minecraft session token is missing. Please sign in again."
                             .to_string()
                     })?;
 
@@ -5129,7 +5129,7 @@ async fn launch_alphaclient_for_server(
                     })?
                     .clone()
                     .ok_or_else(|| {
-                        "Minecraft-UUID ontbreekt. Log opnieuw in."
+                        "Minecraft UUID is missing. Please sign in again."
                             .to_string()
                     })?;
 
@@ -5356,7 +5356,7 @@ async fn launch_alphaclient_for_server(
                     .spawn()
                     .map_err(|e| {
                         format!(
-                            "Minecraft kon niet worden gestart met Java {}: {}",
+                            "Minecraft could not be started with Java {}: {}",
                             java.display(),
                             e
                         )
@@ -5369,7 +5369,7 @@ async fn launch_alphaclient_for_server(
 
             Ok(
                 format!(
-                    "AlphaClient wordt gestart voor {}.",
+                    "AlphaClient is starting for {}.",
                     account.name
                 )
             )
@@ -5626,7 +5626,7 @@ fn start_offline_test_internal(
             .spawn()
             .map_err(|error| {
                 format!(
-                    "Minecraft kon niet worden gestart met Java {}: {}",
+                    "Minecraft could not be started with Java {}: {}",
                     java.display(),
                     error
                 )
@@ -5636,7 +5636,7 @@ fn start_offline_test_internal(
 
     Ok(
         format!(
-            "AlphaClient offline test wordt gestart voor {}.",
+            "AlphaClient offline test is starting for {}.",
             username
         )
     )
