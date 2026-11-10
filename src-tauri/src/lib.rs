@@ -5024,7 +5024,7 @@ fn install_alphaclient_internal()
         || !forge_json_path.exists()
     {
         return Err(
-            "Installatie onvolledig: Minecraft- of Forge-bestanden ontbreken."
+            "Installation incomplete: Minecraft or Forge files are missing."
                 .to_string()
         );
     }
@@ -5047,7 +5047,7 @@ fn install_alphaclient_internal()
 
     Ok(
         format!(
-            "AlphaClient {} base-installatie is gereed. Java: {}. Minecraft {} + Forge {}. Asset-index: {}. Clientmod: {}.",
+            "AlphaClient {} base installation is ready. Java: {}. Minecraft {} + Forge {}. Asset index: {}. Client mod: {}.",
             ALPHACLIENT_VERSION,
             java.display(),
             MINECRAFT_VERSION,
