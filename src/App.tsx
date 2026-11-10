@@ -997,8 +997,7 @@ console.error("Developer permission check failed:", errorMessage);
   };
 
   const handleNavigation = async (next: Page) => {
-    if (next === "Friends") {
-      try {
+    if (next === "Friends") {      try {
         const { data, error } = await supabase.auth.getUser();
         if (error || !data.user) {
           navigate("Friends");
@@ -1977,6 +1976,7 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
 
 function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
   const [profile, setProfile] = useState<EditableCommunityProfile | null>(null);
+  const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -1997,8 +1997,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
       const user = authData.user;
       if (!user) {
         setUserId(null);
-        setProfile(null);
-        return;
+        setProfile(null);        return;
       }
       setUserId(user.id);
       const { data, error: profileError } = await supabase
@@ -2997,8 +2996,7 @@ function HomePage(props: {
                         : `AlphaClient ${session.version}`}
                     </span>
                   </div>
-                </div>
-              ))
+                </div>              ))
             ) : (
               <div className="last-played">
                 <div className="minecraft-icon">A</div>
@@ -3997,8 +3995,7 @@ function DeveloperPage({
             )}
 
             <button
-              type="submit"
-              className="large-play-button developer-start-button"
+              type="submit"              className="large-play-button developer-start-button"
               disabled={developerSigningIn}
             >
               {developerSigningIn ? "SIGNING IN..." : "LOGIN TO DEVELOPER CENTER"}
