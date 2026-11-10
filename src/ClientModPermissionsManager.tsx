@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 
 type ModRecord = { mod_id: string; display_name: string; category_key: string; description: string; enabled: boolean };
@@ -32,15 +32,6 @@ const RANKS = [
   ["elite", "Elite"], ["rogue", "Rogue"], ["scout", "Scout"], ["the_nibbler", "The Nibbler"],
   ["media", "Media"], ["famous", "Famous"], ["partner", "Partner"], ["member", "Member"],
 ] as const;
-const CATEGORIES = [
-  ["general", "General"], ["staff", "Staff"], ["trial_moderator", "Trial Moderator"],
-  ["moderator", "Moderator"], ["senior_moderator", "Senior Moderator"], ["admin", "Admin"],
-  ["senior_admin", "Senior Admin"], ["management", "Management"], ["plat_admin", "Platform Admin"],
-  ["manager", "Manager"], ["owner", "Owner"], ["founder", "Founder"], ["beta", "Beta"],
-  ["donator", "Donator"], ["scout", "Scout"], ["rogue", "Rogue"], ["elite", "Elite"],
-  ["alpha", "Alpha"], ["alpha_plus", "Alpha+"], ["mod", "Mod"], ["sr_mod", "Sr Mod"],
-] as const;
-
 // Mirrors the actual StaffMods folder tree in AlphaClient. Management contains two subfolders.
 const CLIENT_RANK_FOLDERS = [
   { key: "general", label: "General", description: "Public client modules and Bhop." },
@@ -115,23 +106,7 @@ export default function ClientModPermissionsManager() {
 
   useEffect(() => { void load(""); }, []);
   const chosenPlayer = players.find(p => p.user_id === selectedPlayer);
-  const groupedMods = useMemo(() => {
-    const categoryKeys = Array.from(new Set(mods.map(mod => mod.category_key))).sort((a, b) => {
-      const aIndex = CATEGORIES.findIndex(([key]) => key === a);
-      const bIndex = CATEGORIES.findIndex(([key]) => key === b);
-      if (aIndex < 0 && bIndex < 0) return a.localeCompare(b);
-      if (aIndex < 0) return 1;
-      if (bIndex < 0) return -1;
-      return aIndex - bIndex;
-    });
-    return categoryKeys.map(key => ({
-      key,
-      label: CATEGORIES.find(([categoryKey]) => categoryKey === key)?.[1]
-        ?? key.split("_").map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" "),
-      mods: mods.filter(mod => mod.category_key === key),
-    }));
-  }, [mods]);
-
+  const selectedFolderKey: string = selectedRankFolder;
   // Keep the complete Rank Permission folder tree visible, including empty folders.
   const PLAYER_PERMISSION_FOLDERS = [
     ...CLIENT_RANK_FOLDERS.filter(folder => folder.key !== "founder"),
@@ -154,7 +129,7 @@ export default function ClientModPermissionsManager() {
     return permissions.find(permission => permission.rank_key === rankKey && permission.mod_id === mod.mod_id)?.enabled ?? false;
   };
   const getFolderEnabledCount = (folderKey: string) =>
-    getFolderMods(folderKey).filter(isModEnabledForSelectedRank).length;
+    getFolderMods(folderKey).filter(mod => isModEnabledForSelectedRank(mod)).length;
   const saveRankDefaults = async () => {
     setBusy(true); setError(""); setMessage("");
     try {
@@ -285,7 +260,7 @@ export default function ClientModPermissionsManager() {
             : folder.key === "donator"
               ? [...getFolderMods("donator"), ...DONATOR_SUBFOLDERS.flatMap(subfolder => getFolderMods(subfolder.key))]
               : folderMods;
-          const enabledCount = countMods.filter(isModEnabledForSelectedRank).length;
+          const enabledCount = countMods.filter(mod => isModEnabledForSelectedRank(mod)).length;
           const active = selectedRankFolder === folder.key;
           return <button type="button" key={folder.key}
             className={`rank-folder-card${active ? " is-selected" : ""}`}
@@ -302,9 +277,9 @@ export default function ClientModPermissionsManager() {
         <div className="rank-folder-grid" aria-label="Donator rank subfolders">
           {DONATOR_SUBFOLDERS.map(folder => {
             const folderMods = getFolderMods(folder.key);
-            const enabledCount = folderMods.filter(isModEnabledForSelectedRank).length;
-            return <button type="button" key={folder.key} className={`rank-folder-card${selectedRankFolder === folder.key ? " is-selected" : ""}`}
-              aria-pressed={selectedRankFolder === folder.key} onClick={() => setSelectedRankFolder(folder.key)}>
+            const enabledCount = folderMods.filter(mod => isModEnabledForSelectedRank(mod)).length;
+            return <button type="button" key={folder.key} className={`rank-folder-card${selectedFolderKey === folder.key ? " is-selected" : ""}`}
+              aria-pressed={selectedFolderKey === folder.key} onClick={() => setSelectedRankFolder(folder.key)}>
               <span className="rank-folder-icon" aria-hidden="true">▰</span>
               <span className="rank-folder-copy"><strong>{folder.label}</strong><small>{enabledCount} / {folderMods.length} mods enabled</small></span>
               <span className="rank-folder-chevron" aria-hidden="true">›</span>
@@ -317,8 +292,8 @@ export default function ClientModPermissionsManager() {
         <div className="rank-folder-grid" aria-label="Management subfolders">
           {MANAGEMENT_SUBFOLDERS.map(folder => {
             const folderMods = getFolderMods(folder.key);
-            const enabledCount = folderMods.filter(isModEnabledForSelectedRank).length;
-            return <button type="button" key={folder.key} className={`rank-folder-card${selectedRankFolder === folder.key ? " is-selected" : ""}`}
+            const enabledCount = folderMods.filter(mod => isModEnabledForSelectedRank(mod)).length;
+            return <button type="button" key={folder.key} className={`rank-folder-card${selectedFolderKey === folder.key ? " is-selected" : ""}`}
               onClick={() => setSelectedRankFolder(folder.key)}>
               <span className="rank-folder-icon" aria-hidden="true">▰</span>
               <span className="rank-folder-copy"><strong>{folder.label}</strong><small>{enabledCount} / {folderMods.length} mods enabled</small></span>
