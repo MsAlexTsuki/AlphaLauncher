@@ -1997,7 +1997,8 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
       const user = authData.user;
       if (!user) {
         setUserId(null);
-        setProfile(null);        return;
+        setProfile(null);
+        return;
       }
       setUserId(user.id);
       const { data, error: profileError } = await supabase
