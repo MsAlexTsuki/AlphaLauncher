@@ -5103,7 +5103,7 @@ async fn launch_alphaclient_for_server(
                     })?
                     .clone()
                     .ok_or_else(|| {
-                        "Log eerst in met je Microsoft-account voordat je AlphaClient start."
+                        "Please log in with your Microsoft account before starting AlphaClient."
                             .to_string()
                     })?;
 
