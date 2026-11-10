@@ -1976,7 +1976,6 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
 
 function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
   const [profile, setProfile] = useState<EditableCommunityProfile | null>(null);
-  const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -2015,7 +2014,6 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
       if (rankError) throw rankError;
       const loaded = { ...(data as EditableCommunityProfile), rank_keys: (rankRows ?? []).map((row: { rank_key: string }) => row.rank_key) };
       setProfile(loaded);
-      setDisplayName(loaded.username || "");
       setBio(loaded.bio || "");
       setAvatarUrl(loaded.avatar_url || null);
     } catch (e) {
@@ -2072,7 +2070,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
         .single();
       if (updateError) throw updateError;
       setProfile({ ...(data as EditableCommunityProfile), rank_keys: profile.rank_keys });
-      setDisplayName(data.username || profile.username); setBio(cleanBio); setAvatarUrl(nextAvatarUrl);
+      setBio(cleanBio); setAvatarUrl(nextAvatarUrl);
       setIsEditing(false);
       setSelectedAvatar(null);
       setMessage("Your profile has been saved.");
@@ -2085,7 +2083,6 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
 
   const resetChanges = () => {
     if (!profile) return;
-    setDisplayName(profile.username || "");
     setBio(profile.bio || "");
     setAvatarUrl(profile.avatar_url || null);
     setSelectedAvatar(null);
