@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { supabase } from "./lib/supabase";
 import PrivateChatPanel from "./PrivateChatPanel";
 import InboxButton from "./InboxButton";
@@ -122,13 +121,17 @@ function readSavedMicrosoftAccounts(): MicrosoftAccount[] {
     const parsed: unknown = JSON.parse(saved);
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter((entry): entry is MicrosoftAccount =>
-        entry !== null && typeof entry === "object" &&
-        typeof (entry as MicrosoftAccount).name === "string" &&
-        typeof (entry as MicrosoftAccount).email === "string" &&
-        ((entry as MicrosoftAccount).uuid === undefined ||
-          (typeof (entry as MicrosoftAccount).uuid === "string" && (entry as MicrosoftAccount).uuid.trim().length > 0))
-      )
+      .filter((entry): entry is MicrosoftAccount => {
+        if (
+          entry === null ||
+          typeof entry !== "object" ||
+          typeof (entry as MicrosoftAccount).name !== "string" ||
+          typeof (entry as MicrosoftAccount).email !== "string"
+        ) return false;
+
+        const uuid = (entry as MicrosoftAccount).uuid;
+        return uuid === undefined || (typeof uuid === "string" && uuid.trim().length > 0);
+      })
       .filter((entry, index, accounts) => accounts.findIndex((candidate) => candidate.email.toLowerCase() === entry.email.toLowerCase()) === index)
       .slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS);
   } catch {
@@ -1585,17 +1588,6 @@ function AlphaLogo() {
   );
 }
 
-function StartupLogo() {
-  return (
-    <img
-      className="startup-logo-image"
-      src="/alpha-client-startup-logo.png"
-      alt="AlphaClient"
-      draggable={false}
-    />
-  );
-}
-
 type EditableCommunityProfile = {
   id: string;
   username: string;
@@ -1985,7 +1977,6 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
 
 function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
   const [profile, setProfile] = useState<EditableCommunityProfile | null>(null);
-  const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
