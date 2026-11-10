@@ -75,7 +75,7 @@ function isClientUpdateAvailable(latestVersion: string, installedVersion: string
 
   if (!latest || latest === "UNKNOWN") return false;
   if (!installed || installed === "UNKNOWN") return false;
-  if (installed === "Niet geïnstalleerd") return true;
+  if (installed === "Not installed") return true;
 
   const latestParts = latest.split(".").map((part) => Number.parseInt(part, 10));
   const installedParts = installed.split(".").map((part) => Number.parseInt(part, 10));
@@ -976,7 +976,7 @@ console.error("Developer permission check failed:", errorMessage);
 
   const handleMicrosoftLogout = async () => {
     if (isMinecraftRunning) {
-      setLoginError("Je kunt niet uitloggen zolang Minecraft actief is. Sluit Minecraft eerst af.");
+      setLoginError("You cannot sign out while Minecraft is running. Please close Minecraft first.");
       return;
     }
 
@@ -3915,7 +3915,7 @@ function DeveloperPage({
         <PageTitle
           eyebrow="DEVELOPMENT"
           title="Developer Center"
-          description="Beveiligde toegang tot developer tools en releasebeheer."
+          description="Secure access to developer tools and release management."
         />
         <section className="section-card developer-card">
           <p className="subtitle">Checking Supabase session and developer permissions…</p>
