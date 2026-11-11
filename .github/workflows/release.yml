@@ -37,8 +37,8 @@ jobs:
         with:
           tagName: launcher-v__VERSION__
           releaseName: "Alpha Launcher v__VERSION__"
-          releaseBody: "Alpha Launcher release. See the assets for installers and signed update packages."
-          releaseDraft: false
+          releaseBody: "Add the user-facing changelog for this version before publishing. These notes are displayed in Alpha Launcher."
+          releaseDraft: true
           prerelease: false
           uploadUpdaterJson: true
           uploadUpdaterSignatures: true
