@@ -15,7 +15,7 @@ const versions = [
   packageLock.packages?.[""]?.version,
   tauriConfig.version,
   cargoToml.match(/^version\s*=\s*"([^"]+)"/m)?.[1],
-  cargoLock.match(/\[\[package\]\]\nname = "alphalauncher"\nversion = "([^"]+)"/)?.[1],
+  cargoLock.match(/\[\[package\]\]\r?\nname = "alphalauncher"\r?\nversion = "([^"]+)"/)?.[1],
 ];
 
 if (versions.some((version) => !version) || new Set(versions).size !== 1) {
@@ -39,7 +39,7 @@ write("src-tauri/Cargo.toml", cargoToml.replace(/^(version\s*=\s*")[^"]+(")/m, `
 write(
   "src-tauri/Cargo.lock",
   cargoLock.replace(
-    /(\[\[package\]\]\nname = "alphalauncher"\nversion = ")[^"]+(")/,
+    /(\[\[package\]\]\r?\nname = "alphalauncher"\r?\nversion = ")[^"]+(")/,
     `$1${nextVersion}$2`,
   ),
 );
