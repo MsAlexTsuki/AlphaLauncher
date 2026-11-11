@@ -18,7 +18,8 @@
         "height": 720,
         "minWidth": 1000,
         "minHeight": 650,
-        "visible": false
+        "visible": false,
+        "decorations": false
       },
       {
         "label": "splash",
