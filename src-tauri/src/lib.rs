@@ -652,43 +652,42 @@ fn get_microsoft_account()
 }
 
 
-fn microsoft_credential_entry(username: &str) -> Result<keyring::Entry, String> {
-    keyring::Entry::new("com.alphaclient.launcher", username)
-        .map_err(|error| format!("Could not access the Windows credential store: {}", error))
+#[derive(Serialize, Deserialize)]
+struct PersistedMicrosoftSession {
+    refresh_token: String,
+    account: MicrosoftAccount,
+}
+
+fn microsoft_credential_entry() -> Result<keyring::Entry, String> {
+    keyring::Entry::new("com.alphaclient.launcher", "microsoft-session")
+        .map_err(|error| format!("Could not access the system credential store: {}", error))
 }
 
 fn save_microsoft_credentials(refresh_token: &str, account: &MicrosoftAccount) -> Result<(), String> {
-    microsoft_credential_entry("microsoft-refresh-token")?
-        .set_password(refresh_token)
-        .map_err(|error| format!("Could not securely save the Microsoft session: {}", error))?;
-
-    let serialized_account = serde_json::to_string(account)
-        .map_err(|error| format!("Could not serialize the Microsoft account: {}", error))?;
-    microsoft_credential_entry("microsoft-account")?
-        .set_password(&serialized_account)
-        .map_err(|error| format!("Could not securely save the Microsoft account: {}", error))
+    let session = PersistedMicrosoftSession {
+        refresh_token: refresh_token.to_string(),
+        account: account.clone(),
+    };
+    let serialized = serde_json::to_string(&session)
+        .map_err(|error| format!("Could not serialize the Microsoft session: {}", error))?;
+    microsoft_credential_entry()?
+        .set_password(&serialized)
+        .map_err(|error| format!("Could not securely save the Microsoft session: {}", error))
 }
 
 fn load_microsoft_credentials() -> Result<Option<(String, MicrosoftAccount)>, String> {
-    let refresh_token = match microsoft_credential_entry("microsoft-refresh-token")?.get_password() {
+    let serialized = match microsoft_credential_entry()?.get_password() {
         Ok(value) => value,
         Err(keyring::Error::NoEntry) => return Ok(None),
         Err(error) => return Err(format!("Could not read the saved Microsoft session: {}", error)),
     };
-
-    let serialized_account = microsoft_credential_entry("microsoft-account")?
-        .get_password()
-        .map_err(|error| format!("Could not read the saved Microsoft account: {}", error))?;
-    let account = serde_json::from_str::<MicrosoftAccount>(&serialized_account)
-        .map_err(|error| format!("The saved Microsoft account data is invalid: {}", error))?;
-
-    Ok(Some((refresh_token, account)))
+    let session = serde_json::from_str::<PersistedMicrosoftSession>(&serialized)
+        .map_err(|error| format!("The saved Microsoft session is invalid: {}", error))?;
+    Ok(Some((session.refresh_token, session.account)))
 }
 
 fn delete_microsoft_credentials() {
-    let _ = microsoft_credential_entry("microsoft-refresh-token")
-        .and_then(|entry| entry.delete_credential().map_err(|error| error.to_string()));
-    let _ = microsoft_credential_entry("microsoft-account")
+    let _ = microsoft_credential_entry()
         .and_then(|entry| entry.delete_credential().map_err(|error| error.to_string()));
 }
 
@@ -746,6 +745,8 @@ fn restore_microsoft_session_internal() -> Result<Option<MicrosoftAccount>, Stri
         uuid: profile.id,
     };
 
+    save_microsoft_credentials(refresh_token, &account)?;
+
     if let Ok(mut value) = microsoft_account_state().lock() { *value = Some(account.clone()); }
     if let Ok(mut value) = microsoft_access_token_state().lock() { *value = Some(token_response.access_token); }
     if let Ok(mut value) = microsoft_refresh_token_state().lock() { *value = Some(refresh_token.to_string()); }
@@ -754,8 +755,6 @@ fn restore_microsoft_session_internal() -> Result<Option<MicrosoftAccount>, Stri
     if let Ok(mut value) = xbox_user_hash_state().lock() { *value = Some(user_hash); }
     if let Ok(mut value) = minecraft_access_token_state().lock() { *value = Some(minecraft_login.access_token); }
     if let Ok(mut value) = minecraft_uuid_state().lock() { *value = Some(account.uuid.clone()); }
-
-    save_microsoft_credentials(refresh_token, &account)?;
     Ok(Some(account))
 }
 
@@ -1438,9 +1437,9 @@ fn perform_microsoft_login_inner(login_hint: Option<String>)
 
     match login_result {
         Ok(account) => {
-            if let Some(refresh_token) = refresh_token_to_persist.as_deref() {
-                save_microsoft_credentials(refresh_token, &account)?;
-            }
+            let refresh_token = refresh_token_to_persist.as_deref()
+                .ok_or_else(|| "Microsoft did not return a refresh token. The account session cannot be saved.".to_string())?;
+            save_microsoft_credentials(refresh_token, &account)?;
 
             let _ =
                 send_callback_response(
