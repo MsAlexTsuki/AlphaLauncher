@@ -1,4 +1,4 @@
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use base64::{
     engine::general_purpose::URL_SAFE_NO_PAD,
     Engine as _,
@@ -41,12 +41,12 @@ use std::{
         Path,
         PathBuf,
     },
-    process::{Child, Command},
+    process::{Child, Command, Stdio},
     sync::{
         Mutex,
         OnceLock,
     },
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use url::Url;
@@ -243,6 +243,55 @@ static MINECRAFT_UUID: OnceLock<
 static MINECRAFT_PROCESSES: OnceLock<
     Mutex<Vec<Child>>
 > = OnceLock::new();
+
+#[derive(Clone, Debug, Serialize)]
+struct MinecraftLogEvent {
+    timestamp: u128,
+    stream: String,
+    message: String,
+}
+
+fn stream_minecraft_output<R: Read + Send + 'static>(
+    reader: R,
+    app: tauri::AppHandle,
+    stream: &'static str,
+) {
+    std::thread::spawn(move || {
+        for line in BufReader::new(reader).lines() {
+            match line {
+                Ok(message) => {
+                    let timestamp = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis();
+                    let _ = app.emit(
+                        "alpha-nexus-log",
+                        MinecraftLogEvent {
+                            timestamp,
+                            stream: stream.to_string(),
+                            message,
+                        },
+                    );
+                }
+                Err(error) => {
+                    let timestamp = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis();
+                    let _ = app.emit(
+                        "alpha-nexus-log",
+                        MinecraftLogEvent {
+                            timestamp,
+                            stream: stream.to_string(),
+                            message: format!("Could not read Minecraft {}: {}", stream, error),
+                        },
+                    );
+                    break;
+                }
+            }
+        }
+    });
+}
 
 
 fn minecraft_processes_state()
@@ -5076,17 +5125,24 @@ fn greet(
 
 
 #[tauri::command]
-async fn launch_alphaclient(saved_accounts: Vec<MicrosoftAccount>) -> Result<String, String> {
-    launch_alphaclient_for_server(None, saved_accounts).await
+async fn launch_alphaclient(
+    app: tauri::AppHandle,
+    saved_accounts: Vec<MicrosoftAccount>,
+) -> Result<String, String> {
+    launch_alphaclient_for_server(app, None, saved_accounts).await
 }
 
 #[tauri::command]
-async fn launch_partner_server(saved_accounts: Vec<MicrosoftAccount>) -> Result<String, String> {
+async fn launch_partner_server(
+    app: tauri::AppHandle,
+    saved_accounts: Vec<MicrosoftAccount>,
+) -> Result<String, String> {
     // Start at the Minecraft main menu; let the player choose when to join Alpha.rip.
-    launch_alphaclient_for_server(None, saved_accounts).await
+    launch_alphaclient_for_server(app, None, saved_accounts).await
 }
 
 async fn launch_alphaclient_for_server(
+    app: tauri::AppHandle,
     server: Option<String>,
     saved_accounts: Vec<MicrosoftAccount>
 )
@@ -5351,18 +5407,26 @@ async fn launch_alphaclient_for_server(
                 .arg(main_class)
                 .args(game_arguments);
 
-            let child =
-                command
-                    .spawn()
-                    .map_err(|e| {
-                        format!(
-                            "Minecraft could not be started with Java {}: {}",
-                            java.display(),
-                            e
-                        )
-                    })?;
+            let mut child = command
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .map_err(|e| {
+                    format!(
+                        "Minecraft could not be started with Java {}: {}",
+                        java.display(),
+                        e
+                    )
+                })?;
+
+            let stdout = child.stdout.take()
+                .ok_or_else(|| "Could not capture Minecraft standard output.".to_string())?;
+            let stderr = child.stderr.take()
+                .ok_or_else(|| "Could not capture Minecraft error output.".to_string())?;
 
             track_minecraft_process(child)?;
+            stream_minecraft_output(stdout, app.clone(), "stdout");
+            stream_minecraft_output(stderr, app.clone(), "stderr");
             std::thread::spawn(move || {
                 serve_account_switch_requests(account_switch_listener, account_switch_secret);
             });
@@ -5386,6 +5450,7 @@ async fn launch_alphaclient_for_server(
 
 
 fn start_offline_test_internal(
+    app: tauri::AppHandle,
     username: String
 ) -> Result<String, String>
 {
@@ -5621,18 +5686,26 @@ fn start_offline_test_internal(
         .arg(main_class)
         .args(game_arguments);
 
-    let child =
-        command
-            .spawn()
-            .map_err(|error| {
-                format!(
-                    "Minecraft could not be started with Java {}: {}",
-                    java.display(),
-                    error
-                )
-            })?;
+    let mut child = command
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| {
+            format!(
+                "Minecraft could not be started with Java {}: {}",
+                java.display(),
+                error
+            )
+        })?;
+
+    let stdout = child.stdout.take()
+        .ok_or_else(|| "Could not capture Minecraft standard output.".to_string())?;
+    let stderr = child.stderr.take()
+        .ok_or_else(|| "Could not capture Minecraft error output.".to_string())?;
 
     track_minecraft_process(child)?;
+    stream_minecraft_output(stdout, app.clone(), "stdout");
+    stream_minecraft_output(stderr, app.clone(), "stderr");
 
     Ok(
         format!(
@@ -5645,12 +5718,14 @@ fn start_offline_test_internal(
 
 #[tauri::command]
 async fn start_offline_test(
+    app: tauri::AppHandle,
     username: String
 ) -> Result<String, String>
 {
     tauri::async_runtime::spawn_blocking(
         move || {
             start_offline_test_internal(
+                app,
                 username
             )
         }
