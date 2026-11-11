@@ -1,4 +1,4 @@
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use base64::{
     engine::general_purpose::URL_SAFE_NO_PAD,
     Engine as _,
@@ -28,6 +28,8 @@ use std::{
     fs,
     fs::File,
     io::{
+        BufRead,
+        BufReader,
         Read,
         Write,
     },
@@ -39,12 +41,12 @@ use std::{
         Path,
         PathBuf,
     },
-    process::{Child, Command},
+    process::{Child, Command, Stdio},
     sync::{
         Mutex,
         OnceLock,
     },
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use url::Url;
@@ -65,7 +67,7 @@ const ALPHACLIENT_UPDATE_MANIFEST_ENV: &str = "ALPHACLIENT_UPDATE_MANIFEST_URL";
 
 const ALPHACLIENT_VERSION_FILE: &str = "alpha-client-version.json";
 const ALPHACLIENT_UPDATE_ZIP_NAME: &str = "alphaclient-update.jar";
-const ALPHACLIENT_GITHUB_RELEASES_URL: &str = "https://api.github.com/repos/MsAlexTsuki/AlphaClient/releases?per_page=20";
+const ALPHACLIENT_GITHUB_RELEASE_URL: &str = "https://api.github.com/repos/MsAlexTsuki/AlphaClient/releases/tags/Release";
 const ALPHACLIENT_OFFICIAL_MOD_JAR_NAME: &str = "AlphaClient.jar";
 const ALPHACLIENT_0_3_81_SHA256: &str = "fb2451cb5ce671a6f5b2f5229374ff1df02f0164eef83367d692f74cbb97fec2";
 
@@ -145,11 +147,39 @@ const MINECRAFT_PROFILE_URL: &str =
 // GLOBAL AUTH STATE
 // ============================================================
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct MicrosoftAccount {
     name: String,
     email: String,
+    #[serde(default)]
     uuid: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct AccountSwitchRequest {
+    secret: String,
+    email: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AccountSwitchResponse {
+    name: String,
+    email: String,
+    uuid: String,
+    access_token: String,
+}
+
+#[derive(Clone)]
+struct MicrosoftAuthSnapshot {
+    account: Option<MicrosoftAccount>,
+    microsoft_access_token: Option<String>,
+    microsoft_refresh_token: Option<String>,
+    xbox_live_token: Option<String>,
+    xsts_token: Option<String>,
+    xbox_user_hash: Option<String>,
+    minecraft_access_token: Option<String>,
+    minecraft_uuid: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -213,6 +243,55 @@ static MINECRAFT_UUID: OnceLock<
 static MINECRAFT_PROCESSES: OnceLock<
     Mutex<Vec<Child>>
 > = OnceLock::new();
+
+#[derive(Clone, Debug, Serialize)]
+struct MinecraftLogEvent {
+    timestamp: u128,
+    stream: String,
+    message: String,
+}
+
+fn stream_minecraft_output<R: Read + Send + 'static>(
+    reader: R,
+    app: tauri::AppHandle,
+    stream: &'static str,
+) {
+    std::thread::spawn(move || {
+        for line in BufReader::new(reader).lines() {
+            match line {
+                Ok(message) => {
+                    let timestamp = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis();
+                    let _ = app.emit(
+                        "alpha-nexus-log",
+                        MinecraftLogEvent {
+                            timestamp,
+                            stream: stream.to_string(),
+                            message,
+                        },
+                    );
+                }
+                Err(error) => {
+                    let timestamp = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis();
+                    let _ = app.emit(
+                        "alpha-nexus-log",
+                        MinecraftLogEvent {
+                            timestamp,
+                            stream: stream.to_string(),
+                            message: format!("Could not read Minecraft {}: {}", stream, error),
+                        },
+                    );
+                    break;
+                }
+            }
+        }
+    });
+}
 
 
 fn minecraft_processes_state()
@@ -280,7 +359,7 @@ fn minecraft_process_is_running()
 
 fn minecraft_running_error() -> String
 {
-    "Je kunt niet uitloggen of van account wisselen zolang Minecraft actief is. Sluit Minecraft eerst af.".to_string()
+    "You cannot sign out or switch accounts while Minecraft is running. Please close Minecraft first.".to_string()
 }
 
 
@@ -478,53 +557,38 @@ struct MinecraftEntitlement {
 // ============================================================
 
 fn clear_microsoft_auth_state() {
-    if let Ok(mut value) =
-        microsoft_account_state().lock()
-    {
-        *value = None;
-    }
+    if let Ok(mut value) = microsoft_account_state().lock() { *value = None; }
+    if let Ok(mut value) = microsoft_access_token_state().lock() { *value = None; }
+    if let Ok(mut value) = microsoft_refresh_token_state().lock() { *value = None; }
+    if let Ok(mut value) = xbox_live_token_state().lock() { *value = None; }
+    if let Ok(mut value) = xsts_token_state().lock() { *value = None; }
+    if let Ok(mut value) = xbox_user_hash_state().lock() { *value = None; }
+    if let Ok(mut value) = minecraft_access_token_state().lock() { *value = None; }
+    if let Ok(mut value) = minecraft_uuid_state().lock() { *value = None; }
+}
 
-    if let Ok(mut value) =
-        microsoft_access_token_state().lock()
-    {
-        *value = None;
+fn capture_microsoft_auth_state() -> MicrosoftAuthSnapshot {
+    MicrosoftAuthSnapshot {
+        account: microsoft_account_state().lock().ok().and_then(|value| value.clone()),
+        microsoft_access_token: microsoft_access_token_state().lock().ok().and_then(|value| value.clone()),
+        microsoft_refresh_token: microsoft_refresh_token_state().lock().ok().and_then(|value| value.clone()),
+        xbox_live_token: xbox_live_token_state().lock().ok().and_then(|value| value.clone()),
+        xsts_token: xsts_token_state().lock().ok().and_then(|value| value.clone()),
+        xbox_user_hash: xbox_user_hash_state().lock().ok().and_then(|value| value.clone()),
+        minecraft_access_token: minecraft_access_token_state().lock().ok().and_then(|value| value.clone()),
+        minecraft_uuid: minecraft_uuid_state().lock().ok().and_then(|value| value.clone()),
     }
+}
 
-    if let Ok(mut value) =
-        microsoft_refresh_token_state().lock()
-    {
-        *value = None;
-    }
-
-    if let Ok(mut value) =
-        xbox_live_token_state().lock()
-    {
-        *value = None;
-    }
-
-    if let Ok(mut value) =
-        xsts_token_state().lock()
-    {
-        *value = None;
-    }
-
-    if let Ok(mut value) =
-        xbox_user_hash_state().lock()
-    {
-        *value = None;
-    }
-
-    if let Ok(mut value) =
-        minecraft_access_token_state().lock()
-    {
-        *value = None;
-    }
-
-    if let Ok(mut value) =
-        minecraft_uuid_state().lock()
-    {
-        *value = None;
-    }
+fn restore_microsoft_auth_state(snapshot: MicrosoftAuthSnapshot) {
+    if let Ok(mut value) = microsoft_account_state().lock() { *value = snapshot.account; }
+    if let Ok(mut value) = microsoft_access_token_state().lock() { *value = snapshot.microsoft_access_token; }
+    if let Ok(mut value) = microsoft_refresh_token_state().lock() { *value = snapshot.microsoft_refresh_token; }
+    if let Ok(mut value) = xbox_live_token_state().lock() { *value = snapshot.xbox_live_token; }
+    if let Ok(mut value) = xsts_token_state().lock() { *value = snapshot.xsts_token; }
+    if let Ok(mut value) = xbox_user_hash_state().lock() { *value = snapshot.xbox_user_hash; }
+    if let Ok(mut value) = minecraft_access_token_state().lock() { *value = snapshot.minecraft_access_token; }
+    if let Ok(mut value) = minecraft_uuid_state().lock() { *value = snapshot.minecraft_uuid; }
 }
 
 
@@ -541,7 +605,7 @@ async fn start_microsoft_login(login_hint: Option<String>)
     }
 
     tauri::async_runtime::spawn_blocking(
-        move || perform_microsoft_login(login_hint)
+        move || perform_microsoft_login(login_hint, false)
     )
     .await
     .map_err(|error| {
@@ -588,16 +652,147 @@ fn get_microsoft_account()
 
 
 // ============================================================
+// LOCAL ACCOUNT-SWITCH BRIDGE
+// ============================================================
+
+fn create_account_switch_listener() -> Result<(TcpListener, u16, String), String> {
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .map_err(|error| format!("Could not start the local account-switch bridge: {}", error))?;
+    listener.set_nonblocking(true)
+        .map_err(|error| format!("Could not configure the local account-switch bridge: {}", error))?;
+    let port = listener.local_addr()
+        .map_err(|error| format!("Could not read the local account-switch port: {}", error))?
+        .port();
+    Ok((listener, port, random_string(64)))
+}
+
+fn serve_account_switch_requests(listener: TcpListener, secret: String) {
+    while minecraft_process_is_running() {
+        match listener.accept() {
+            Ok((stream, _)) => handle_account_switch_connection(stream, &secret),
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                std::thread::sleep(Duration::from_millis(200));
+            }
+            Err(_) => break,
+        }
+    }
+}
+
+fn handle_account_switch_connection(mut stream: TcpStream, secret: &str) {
+    let result = (|| -> Result<AccountSwitchResponse, String> {
+        stream.set_read_timeout(Some(Duration::from_secs(15)))
+            .map_err(|error| format!("Could not configure the account-switch request: {}", error))?;
+        let cloned = stream.try_clone()
+            .map_err(|error| format!("Could not read the account-switch request: {}", error))?;
+        let mut reader = BufReader::new(cloned);
+
+        let mut request_line = String::new();
+        reader.read_line(&mut request_line)
+            .map_err(|error| format!("Could not read the account-switch request: {}", error))?;
+        if !request_line.starts_with("POST /switch-account ") {
+            return Err("Unsupported account-switch request.".to_string());
+        }
+
+        let mut content_length = None;
+        let mut header_bytes = request_line.len();
+        loop {
+            let mut header = String::new();
+            let count = reader.read_line(&mut header)
+                .map_err(|error| format!("Could not read account-switch headers: {}", error))?;
+            header_bytes += count;
+            if header_bytes > 8192 {
+                return Err("Account-switch request headers are too large.".to_string());
+            }
+            if count == 0 || header == "\r\n" || header == "\n" {
+                break;
+            }
+            if let Some((name, value)) = header.split_once(':') {
+                if name.trim().eq_ignore_ascii_case("content-length") {
+                    content_length = value.trim().parse::<usize>().ok();
+                }
+            }
+        }
+
+        let length = content_length.ok_or_else(|| "Account-switch request is missing its content length.".to_string())?;
+        if length == 0 || length > 4096 {
+            return Err("Account-switch request body has an invalid size.".to_string());
+        }
+
+        let mut body = vec![0u8; length];
+        reader.read_exact(&mut body)
+            .map_err(|error| format!("Could not read account-switch request body: {}", error))?;
+        let request: AccountSwitchRequest = serde_json::from_slice(&body)
+            .map_err(|_| "Account-switch request was not valid JSON.".to_string())?;
+
+        if request.secret != secret {
+            return Err("The account-switch request was not authorized.".to_string());
+        }
+
+        let email = request.email.trim();
+        if email.is_empty() || email.len() > 320 {
+            return Err("Select a valid saved Microsoft account.".to_string());
+        }
+
+        let account = perform_microsoft_login(Some(email.to_string()), true)?;
+        let access_token = minecraft_access_token_state().lock()
+            .map_err(|_| "Could not access the new Minecraft session.".to_string())?
+            .clone()
+            .ok_or_else(|| "Microsoft authentication did not return a Minecraft session token.".to_string())?;
+
+        Ok(AccountSwitchResponse {
+            name: account.name,
+            email: account.email,
+            uuid: account.uuid,
+            access_token,
+        })
+    })();
+
+    let (status, response_body) = match result {
+        Ok(response) => (
+            "200 OK",
+            serde_json::to_string(&response).unwrap_or_else(|_| "{}".to_string())
+        ),
+        Err(error) => (
+            "400 Bad Request",
+            serde_json::json!({ "error": error }).to_string()
+        ),
+    };
+
+    let response = format!(
+        "HTTP/1.1 {}\r\nContent-Type: application/json; charset=utf-8\r\nCache-Control: no-store\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{}",
+        status,
+        response_body.as_bytes().len(),
+        response_body
+    );
+    let _ = stream.write_all(response.as_bytes());
+    let _ = stream.flush();
+}
+
+// ============================================================
 // MICROSOFT LOGIN
 // ============================================================
 
-fn perform_microsoft_login(login_hint: Option<String>)
-    -> Result<MicrosoftAccount, String>
-{
-    if minecraft_process_is_running() {
+fn perform_microsoft_login(
+    login_hint: Option<String>,
+    allow_minecraft_running: bool
+) -> Result<MicrosoftAccount, String> {
+    if !allow_minecraft_running && minecraft_process_is_running() {
         return Err(minecraft_running_error());
     }
 
+    let previous_state = capture_microsoft_auth_state();
+    match perform_microsoft_login_inner(login_hint) {
+        Ok(account) => Ok(account),
+        Err(error) => {
+            restore_microsoft_auth_state(previous_state);
+            Err(error)
+        }
+    }
+}
+
+fn perform_microsoft_login_inner(login_hint: Option<String>)
+    -> Result<MicrosoftAccount, String>
+{
     clear_microsoft_auth_state();
 
     // --------------------------------------------------------
@@ -4059,7 +4254,7 @@ fn installed_alphaclient_version(
 {
     let mods_dir = root.join("mods");
     if !mods_dir.is_dir() {
-        return Ok("Niet geïnstalleerd".to_string());
+        return Ok("Not installed".to_string());
     }
 
     let mut jars = Vec::<PathBuf>::new();
@@ -4095,7 +4290,7 @@ fn installed_alphaclient_version(
     if found_alphastaffmod {
         Ok(alphaclient_version_from_marker(root).unwrap_or_else(|| "UNKNOWN".to_string()))
     } else {
-        Ok("Niet geïnstalleerd".to_string())
+        Ok("Not installed".to_string())
     }
 }
 
@@ -4176,8 +4371,8 @@ fn fetch_alpha_client_manifest()
 {
     let client = http_client()?;
 
-    // Keep support for a custom manifest, but use GitHub Releases by default so
-    // end users do not need to configure an environment variable.
+    // Keep support for a custom manifest. Otherwise, check the official
+    // stable Release tag directly instead of downloading the full release list.
     if let Some(url) = update_manifest_url() {
         return client
             .get(&url)
@@ -4189,86 +4384,126 @@ fn fetch_alpha_client_manifest()
             .map_err(|error| format!("Could not parse AlphaClient update manifest: {}", error));
     }
 
-    let releases = client
-        .get(ALPHACLIENT_GITHUB_RELEASES_URL)
-        .header("Accept", "application/vnd.github+json")
-        .header("X-GitHub-Api-Version", "2022-11-28")
-        .send()
-        .map_err(|error| format!("Could not contact GitHub Releases: {}", error))?
-        .error_for_status()
-        .map_err(|error| format!("GitHub Releases returned an error: {}", error))?
-        .json::<Vec<Value>>()
-        .map_err(|error| format!("Could not parse GitHub Releases response: {}", error))?;
+    // GitHub can temporarily return 5xx/429 responses or time out.
+    // Retry transient failures up to three times with a short backoff.
+    let mut release: Option<Value> = None;
+    let mut last_error = String::new();
 
-    // GitHub orders releases by publication date, which may not match semantic
-    // version order. Pick the highest AlphaClient JAR version, not the first asset.
-    let mut latest: Option<(Vec<u64>, String, String, String, String)> = None;
+    for attempt in 0..3 {
+        let response = client
+            .get(ALPHACLIENT_GITHUB_RELEASE_URL)
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .send();
 
-    for release in &releases {
-        let assets = match release.get("assets").and_then(Value::as_array) {
-            Some(assets) => assets,
+        match response {
+            Ok(response) if response.status().is_success() => {
+                release = Some(
+                    response
+                        .json::<Value>()
+                        .map_err(|error| format!("Could not parse the official AlphaClient Release response: {}", error))?
+                );
+                break;
+            }
+            Ok(response) => {
+                let status = response.status();
+                last_error = format!("GitHub Release lookup returned HTTP {}.", status);
+                if !(status.is_server_error() || status.as_u16() == 429) || attempt == 2 {
+                    return Err(last_error);
+                }
+            }
+            Err(error) => {
+                last_error = format!("Could not contact the official AlphaClient GitHub Release: {}", error);
+                if attempt == 2 {
+                    return Err(last_error);
+                }
+            }
+        }
+
+        std::thread::sleep(Duration::from_secs((attempt + 1) as u64));
+    }
+
+    let release = release.ok_or_else(|| {
+        if last_error.is_empty() {
+            "Could not retrieve the official AlphaClient Release.".to_string()
+        } else {
+            last_error
+        }
+    })?;
+
+    let assets = release
+        .get("assets")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "The official AlphaClient Release does not contain an asset list.".to_string())?;
+    let changelog = release
+        .get("body")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+
+    // The stable Release tag contains the current distributable AlphaClient JAR.
+    // Select the highest semantic version if the release contains more than one JAR.
+    let mut latest: Option<(Vec<u64>, String, String, String)> = None;
+
+    for asset in assets {
+        let asset_name = asset.get("name").and_then(Value::as_str).unwrap_or("");
+        let version = asset_name
+            .strip_prefix("AlphaClient-")
+            .and_then(|name| name.strip_suffix(".jar"))
+            .or_else(|| {
+                asset_name
+                    .strip_prefix("alphaclient-")
+                    .and_then(|name| name.strip_suffix(".jar"))
+            });
+
+        let version = match version {
+            Some(version) if version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) => version,
+            _ => continue,
+        };
+        let parts = parse_version_parts(version);
+        if parts.is_empty() {
+            continue;
+        }
+
+        let download_url = match asset.get("browser_download_url").and_then(Value::as_str) {
+            Some(url) => url.to_string(),
             None => continue,
         };
-        let changelog = release.get("body").and_then(Value::as_str).unwrap_or("").to_string();
 
-        for asset in assets {
-            let asset_name = asset.get("name").and_then(Value::as_str).unwrap_or("");
-            let lower = asset_name.to_ascii_lowercase();
-            if !lower.starts_with("alphaclient-") || !lower.ends_with(".jar") {
-                continue;
-            }
+        let mut sha256 = asset
+            .get("digest")
+            .and_then(Value::as_str)
+            .and_then(|digest| digest.strip_prefix("sha256:"))
+            .unwrap_or("")
+            .to_string();
 
-            let version = asset_name
-                .strip_prefix("AlphaClient-")
-                .and_then(|name| name.strip_suffix(".jar"))
-                .or_else(|| asset_name.strip_prefix("alphaclient-").and_then(|name| name.strip_suffix(".jar")));
-            let version = match version {
-                Some(version) if version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) => version,
-                _ => continue,
-            };
-            let parts = parse_version_parts(version);
-            if parts.is_empty() {
-                continue;
-            }
+        // GitHub does not populate asset digests for every older release.
+        if sha256.is_empty() && version == "0.3.81" {
+            sha256 = ALPHACLIENT_0_3_81_SHA256.to_string();
+        }
 
-            let download_url = match asset.get("browser_download_url").and_then(Value::as_str) {
-                Some(url) => url.to_string(),
-                None => continue,
-            };
+        let should_replace = latest.as_ref()
+            .map(|(latest_parts, _, _, _)| {
+                let length = parts.len().max(latest_parts.len());
+                (0..length).find_map(|index| {
+                    let candidate = *parts.get(index).unwrap_or(&0);
+                    let current = *latest_parts.get(index).unwrap_or(&0);
+                    if candidate != current { Some(candidate > current) } else { None }
+                }).unwrap_or(false)
+            })
+            .unwrap_or(true);
 
-            let mut sha256 = asset.get("digest").and_then(Value::as_str)
-                .and_then(|digest| digest.strip_prefix("sha256:"))
-                .unwrap_or("")
-                .to_string();
-
-            // GitHub does not populate asset digests for every existing release.
-            if sha256.is_empty() && version == "0.3.81" {
-                sha256 = ALPHACLIENT_0_3_81_SHA256.to_string();
-            }
-
-            let should_replace = latest.as_ref()
-                .map(|(latest_parts, _, _, _, _)| {
-                    let length = parts.len().max(latest_parts.len());
-                    (0..length).find_map(|index| {
-                        let candidate = *parts.get(index).unwrap_or(&0);
-                        let current = *latest_parts.get(index).unwrap_or(&0);
-                        if candidate != current { Some(candidate > current) } else { None }
-                    }).unwrap_or(false)
-                })
-                .unwrap_or(true);
-
-            if should_replace {
-                latest = Some((parts, version.to_string(), download_url, sha256, changelog.clone()));
-            }
+        if should_replace {
+            latest = Some((parts, version.to_string(), download_url, sha256));
         }
     }
 
-    let (_, version, download_url, sha256, changelog) = latest
-        .ok_or_else(|| "No GitHub release containing an AlphaClient-<version>.jar asset was found.".to_string())?;
+    let (_, version, download_url, sha256) = latest
+        .ok_or_else(|| "The official AlphaClient Release does not contain an AlphaClient-<version>.jar asset.".to_string())?;
 
     if sha256.trim().len() != 64 || !sha256.trim().chars().all(|character| character.is_ascii_hexdigit()) {
         return Err(format!(
-            "GitHub release asset AlphaClient-{}.jar has no valid SHA-256 digest. Add a SHA-256 digest/checksum to the release before publishing updates.",
+            "GitHub release asset AlphaClient-{}.jar has no valid SHA-256 digest. Add a SHA-256 digest/checksum to the Release before publishing updates.",
             version
         ));
     }
@@ -4296,7 +4531,7 @@ fn check_alphaclient_update_internal()
         AlphaClientUpdateInfo {
             current_version: current_version.clone(),
             latest_version: manifest.version.clone(),
-            update_available: current_version == "Niet geïnstalleerd"
+            update_available: current_version == "Not installed"
                 || current_version == "UNKNOWN"
                 || version_is_newer(
                     &manifest.version,
@@ -4838,7 +5073,7 @@ fn install_alphaclient_internal()
         || !forge_json_path.exists()
     {
         return Err(
-            "Installatie onvolledig: Minecraft- of Forge-bestanden ontbreken."
+            "Installation incomplete: Minecraft or Forge files are missing."
                 .to_string()
         );
     }
@@ -4861,7 +5096,7 @@ fn install_alphaclient_internal()
 
     Ok(
         format!(
-            "AlphaClient {} base-installatie is gereed. Java: {}. Minecraft {} + Forge {}. Asset-index: {}. Clientmod: {}.",
+            "AlphaClient {} base installation is ready. Java: {}. Minecraft {} + Forge {}. Asset index: {}. Client mod: {}.",
             ALPHACLIENT_VERSION,
             java.display(),
             MINECRAFT_VERSION,
@@ -4890,17 +5125,27 @@ fn greet(
 
 
 #[tauri::command]
-async fn launch_alphaclient() -> Result<String, String> {
-    launch_alphaclient_for_server(None).await
+async fn launch_alphaclient(
+    app: tauri::AppHandle,
+    saved_accounts: Vec<MicrosoftAccount>,
+) -> Result<String, String> {
+    launch_alphaclient_for_server(app, None, saved_accounts).await
 }
 
 #[tauri::command]
-async fn launch_partner_server() -> Result<String, String> {
+async fn launch_partner_server(
+    app: tauri::AppHandle,
+    saved_accounts: Vec<MicrosoftAccount>,
+) -> Result<String, String> {
     // Start at the Minecraft main menu; let the player choose when to join Alpha.rip.
-    launch_alphaclient_for_server(None).await
+    launch_alphaclient_for_server(app, None, saved_accounts).await
 }
 
-async fn launch_alphaclient_for_server(server: Option<String>)
+async fn launch_alphaclient_for_server(
+    app: tauri::AppHandle,
+    server: Option<String>,
+    saved_accounts: Vec<MicrosoftAccount>
+)
     -> Result<String, String>
 {
     tauri::async_runtime::spawn_blocking(
@@ -4914,7 +5159,7 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                     })?
                     .clone()
                     .ok_or_else(|| {
-                        "Log eerst in met je Microsoft-account voordat je AlphaClient start."
+                        "Please log in with your Microsoft account before starting AlphaClient."
                             .to_string()
                     })?;
 
@@ -4927,7 +5172,7 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                     })?
                     .clone()
                     .ok_or_else(|| {
-                        "Minecraft-sessietoken ontbreekt. Log opnieuw in."
+                        "Minecraft session token is missing. Please sign in again."
                             .to_string()
                     })?;
 
@@ -4940,9 +5185,21 @@ async fn launch_alphaclient_for_server(server: Option<String>)
                     })?
                     .clone()
                     .ok_or_else(|| {
-                        "Minecraft-UUID ontbreekt. Log opnieuw in."
+                        "Minecraft UUID is missing. Please sign in again."
                             .to_string()
                     })?;
+
+            let mut client_accounts = saved_accounts;
+            if !client_accounts.iter().any(|saved| {
+                saved.email.eq_ignore_ascii_case(&account.email)
+                    || (!saved.uuid.is_empty() && saved.uuid.eq_ignore_ascii_case(&account.uuid))
+            }) {
+                client_accounts.insert(0, account.clone());
+            }
+            client_accounts.truncate(5);
+            let saved_accounts_json = serde_json::to_vec(&client_accounts)
+                .map_err(|error| format!("Could not prepare saved account metadata: {}", error))?;
+            let saved_accounts_encoded = URL_SAFE_NO_PAD.encode(saved_accounts_json);
 
             install_alphaclient_internal()?;
             update_alphaclient_internal()?;
@@ -5118,6 +5375,9 @@ async fn launch_alphaclient_for_server(server: Option<String>)
 
             // Partner launches pass a JVM property instead of Minecraft's early --server arguments.
             // AlphaClient waits until its main menu is loaded before starting the connection.
+            let (account_switch_listener, account_switch_port, account_switch_secret) =
+                create_account_switch_listener()?;
+
             let mut command =
                 Command::new(
                     &java
@@ -5139,27 +5399,41 @@ async fn launch_alphaclient_for_server(server: Option<String>)
             }
 
             command
+                .arg(format!("-Dalphaclient.accountSwitchPort={}", account_switch_port))
+                .arg(format!("-Dalphaclient.accountSwitchSecret={}", account_switch_secret))
+                .arg(format!("-Dalphaclient.savedAccounts={}", saved_accounts_encoded))
                 .arg("-cp")
                 .arg(classpath)
                 .arg(main_class)
                 .args(game_arguments);
 
-            let child =
-                command
-                    .spawn()
-                    .map_err(|e| {
-                        format!(
-                            "Minecraft kon niet worden gestart met Java {}: {}",
-                            java.display(),
-                            e
-                        )
-                    })?;
+            let mut child = command
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .map_err(|e| {
+                    format!(
+                        "Minecraft could not be started with Java {}: {}",
+                        java.display(),
+                        e
+                    )
+                })?;
+
+            let stdout = child.stdout.take()
+                .ok_or_else(|| "Could not capture Minecraft standard output.".to_string())?;
+            let stderr = child.stderr.take()
+                .ok_or_else(|| "Could not capture Minecraft error output.".to_string())?;
 
             track_minecraft_process(child)?;
+            stream_minecraft_output(stdout, app.clone(), "stdout");
+            stream_minecraft_output(stderr, app.clone(), "stderr");
+            std::thread::spawn(move || {
+                serve_account_switch_requests(account_switch_listener, account_switch_secret);
+            });
 
             Ok(
                 format!(
-                    "AlphaClient wordt gestart voor {}.",
+                    "AlphaClient is starting for {}.",
                     account.name
                 )
             )
@@ -5176,6 +5450,7 @@ async fn launch_alphaclient_for_server(server: Option<String>)
 
 
 fn start_offline_test_internal(
+    app: tauri::AppHandle,
     username: String
 ) -> Result<String, String>
 {
@@ -5411,22 +5686,30 @@ fn start_offline_test_internal(
         .arg(main_class)
         .args(game_arguments);
 
-    let child =
-        command
-            .spawn()
-            .map_err(|error| {
-                format!(
-                    "Minecraft kon niet worden gestart met Java {}: {}",
-                    java.display(),
-                    error
-                )
-            })?;
+    let mut child = command
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| {
+            format!(
+                "Minecraft could not be started with Java {}: {}",
+                java.display(),
+                error
+            )
+        })?;
+
+    let stdout = child.stdout.take()
+        .ok_or_else(|| "Could not capture Minecraft standard output.".to_string())?;
+    let stderr = child.stderr.take()
+        .ok_or_else(|| "Could not capture Minecraft error output.".to_string())?;
 
     track_minecraft_process(child)?;
+    stream_minecraft_output(stdout, app.clone(), "stdout");
+    stream_minecraft_output(stderr, app.clone(), "stderr");
 
     Ok(
         format!(
-            "AlphaClient offline test wordt gestart voor {}.",
+            "AlphaClient offline test is starting for {}.",
             username
         )
     )
@@ -5435,12 +5718,14 @@ fn start_offline_test_internal(
 
 #[tauri::command]
 async fn start_offline_test(
+    app: tauri::AppHandle,
     username: String
 ) -> Result<String, String>
 {
     tauri::async_runtime::spawn_blocking(
         move || {
             start_offline_test_internal(
+                app,
                 username
             )
         }
@@ -5517,6 +5802,122 @@ async fn install_alphaclient()
 }
 
 
+
+#[derive(Clone, Debug, Serialize)]
+struct LauncherMod {
+    file_name: String,
+    enabled: bool,
+    is_alphaclient: bool,
+    size_bytes: u64,
+}
+
+fn launcher_mods_directory() -> Result<PathBuf, String> {
+    Ok(alpha_client_directory()?.join("mods"))
+}
+
+#[tauri::command]
+fn list_launcher_mods() -> Result<Vec<LauncherMod>, String> {
+    let mods_dir = launcher_mods_directory()?;
+    let disabled_dir = mods_dir.parent()
+        .ok_or_else(|| "Could not determine the AlphaClient directory.".to_string())?
+        .join("mods-disabled");
+
+    fs::create_dir_all(&mods_dir)
+        .map_err(|error| format!("Could not open mods folder: {}", error))?;
+    fs::create_dir_all(&disabled_dir)
+        .map_err(|error| format!("Could not create disabled mods folder: {}", error))?;
+
+    let mut mods = Vec::<LauncherMod>::new();
+    for (directory, enabled) in [(&mods_dir, true), (&disabled_dir, false)] {
+        let entries = fs::read_dir(directory)
+            .map_err(|error| format!("Could not read {}: {}", directory.display(), error))?;
+        for entry in entries {
+            let entry = entry.map_err(|error| format!("Could not read a mod entry: {}", error))?;
+            let path = entry.path();
+            if !path.is_file()
+                || path.extension().and_then(|ext| ext.to_str())
+                    .map(|ext| ext.eq_ignore_ascii_case("jar")) != Some(true)
+            {
+                continue;
+            }
+            let file_name = match path.file_name().and_then(|name| name.to_str()) {
+                Some(name) => name.to_string(),
+                None => continue,
+            };
+            let metadata = fs::metadata(&path)
+                .map_err(|error| format!("Could not read {}: {}", file_name, error))?;
+            let is_alphaclient = file_name.eq_ignore_ascii_case(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME);
+            mods.push(LauncherMod {
+                file_name,
+                enabled: is_alphaclient || enabled,
+                is_alphaclient,
+                size_bytes: metadata.len(),
+            });
+        }
+    }
+
+    mods.sort_by(|a, b| {
+        b.is_alphaclient.cmp(&a.is_alphaclient)
+            .then_with(|| a.file_name.to_lowercase().cmp(&b.file_name.to_lowercase()))
+    });
+    Ok(mods)
+}
+
+#[tauri::command]
+fn set_launcher_mod_enabled(file_name: String, enabled: bool) -> Result<(), String> {
+    let file_path = Path::new(&file_name);
+    if file_path.file_name().and_then(|name| name.to_str()) != Some(file_name.as_str())
+        || file_path.extension().and_then(|ext| ext.to_str())
+            .map(|ext| !ext.eq_ignore_ascii_case("jar")) != Some(false)
+    {
+        return Err("Select a valid .jar mod file.".to_string());
+    }
+    if file_name.eq_ignore_ascii_case(ALPHACLIENT_OFFICIAL_MOD_JAR_NAME) {
+        return Err("AlphaClient is managed by the launcher and cannot be disabled here.".to_string());
+    }
+
+    let mods_dir = launcher_mods_directory()?;
+    let parent = mods_dir.parent()
+        .ok_or_else(|| "Could not determine the AlphaClient directory.".to_string())?;
+    let disabled_dir = parent.join("mods-disabled");
+    fs::create_dir_all(&mods_dir)
+        .map_err(|error| format!("Could not create mods folder: {}", error))?;
+    fs::create_dir_all(&disabled_dir)
+        .map_err(|error| format!("Could not create disabled mods folder: {}", error))?;
+
+    let (source_dir, destination_dir) = if enabled {
+        (&disabled_dir, &mods_dir)
+    } else {
+        (&mods_dir, &disabled_dir)
+    };
+    let source = source_dir.join(&file_name);
+    let destination = destination_dir.join(&file_name);
+    if !source.is_file() {
+        return Err(format!("Could not find {} in the expected folder.", file_name));
+    }
+    if destination.exists() {
+        return Err(format!("A file named {} already exists in the destination folder.", file_name));
+    }
+    fs::rename(&source, &destination)
+        .map_err(|error| format!("Could not {} {}: {}", if enabled { "enable" } else { "disable" }, file_name, error))
+}
+
+#[tauri::command]
+fn open_launcher_mods_folder() -> Result<(), String> {
+    let mods_dir = launcher_mods_directory()?;
+    fs::create_dir_all(&mods_dir)
+        .map_err(|error| format!("Could not create mods folder: {}", error))?;
+
+    #[cfg(target_os = "windows")]
+    let result = Command::new("explorer").arg(&mods_dir).spawn();
+    #[cfg(target_os = "macos")]
+    let result = Command::new("open").arg(&mods_dir).spawn();
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    let result = Command::new("xdg-open").arg(&mods_dir).spawn();
+
+    result.map(|_| ()).map_err(|error| format!("Could not open mods folder: {}", error))
+}
+
 #[tauri::command]
 fn get_alphaclient_directory_path()
     -> Result<String, String>
@@ -5564,6 +5965,8 @@ pub fn run()
 
     builder = builder
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             #[cfg(any(target_os = "linux", all(debug_assertions, windows)))]
             {
@@ -5615,6 +6018,9 @@ pub fn run()
                 update_alphaclient,
                 install_alphaclient,
                 get_alphaclient_directory_path,
+                list_launcher_mods,
+                set_launcher_mod_enabled,
+                open_launcher_mods_folder,
                 start_microsoft_login,
                 logout_microsoft,
                 get_microsoft_account,

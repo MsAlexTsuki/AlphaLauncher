@@ -8184,3 +8184,204 @@ button:not(:disabled):active {
 .rank-client-folders-section {
   padding-top: 4px;
 }
+
+
+/* Founder-only account inspection tools */
+.developer-account-inspector-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.28fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+.developer-account-list,
+.developer-account-inspector-detail {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.developer-account-list-items,
+.developer-inspected-permission-list {
+  display: grid;
+  gap: 8px;
+}
+.developer-account-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px;
+  text-align: left;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.developer-account-list-item > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.developer-account-list-item strong,
+.developer-account-list-item small {
+  overflow-wrap: anywhere;
+}
+.developer-account-list-item small {
+  color: var(--text-muted, #a5a5a5);
+  font-size: 0.78rem;
+}
+.developer-account-list-item.is-selected {
+  border-color: rgba(255, 200, 61, 0.58);
+  background: rgba(255, 200, 61, 0.09);
+}
+.developer-account-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 200, 61, 0.13);
+  color: #ffc83d;
+  font-weight: 700;
+}
+.developer-account-empty {
+  display: grid;
+  min-height: 180px;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--text-muted, #a5a5a5);
+}
+.developer-verification-actions {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-top: 20px;
+}
+.developer-inspected-permissions {
+  margin-top: 18px;
+}
+.developer-inspected-permission-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.developer-permission-state {
+  flex: 0 0 auto;
+  min-width: 68px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.developer-permission-state.is-allowed {
+  color: #a5e6b0;
+  background: rgba(67, 190, 94, 0.12);
+}
+.developer-permission-state.is-denied {
+  color: #ffaaaa;
+  background: rgba(230, 76, 76, 0.12);
+}
+.developer-inspected-permission-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.developer-inspected-permission-copy small,
+.developer-inspected-permission-copy span {
+  color: var(--text-muted, #a5a5a5);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .developer-account-inspector-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Scroll long permission results inside the inspector instead of expanding the entire page */
+.developer-inspected-permission-list {
+  max-height: min(52vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #555862 rgba(255, 255, 255, 0.035);
+}
+.developer-inspected-permission-list::-webkit-scrollbar {
+  width: 8px;
+}
+.developer-inspected-permission-list::-webkit-scrollbar-track {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.developer-inspected-permission-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #555862;
+  background-clip: padding-box;
+}
+.developer-inspected-permission-list::-webkit-scrollbar-thumb:hover {
+  background: #777b86;
+  background-clip: padding-box;
+}
+
+
+/* Player Permission combines rank-style folder navigation with timed per-module access. */
+.player-permission-player-select {
+  margin-top: 10px;
+}
+.player-module-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.player-module-actions .small-button {
+  min-width: 72px;
+}
+@media (max-width: 700px) {
+  .player-module-actions {
+    width: 100%;
+  }
+  .player-module-actions .small-button {
+    flex: 1;
+  }
+}
+
+
+/* Alpha Nexus live Minecraft console */
+.alpha-nexus-page { display:flex; flex-direction:column; min-height:0; }
+.alpha-nexus-console { display:flex; flex:1 1 auto; flex-direction:column; min-height:300px; padding:0; overflow:hidden; }
+.alpha-nexus-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:70px; padding:16px 20px; border-bottom:1px solid var(--border); }
+.alpha-nexus-console-heading { display:flex; align-items:center; gap:12px; min-width:0; }
+.alpha-nexus-console-heading > div { display:flex; flex-direction:column; gap:4px; }
+.alpha-nexus-console-heading strong { color:var(--text); font-size:13px; font-weight:700; }
+.alpha-nexus-console-heading span:not(.alpha-nexus-status-dot) { color:var(--muted); font-size:11px; }
+.alpha-nexus-status-dot { width:9px; height:9px; flex:0 0 9px; border-radius:50%; background:#777b86; }
+.alpha-nexus-status-dot.is-running { background:var(--green); box-shadow:0 0 10px rgba(113,217,155,.55); }
+.alpha-nexus-hide { display:grid; place-items:center; width:30px; height:30px; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,.035); color:var(--muted); font-size:21px; line-height:1; cursor:pointer; }
+.alpha-nexus-hide:hover { border-color:var(--border-hover); color:var(--text); background:rgba(255,200,61,.08); }
+.alpha-nexus-output { flex:1 1 auto; min-height:240px; max-height:calc(100vh - 310px); overflow:auto; padding:14px 16px; background:#0b0d12; color:#d7d9e0; font:11px/1.65 Consolas,"Cascadia Code",monospace; scrollbar-color:#41434c #0b0d12; }
+.alpha-nexus-empty { padding:12px 4px; color:var(--muted); font:12px/1.6 Inter,sans-serif; }
+.alpha-nexus-log-line { display:grid; grid-template-columns:74px 58px minmax(0,1fr); gap:10px; padding:2px 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.alpha-nexus-log-line time { color:#777e8d; font-variant-numeric:tabular-nums; }
+.alpha-nexus-stream { color:#9da4b3; font-size:10px; font-weight:700; }
+.alpha-nexus-log-line.is-stderr .alpha-nexus-stream,.alpha-nexus-log-line.is-stderr .alpha-nexus-message { color:#e6a0a0; }
+.alpha-nexus-message { min-width:0; }
+.alpha-nexus-console-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 16px; border-top:1px solid var(--border); color:var(--muted); font-size:10px; }
+@media (max-width:700px) {
+  .alpha-nexus-log-line { grid-template-columns:62px 48px minmax(0,1fr); gap:6px; }
+  .alpha-nexus-console-footer { align-items:flex-start; flex-direction:column; }
+}

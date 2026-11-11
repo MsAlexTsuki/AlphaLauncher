@@ -1,12 +1,16 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { check as checkLauncherUpdate } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { supabase } from "./lib/supabase";
 import PrivateChatPanel from "./PrivateChatPanel";
 import InboxButton from "./InboxButton";
 import RankPermissionsManager from "./RankPermissionsManager";
 import ClientModPermissionsManager from "./ClientModPermissionsManager";
+import DeveloperAccountTools from "./DeveloperAccountTools";
+import ModsPage from "./ModsPage";
 import "./App.css";
 
 type Page =
@@ -18,9 +22,11 @@ type Page =
   | "Friends"
   | "Developer"
   | "Chats"
+  | "Alpha Nexus"
   | "Settings"
   | "Account";
 
+type AlphaNexusLog = { timestamp: number; stream: "stdout" | "stderr"; message: string };
 type MicrosoftAccount = { name: string; email: string; uuid?: string };
 type LastPlayed = { timestamp: number; version: string };
 type ChangelogProduct = "launcher" | "client";
@@ -47,7 +53,7 @@ const MAX_LAUNCH_HISTORY = 3;
 type ModalContent = {
   title: string;
   body: string;
-  kind?: "settings" | "changelog";
+  kind?: "settings" | "changelog" | "launcher-update";
 } | null;
 
 type Settings = {
@@ -74,7 +80,7 @@ function isClientUpdateAvailable(latestVersion: string, installedVersion: string
 
   if (!latest || latest === "UNKNOWN") return false;
   if (!installed || installed === "UNKNOWN") return false;
-  if (installed === "Niet geïnstalleerd") return true;
+  if (installed === "Not installed") return true;
 
   const latestParts = latest.split(".").map((part) => Number.parseInt(part, 10));
   const installedParts = installed.split(".").map((part) => Number.parseInt(part, 10));
@@ -120,13 +126,17 @@ function readSavedMicrosoftAccounts(): MicrosoftAccount[] {
     const parsed: unknown = JSON.parse(saved);
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter((entry): entry is MicrosoftAccount =>
-        entry !== null && typeof entry === "object" &&
-        typeof (entry as MicrosoftAccount).name === "string" &&
-        typeof (entry as MicrosoftAccount).email === "string" &&
-        ((entry as MicrosoftAccount).uuid === undefined ||
-          (typeof (entry as MicrosoftAccount).uuid === "string" && (entry as MicrosoftAccount).uuid.trim().length > 0))
-      )
+      .filter((entry): entry is MicrosoftAccount => {
+        if (
+          entry === null ||
+          typeof entry !== "object" ||
+          typeof (entry as MicrosoftAccount).name !== "string" ||
+          typeof (entry as MicrosoftAccount).email !== "string"
+        ) return false;
+
+        const uuid = (entry as MicrosoftAccount).uuid;
+        return uuid === undefined || (typeof uuid === "string" && uuid.trim().length > 0);
+      })
       .filter((entry, index, accounts) => accounts.findIndex((candidate) => candidate.email.toLowerCase() === entry.email.toLowerCase()) === index)
       .slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS);
   } catch {
@@ -258,6 +268,7 @@ function LauncherApp() {
   }, []);
   const [page, setPage] = useState<Page>("Home");
   const [chatTargetFriendId, setChatTargetFriendId] = useState<string | null>(null);
+  const [chatProfileTargetId, setChatProfileTargetId] = useState<string | null>(null);
   const [communityLoginRequested, setCommunityLoginRequested] = useState(false);
   const [alphaAuthModalOpen, setAlphaAuthModalOpen] = useState(false);
   const [openProfileEditor, setOpenProfileEditor] = useState(false);
@@ -273,7 +284,30 @@ function LauncherApp() {
   const [savedAccounts, setSavedAccounts] = useState<MicrosoftAccount[]>(readSavedMicrosoftAccounts);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isMinecraftRunning, setIsMinecraftRunning] = useState(false);
+  const [alphaNexusLogs, setAlphaNexusLogs] = useState<AlphaNexusLog[]>([]);
+  const alphaNexusLogEndRef = useRef<HTMLDivElement>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: UnlistenFn | null = null;
+    void listen<AlphaNexusLog>("alpha-nexus-log", (event) => {
+      setAlphaNexusLogs((current) => [...current, event.payload].slice(-5000));
+    }).then((stopListening) => {
+      if (disposed) stopListening();
+      else unlisten = stopListening;
+    });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (page === "Alpha Nexus") {
+      alphaNexusLogEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [alphaNexusLogs, page]);
 
   const [isInstalling, setIsInstalling] = useState(false);
   const [installMessage, setInstallMessage] = useState<string | null>(null);
@@ -288,6 +322,10 @@ function LauncherApp() {
     useState<AlphaClientUpdateInfo | null>(null);
   const [isUpdatingClient, setIsUpdatingClient] = useState(false);
   const [clientDirectory, setClientDirectory] = useState<string | null>(null);
+  const [launcherUpdate, setLauncherUpdate] = useState<Awaited<ReturnType<typeof checkLauncherUpdate>>>(null);
+  const [isCheckingLauncherUpdate, setIsCheckingLauncherUpdate] = useState(false);
+  const [isInstallingLauncherUpdate, setIsInstallingLauncherUpdate] = useState(false);
+  const [launcherUpdateStatus, setLauncherUpdateStatus] = useState("");
 
   useEffect(() => {
     let disposed = false;
@@ -296,8 +334,25 @@ function LauncherApp() {
       try {
         const running = await invoke<boolean>("get_minecraft_process_status");
         if (!disposed) setIsMinecraftRunning(running);
+
+        if (running) {
+          const activeAccount = await invoke<MicrosoftAccount | null>("get_microsoft_account");
+          if (!disposed && activeAccount) {
+            setAccount(activeAccount);
+            setSavedAccounts((current) => {
+              const first = current[0];
+              if (first && first.name === activeAccount.name
+                  && first.email.toLowerCase() === activeAccount.email.toLowerCase()) {
+                return current;
+              }
+              return [activeAccount, ...current.filter((saved) =>
+                saved.email.toLowerCase() !== activeAccount.email.toLowerCase()
+              )].slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS);
+            });
+          }
+        }
       } catch (error) {
-        console.warn("Could not check Minecraft process status:", error);
+        console.warn("Could not refresh Minecraft account status:", error);
       }
     };
 
@@ -770,6 +825,7 @@ console.error("Developer permission check failed:", errorMessage);
       const message = await invoke<string>("start_offline_test", { username });
       setLaunchMessage(message || "Offline test is starting.");
       recordLaunch(`Offline test · ${username}`);
+      setPage("Alpha Nexus");
     } catch (error) {
       setLaunchError(errorText(error));
     } finally {
@@ -835,6 +891,7 @@ console.error("Developer permission check failed:", errorMessage);
 
       const message = await invoke<string>(
         partnerServer ? "launch_partner_server" : "launch_alphaclient",
+        { savedAccounts },
       );
       const launchedVersion = updateInfo?.update_available
         ? updateInfo.latest_version
@@ -861,6 +918,7 @@ console.error("Developer permission check failed:", errorMessage);
       })();
 
       setLaunchMessage(message || "AlphaClient is starting.");
+      setPage("Alpha Nexus");
     } catch (error) {
       setIsUpdatingClient(false);
       setLaunchError(errorText(error));
@@ -952,7 +1010,7 @@ console.error("Developer permission check failed:", errorMessage);
 
   const handleMicrosoftLogout = async () => {
     if (isMinecraftRunning) {
-      setLoginError("Je kunt niet uitloggen zolang Minecraft actief is. Sluit Minecraft eerst af.");
+      setLoginError("You cannot sign out while Minecraft is running. Please close Minecraft first.");
       return;
     }
 
@@ -973,8 +1031,7 @@ console.error("Developer permission check failed:", errorMessage);
   };
 
   const handleNavigation = async (next: Page) => {
-    if (next === "Friends") {
-      try {
+    if (next === "Friends") {      try {
         const { data, error } = await supabase.auth.getUser();
         if (error || !data.user) {
           navigate("Friends");
@@ -1000,6 +1057,56 @@ console.error("Developer permission check failed:", errorMessage);
     setAlphaAuthModalOpen(true);
   };
 
+  const handleCheckLauncherUpdate = async () => {
+    setIsCheckingLauncherUpdate(true);
+    setLauncherUpdateStatus("Checking for launcher updates...");
+    try {
+      const availableUpdate = await checkLauncherUpdate();
+      setLauncherUpdate(availableUpdate);
+      if (availableUpdate) {
+        setLauncherUpdateStatus("");
+        setModal({ title: `Alpha Launcher ${availableUpdate.version} is available`, kind: "launcher-update", body: "" });
+      } else {
+        setLauncherUpdateStatus("Alpha Launcher is up to date.");
+      }
+    } catch (error) {
+      setLauncherUpdateStatus(`Could not check for updates: ${errorText(error)}`);
+    } finally {
+      setIsCheckingLauncherUpdate(false);
+    }
+  };
+
+  const handleInstallLauncherUpdate = async () => {
+    if (!launcherUpdate || isInstallingLauncherUpdate) return;
+    setIsInstallingLauncherUpdate(true);
+    setLauncherUpdateStatus("Downloading and installing the launcher update...");
+    try {
+      await launcherUpdate.downloadAndInstall();
+      setLauncherUpdateStatus("Update installed. Restarting Alpha Launcher...");
+      await relaunch();
+    } catch (error) {
+      setLauncherUpdateStatus(`Update failed: ${errorText(error)}`);
+      setIsInstallingLauncherUpdate(false);
+    }
+  };
+
+  useEffect(() => {
+    if (import.meta.env.DEV) return;
+    let disposed = false;
+    const checkAtStartup = async () => {
+      try {
+        const availableUpdate = await checkLauncherUpdate();
+        if (disposed || !availableUpdate) return;
+        setLauncherUpdate(availableUpdate);
+        setModal({ title: `Alpha Launcher ${availableUpdate.version} is available`, kind: "launcher-update", body: "" });
+      } catch (error) {
+        console.warn("Could not check for Alpha Launcher updates:", error);
+      }
+    };
+    void checkAtStartup();
+    return () => { disposed = true; };
+  }, []);
+
   const openSettings = (section: string) => {
     setModal({
       title: `${section} settings`,
@@ -1017,6 +1124,7 @@ console.error("Developer permission check failed:", errorMessage);
     { name: "Friends", icon: "♧" },
     { name: "Developer", icon: "⌘" },
     { name: "Chats", icon: "✉" },
+    { name: "Alpha Nexus", icon: "⌂" },
   ];
 
   const bottomNavigation: { name: Page; icon: string }[] = [
@@ -1118,17 +1226,7 @@ console.error("Developer permission check failed:", errorMessage);
             {sidebarExpanded && (
               <div className="nav-partner">
                 <div className="nav-section-label">PARTNER</div>
-                <button
-                  type="button"
-                  className="partner-nav-item"
-                  onClick={() => void handlePlay(true)}
-                >
-                  <span className="nav-icon">◈</span>
-                  <span className="partner-nav-content">
-                    <strong>Alpha.rip</strong>
-                    <small>Partner Server · Join alpha.rip</small>
-                  </span>
-                </button>
+
               </div>
             )}
           </nav>
@@ -1239,14 +1337,51 @@ console.error("Developer permission check failed:", errorMessage);
             />
           )}
 
-          {page === "Mods" && <ClientModPermissionsManager />}
+          {page === "Mods" && <ModsPage />}
 
           {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
-          {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} onOpenChat={(friendId) => { setChatTargetFriendId(friendId); navigate("Chats"); }} />}
+          {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} onOpenChat={(friendId) => { setChatTargetFriendId(friendId); navigate("Chats"); }} initialProfileId={chatProfileTargetId} onInitialProfileHandled={() => setChatProfileTargetId(null)} />}
 
-          {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} initialFriendId={chatTargetFriendId} onInitialFriendHandled={() => setChatTargetFriendId(null)} />}
+          {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} initialFriendId={chatTargetFriendId} onInitialFriendHandled={() => setChatTargetFriendId(null)} onOpenProfile={(profileId) => { setChatProfileTargetId(profileId); navigate("Friends"); }} />}
 
+          {page === "Alpha Nexus" && (
+            <div className="page alpha-nexus-page">
+              <PageTitle eyebrow="ALPHA TOOLS" title="Alpha Nexus" description="Live Minecraft process output." />
+              <section className="section-card alpha-nexus-console">
+                <div className="alpha-nexus-toolbar">
+                  <div className="alpha-nexus-console-heading">
+                    <span className={`alpha-nexus-status-dot ${isMinecraftRunning ? "is-running" : ""}`} />
+                    <div>
+                      <strong>Minecraft Console</strong>
+                      <span>{isMinecraftRunning ? "Minecraft is running" : "Minecraft is not running"}</span>
+                    </div>
+                  </div>
+                  <button className="alpha-nexus-hide" type="button" onClick={() => navigate("Chats")} aria-label="Hide Alpha Nexus console" title="Hide console">×</button>
+                </div>
+                <div className="alpha-nexus-output" role="log" aria-live="off" aria-label="Minecraft process output">
+                  {alphaNexusLogs.length === 0 ? (
+                    <div className="alpha-nexus-empty">
+                      {isMinecraftRunning ? "Waiting for Minecraft process output…" : "Start AlphaClient to view live Minecraft output here."}
+                    </div>
+                  ) : (
+                    alphaNexusLogs.map((entry, index) => (
+                      <div className={`alpha-nexus-log-line ${entry.stream === "stderr" ? "is-stderr" : ""}`} key={`${entry.timestamp}-${index}`}>
+                        <time>{new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</time>
+                        <span className="alpha-nexus-stream">{entry.stream === "stderr" ? "STDERR" : "STDOUT"}</span>
+                        <span className="alpha-nexus-message">{entry.message}</span>
+                      </div>
+                    ))
+                  )}
+                  <div ref={alphaNexusLogEndRef} />
+                </div>
+                <div className="alpha-nexus-console-footer">
+                  <span>{alphaNexusLogs.length.toLocaleString()} captured lines</span>
+                  <span>Output is kept when this view is hidden</span>
+                </div>
+              </section>
+            </div>
+          )}
 
           {page === "Developer" && (
             <DeveloperPage
@@ -1421,6 +1556,19 @@ console.error("Developer permission check failed:", errorMessage);
                   CLOSE
                 </button>
               </div>
+            ) : modal.kind === "launcher-update" ? (
+              <div className="modal-settings">
+                <p>A new signed version of Alpha Launcher is available.</p>
+                <p><strong>Version {launcherUpdate?.version}</strong></p>
+                {launcherUpdate?.body ? <p className="modal-body-text">{launcherUpdate.body}</p> : <p className="modal-body-text">Install the latest launcher version from GitHub Releases.</p>}
+                {launcherUpdateStatus && <p className="modal-body-text">{launcherUpdateStatus}</p>}
+                <button type="button" className="large-play-button" disabled={isInstallingLauncherUpdate || !launcherUpdate} onClick={() => void handleInstallLauncherUpdate()}>
+                  {isInstallingLauncherUpdate ? "DOWNLOADING AND INSTALLING..." : "UPDATE AND RESTART"}
+                </button>
+                <button type="button" className="large-play-button" disabled={isInstallingLauncherUpdate} onClick={() => setModal(null)}>
+                  LATER
+                </button>
+              </div>
             ) : modal.kind === "settings" ? (
               <div className="modal-settings">
                 {modal.body === "General" && (
@@ -1516,10 +1664,19 @@ console.error("Developer permission check failed:", errorMessage);
                 )}
 
                 {modal.body === "Launcher" && (
-                  <p>
-                    Launcher preferences are saved locally on this device.
-                    Automatic updates and notifications are not connected yet.
-                  </p>
+                  <div className="launcher-update-settings">
+                    <p>Alpha Launcher checks GitHub Releases for signed updates when it starts.</p>
+                    {launcherUpdate && <p>Update available: <strong>{launcherUpdate.version}</strong></p>}
+                    {launcherUpdateStatus && <p className="modal-body-text">{launcherUpdateStatus}</p>}
+                    <button type="button" className="large-play-button" disabled={isCheckingLauncherUpdate || isInstallingLauncherUpdate} onClick={() => void handleCheckLauncherUpdate()}>
+                      {isCheckingLauncherUpdate ? "CHECKING..." : "CHECK FOR UPDATES"}
+                    </button>
+                    {launcherUpdate && (
+                      <button type="button" className="large-play-button" disabled={isInstallingLauncherUpdate} onClick={() => void handleInstallLauncherUpdate()}>
+                        {isInstallingLauncherUpdate ? "INSTALLING..." : "UPDATE AND RESTART"}
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {modal.body === "AlphaClient" && (
@@ -1569,17 +1726,6 @@ function AlphaLogo() {
       className="alpha-logo"
       src="/alpha-client-icon.png"
       alt="AlphaClient icon"
-      draggable={false}
-    />
-  );
-}
-
-function StartupLogo() {
-  return (
-    <img
-      className="startup-logo-image"
-      src="/alpha-client-startup-logo.png"
-      alt="AlphaClient"
       draggable={false}
     />
   );
@@ -1974,7 +2120,6 @@ function CommunityPage({ isMinecraftRunning, onOpenProfile, onOpenAlphaAuth, ope
 
 function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
   const [profile, setProfile] = useState<EditableCommunityProfile | null>(null);
-  const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -2013,7 +2158,6 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
       if (rankError) throw rankError;
       const loaded = { ...(data as EditableCommunityProfile), rank_keys: (rankRows ?? []).map((row: { rank_key: string }) => row.rank_key) };
       setProfile(loaded);
-      setDisplayName(loaded.username || "");
       setBio(loaded.bio || "");
       setAvatarUrl(loaded.avatar_url || null);
     } catch (e) {
@@ -2070,7 +2214,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
         .single();
       if (updateError) throw updateError;
       setProfile({ ...(data as EditableCommunityProfile), rank_keys: profile.rank_keys });
-      setDisplayName(data.username || profile.username); setBio(cleanBio); setAvatarUrl(nextAvatarUrl);
+      setBio(cleanBio); setAvatarUrl(nextAvatarUrl);
       setIsEditing(false);
       setSelectedAvatar(null);
       setMessage("Your profile has been saved.");
@@ -2083,7 +2227,6 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
 
   const resetChanges = () => {
     if (!profile) return;
-    setDisplayName(profile.username || "");
     setBio(profile.bio || "");
     setAvatarUrl(profile.avatar_url || null);
     setSelectedAvatar(null);
@@ -2177,7 +2320,7 @@ function ProfilePage({ startEditing = false }: { startEditing?: boolean }) {
 
 type CommunityProfile = { id: string; username: string; display_name: string; is_founder: boolean; rank_key?: string | null; rank_keys?: string[]; avatar_url?: string | null; bio?: string | null; created_at?: string | null; last_played_at?: string | null; last_played_version?: string | null };
 
-function ChatsPage({ onOpenAlphaAuth, initialFriendId, onInitialFriendHandled }: { onOpenAlphaAuth: () => void; initialFriendId: string | null; onInitialFriendHandled: () => void }) {
+function ChatsPage({ onOpenAlphaAuth, initialFriendId, onInitialFriendHandled, onOpenProfile }: { onOpenAlphaAuth: () => void; initialFriendId: string | null; onInitialFriendHandled: () => void; onOpenProfile: (profileId: string) => void }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [friends, setFriends] = useState<CommunityProfile[]>([]);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
@@ -2234,13 +2377,13 @@ function ChatsPage({ onOpenAlphaAuth, initialFriendId, onInitialFriendHandled }:
     {!loading && !userId && <section className="section-card friends-signin"><div className="friends-empty-icon">✉</div><h2>Sign in to Alpha Community</h2><p>Sign in to your Alpha Account to open private chats with your friends.</p><button className="friends-primary" onClick={onOpenAlphaAuth}>Sign in to Alpha Account</button></section>}
     {loading && <section className="section-card"><div className="friends-loading">Loading your chats…</div></section>}
     {error && <section className="section-card"><p className="friends-notice error" role="alert">{error}</p></section>}
-    {userId && !loading && !error && <PrivateChatPanel userId={userId} friends={friends} selectedFriendId={selectedFriendId} onSelectFriend={setSelectedFriendId} />}
+    {userId && !loading && !error && <PrivateChatPanel userId={userId} friends={friends} selectedFriendId={selectedFriendId} onSelectFriend={setSelectedFriendId} onOpenProfile={onOpenProfile} />}
   </div>;
 }
 
 type CommunityFriendRequest = { id: string; sender_id: string; recipient_id: string; status: string; created_at: string };
 
-function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => void; onOpenChat: (friendId: string) => void }) {
+function FriendsPage({ onOpenAlphaAuth, onOpenChat, initialProfileId, onInitialProfileHandled }: { onOpenAlphaAuth: () => void; onOpenChat: (friendId: string) => void; initialProfileId: string | null; onInitialProfileHandled: () => void }) {
   const [onlineFriendIds, setOnlineFriendIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -2395,6 +2538,17 @@ function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => v
     setProfileLoading(false);
   };
 
+  useEffect(() => {
+    if (!initialProfileId || loading) return;
+    const person = friends.find(item => item.id === initialProfileId)
+      ?? incoming.find(item => item.profile?.id === initialProfileId)?.profile
+      ?? outgoing.find(item => item.profile?.id === initialProfileId)?.profile
+      ?? results.find(item => item.id === initialProfileId)
+      ?? { id: initialProfileId, username: "Player", display_name: "Player", is_founder: false };
+    void openPublicProfile(person);
+    onInitialProfileHandled();
+  }, [initialProfileId, loading]);
+
   const sendRequest = async (profile: CommunityProfile) => {
     setBusyId(profile.id); setError(""); setMessage("");
     const { error: requestError } = await supabase.rpc("send_friend_request", { p_recipient_id: profile.id });
@@ -2450,11 +2604,11 @@ function FriendsPage({ onOpenAlphaAuth, onOpenChat }: { onOpenAlphaAuth: () => v
         <div className="friends-columns friends-request-columns">
         <section className="section-card friends-list-card">
           <div className="friends-section-heading"><div><h2>Incoming requests</h2><p>Players who want to add you.</p></div><span className="friends-count">{incoming.length}</span></div>
-          {incoming.length === 0 ? <div className="friends-empty">No incoming requests right now.</div> : incoming.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{request.profile?.avatar_url ? <img src={request.profile.avatar_url} alt="" onError={event => { event.currentTarget.style.display = "none"; }} /> : (request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div>{request.profile && <CommunityRankBadge rankKey={request.profile.rank_key || (request.profile.is_founder ? "founder" : "member")} />}<button className="friends-primary compact" disabled={busyId === request.id} onClick={() => void respond(request, true)}>{busyId === request.id ? "…" : "Accept"}</button><button className="friends-secondary compact" disabled={busyId === request.id} onClick={() => void respond(request, false)}>Decline</button></div>)}
+          {incoming.length === 0 ? <div className="friends-empty">No incoming requests right now.</div> : incoming.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{request.profile?.avatar_url ? <img src={request.profile.avatar_url} alt="" onError={event => { event.currentTarget.style.display = "none"; }} /> : (request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong><button type="button" className="friends-profile-name-button" disabled={!request.profile} onClick={() => { if (request.profile) void openPublicProfile(request.profile); }}>{request.profile?.username || "Alpha player"}</button></strong><span>@{request.profile?.username || "unknown"}</span></div>{request.profile && <CommunityRankBadge rankKey={request.profile.rank_key || (request.profile.is_founder ? "founder" : "member")} />}<button className="friends-primary compact" disabled={busyId === request.id} onClick={() => void respond(request, true)}>{busyId === request.id ? "…" : "Accept"}</button><button className="friends-secondary compact" disabled={busyId === request.id} onClick={() => void respond(request, false)}>Decline</button></div>)}
         </section>
         <section className="section-card friends-list-card">
           <div className="friends-section-heading"><div><h2>Outgoing requests</h2><p>Players you have sent a request to.</p></div><span className="friends-count">{outgoing.length}</span></div>
-          {outgoing.length === 0 ? <div className="friends-empty">You haven't sent any pending requests.</div> : outgoing.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{request.profile?.avatar_url ? <img src={request.profile.avatar_url} alt="" onError={event => { event.currentTarget.style.display = "none"; }} /> : (request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}{request.profile?.username || "Alpha player"}</strong><span>@{request.profile?.username || "unknown"}</span></div><span className="friends-pending"><i /> Pending</span><button className="friends-secondary compact" type="button" disabled={busyId === request.id} onClick={() => void cancelRequest(request)}>{busyId === request.id ? "Cancelling…" : "Cancel request"}</button></div>)}
+          {outgoing.length === 0 ? <div className="friends-empty">You haven't sent any pending requests.</div> : outgoing.map(request => <div className="friends-user-row" key={request.id}><div className="friends-avatar">{request.profile?.avatar_url ? <img src={request.profile.avatar_url} alt="" onError={event => { event.currentTarget.style.display = "none"; }} /> : (request.profile?.username || "?").slice(0,1).toUpperCase()}</div><div className="friends-user-copy"><strong>{request.profile?.is_founder && <span className="profile-founder-badge friends-founder-badge">FOUNDER</span>}<button type="button" className="friends-profile-name-button" disabled={!request.profile} onClick={() => { if (request.profile) void openPublicProfile(request.profile); }}>{request.profile?.username || "Alpha player"}</button></strong><span>@{request.profile?.username || "unknown"}</span></div><span className="friends-pending"><i /> Pending</span><button className="friends-secondary compact" type="button" disabled={busyId === request.id} onClick={() => void cancelRequest(request)}>{busyId === request.id ? "Cancelling…" : "Cancel request"}</button></div>)}
         </section>
         </div>
         <section className="section-card friends-list-card friends-roster-card">
@@ -2984,8 +3138,7 @@ function HomePage(props: {
                         : `AlphaClient ${session.version}`}
                     </span>
                   </div>
-                </div>
-              ))
+                </div>              ))
             ) : (
               <div className="last-played">
                 <div className="minecraft-icon">A</div>
@@ -3671,6 +3824,10 @@ type DeveloperTool =
   | "Rank Management"
   | "Mods"
   | "Permission Explorer"
+  | "Rank Inspector"
+  | "Verification"
+  | "Module Inspector"
+  | "Permission Inspector"
   | "Audit Timeline"
   | "Change Review"
   | "Development Sandbox"
@@ -3695,6 +3852,26 @@ const developerTools: {
   {
     name: "Permission Explorer",
     description: "Explore permissions and access rules.",
+    icon: "◇",
+  },
+  {
+    name: "Rank Inspector",
+    description: "Inspect another Alpha account and its assigned ranks.",
+    icon: "♙",
+  },
+  {
+    name: "Verification",
+    description: "Review and manage another Alpha account’s verification status.",
+    icon: "✓",
+  },
+  {
+    name: "Module Inspector",
+    description: "Inspect module access and the source of each module permission.",
+    icon: "▦",
+  },
+  {
+    name: "Permission Inspector",
+    description: "Inspect effective account permissions and their sources.",
     icon: "◇",
   },
   {
@@ -3882,7 +4059,7 @@ function DeveloperPage({
         <PageTitle
           eyebrow="DEVELOPMENT"
           title="Developer Center"
-          description="Beveiligde toegang tot developer tools en releasebeheer."
+          description="Secure access to developer tools and release management."
         />
         <section className="section-card developer-card">
           <p className="subtitle">Checking Supabase session and developer permissions…</p>
@@ -3960,8 +4137,7 @@ function DeveloperPage({
             )}
 
             <button
-              type="submit"
-              className="large-play-button developer-start-button"
+              type="submit"              className="large-play-button developer-start-button"
               disabled={developerSigningIn}
             >
               {developerSigningIn ? "SIGNING IN..." : "LOGIN TO DEVELOPER CENTER"}
@@ -4088,6 +4264,10 @@ function DeveloperPage({
           <div className="developer-tool-content">
             {developerAuthorized && activeTool === "Rank Management" && <RankManagement />}
             {developerAuthorized && activeTool === "Mods" && <ClientModPermissionsManager />}
+            {developerAuthorized && activeTool === "Rank Inspector" && <DeveloperAccountTools mode="rank" />}
+            {developerAuthorized && activeTool === "Verification" && <DeveloperAccountTools mode="verification" />}
+            {developerAuthorized && activeTool === "Module Inspector" && <DeveloperAccountTools mode="module" />}
+            {developerAuthorized && activeTool === "Permission Inspector" && <DeveloperAccountTools mode="permission" />}
 
             {developerAuthorized && activeTool === "Permission Explorer" &&
               renderPlaceholder(

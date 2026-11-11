@@ -18,7 +18,8 @@
         "height": 720,
         "minWidth": 1000,
         "minHeight": 650,
-        "visible": false
+        "visible": false,
+        "decorations": false
       },
       {
         "label": "splash",
@@ -51,7 +52,8 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "deep-link": {
@@ -59,6 +61,15 @@
         "schemes": [
           "alphaclient"
         ]
+      }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDAzQkZEN0MxOTc3ODAzMzgKUldRNEEzaVh3ZGUvQTkwKzN1eWFkQnFCYmUzYU1BUGsxbzlXbWZVdG1rY0MyREpodGx1Z3Y0b3cK",
+      "endpoints": [
+        "https://github.com/MsAlexTsuki/AlphaLauncher/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

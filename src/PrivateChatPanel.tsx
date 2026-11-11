@@ -3,7 +3,7 @@ import { supabase } from "./lib/supabase";
 
 type ChatFriend = { id: string; username: string; display_name?: string; is_founder?: boolean; rank_key?: string | null; rank_keys?: string[]; avatar_url?: string | null };
 type PrivateMessage = { id: string; sender_id: string; recipient_id: string; body: string; created_at: string };
-type Props = { userId: string; friends: ChatFriend[]; selectedFriendId: string | null; onSelectFriend: (friendId: string) => void };
+type Props = { userId: string; friends: ChatFriend[]; selectedFriendId: string | null; onSelectFriend: (friendId: string) => void; onOpenProfile: (profileId: string) => void };
 
 function formatRank(rankKey: string | null | undefined, isFounder?: boolean, rankKeys?: string[]) {
   const assigned = rankKeys ?? [];
@@ -54,7 +54,7 @@ function formatMessageTime(value: string) {
   return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
 
-export default function PrivateChatPanel({ userId, friends, selectedFriendId, onSelectFriend }: Props) {
+export default function PrivateChatPanel({ userId, friends, selectedFriendId, onSelectFriend, onOpenProfile }: Props) {
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -149,12 +149,12 @@ export default function PrivateChatPanel({ userId, friends, selectedFriendId, on
         {friends.length === 0 ? <div className="private-chat-no-contacts">Add friends to start a private conversation.</div> : friends.map(friend =>
           <button type="button" className={`private-chat-contact${selectedFriendId === friend.id ? " is-active" : ""}`} key={friend.id} onClick={() => onSelectFriend(friend.id)} aria-pressed={selectedFriendId === friend.id}>
             <span className="private-chat-avatar">{friend.avatar_url ? <img src={friend.avatar_url} alt="" /> : friend.username.slice(0,1).toUpperCase()}<i /></span>
-            <span className="private-chat-contact-copy"><strong>{friend.username}</strong><small className={`private-chat-rank ${rankClass(friend.rank_key, friend.is_founder, friendRankKeys[friend.id] ?? friend.rank_keys)}`}>{formatRank(friend.rank_key, friend.is_founder, friendRankKeys[friend.id] ?? friend.rank_keys)}</small></span><span className="private-chat-contact-arrow">›</span>
+            <span className="private-chat-contact-copy"><strong><span role="button" tabIndex={0} className="friends-profile-name-button" onClick={event => { event.stopPropagation(); onOpenProfile(friend.id); }} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.stopPropagation(); onOpenProfile(friend.id); } }}>{friend.username}</span></strong><small className={`private-chat-rank ${rankClass(friend.rank_key, friend.is_founder, friendRankKeys[friend.id] ?? friend.rank_keys)}`}>{formatRank(friend.rank_key, friend.is_founder, friendRankKeys[friend.id] ?? friend.rank_keys)}</small></span><span className="private-chat-contact-arrow">›</span>
           </button>)}
       </aside>
       <div className="private-chat-conversation">
         {selectedFriend ? <>
-          <header className="private-chat-conversation-header"><span className="private-chat-avatar large">{selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" /> : selectedFriend.username.slice(0,1).toUpperCase()}<i /></span><div><strong>{selectedFriend.username}</strong><small>Private conversation</small></div><span className="private-chat-secure-label">● FRIENDS</span><button type="button" className="private-chat-delete" onClick={() => setConfirmDeleteChat(true)} disabled={sending || loadingMessages} title="Delete conversation" aria-label="Delete conversation">Delete chat</button></header>
+          <header className="private-chat-conversation-header"><span className="private-chat-avatar large">{selectedFriend.avatar_url ? <img src={selectedFriend.avatar_url} alt="" /> : selectedFriend.username.slice(0,1).toUpperCase()}<i /></span><div><strong><button type="button" className="friends-profile-name-button" onClick={() => onOpenProfile(selectedFriend.id)}>{selectedFriend.username}</button></strong><small>Private conversation</small></div><span className="private-chat-secure-label">● FRIENDS</span><button type="button" className="private-chat-delete" onClick={() => setConfirmDeleteChat(true)} disabled={sending || loadingMessages} title="Delete conversation" aria-label="Delete conversation">Delete chat</button></header>
           <div className="private-chat-messages" ref={messageListRef} aria-live="polite">
             {loadingMessages ? <div className="private-chat-placeholder">Loading conversation…</div> : messages.length === 0 ? <div className="private-chat-welcome"><span>✦</span><strong>Start the conversation</strong><p>Send a message to {selectedFriend.username}.</p></div> : messages.map(message => {
               const mine = message.sender_id === userId;
