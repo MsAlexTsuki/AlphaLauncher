@@ -1,5 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { supabase } from "./lib/supabase";
 import PrivateChatPanel from "./PrivateChatPanel";
@@ -23,6 +24,7 @@ type Page =
   | "Settings"
   | "Account";
 
+type AlphaNexusLog = { timestamp: number; stream: "stdout" | "stderr"; message: string };
 type MicrosoftAccount = { name: string; email: string; uuid?: string };
 type LastPlayed = { timestamp: number; version: string };
 type ChangelogProduct = "launcher" | "client";
@@ -280,7 +282,30 @@ function LauncherApp() {
   const [savedAccounts, setSavedAccounts] = useState<MicrosoftAccount[]>(readSavedMicrosoftAccounts);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isMinecraftRunning, setIsMinecraftRunning] = useState(false);
+  const [alphaNexusLogs, setAlphaNexusLogs] = useState<AlphaNexusLog[]>([]);
+  const alphaNexusLogEndRef = useRef<HTMLDivElement>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: UnlistenFn | null = null;
+    void listen<AlphaNexusLog>("alpha-nexus-log", (event) => {
+      setAlphaNexusLogs((current) => [...current, event.payload].slice(-5000));
+    }).then((stopListening) => {
+      if (disposed) stopListening();
+      else unlisten = stopListening;
+    });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (page === "Alpha Nexus") {
+      alphaNexusLogEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [alphaNexusLogs, page]);
 
   const [isInstalling, setIsInstalling] = useState(false);
   const [installMessage, setInstallMessage] = useState<string | null>(null);
@@ -794,6 +819,7 @@ console.error("Developer permission check failed:", errorMessage);
       const message = await invoke<string>("start_offline_test", { username });
       setLaunchMessage(message || "Offline test is starting.");
       recordLaunch(`Offline test · ${username}`);
+      setPage("Alpha Nexus");
     } catch (error) {
       setLaunchError(errorText(error));
     } finally {
@@ -886,6 +912,7 @@ console.error("Developer permission check failed:", errorMessage);
       })();
 
       setLaunchMessage(message || "AlphaClient is starting.");
+      setPage("Alpha Nexus");
     } catch (error) {
       setIsUpdatingClient(false);
       setLaunchError(errorText(error));
@@ -1263,15 +1290,38 @@ console.error("Developer permission check failed:", errorMessage);
           {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} initialFriendId={chatTargetFriendId} onInitialFriendHandled={() => setChatTargetFriendId(null)} onOpenProfile={(profileId) => { setChatProfileTargetId(profileId); navigate("Friends"); }} />}
 
           {page === "Alpha Nexus" && (
-            <div className="page">
-              <PageTitle eyebrow="ALPHA TOOLS" title="Alpha Nexus" description="Minecraft process console and runtime output." />
-              <section className="section-card">
-                <div className="section-header">
-                  <div>
-                    <span className="card-label">ALPHA NEXUS</span>
-                    <h3>Minecraft Console</h3>
-                    <p className="subtitle">Process log streaming is not connected yet.</p>
+            <div className="page alpha-nexus-page">
+              <PageTitle eyebrow="ALPHA TOOLS" title="Alpha Nexus" description="Live Minecraft process output." />
+              <section className="section-card alpha-nexus-console">
+                <div className="alpha-nexus-toolbar">
+                  <div className="alpha-nexus-console-heading">
+                    <span className={`alpha-nexus-status-dot ${isMinecraftRunning ? "is-running" : ""}`} />
+                    <div>
+                      <strong>Minecraft Console</strong>
+                      <span>{isMinecraftRunning ? "Minecraft is running" : "Minecraft is not running"}</span>
+                    </div>
                   </div>
+                  <button className="alpha-nexus-hide" type="button" onClick={() => navigate("Chats")} aria-label="Hide Alpha Nexus console" title="Hide console">×</button>
+                </div>
+                <div className="alpha-nexus-output" role="log" aria-live="off" aria-label="Minecraft process output">
+                  {alphaNexusLogs.length === 0 ? (
+                    <div className="alpha-nexus-empty">
+                      {isMinecraftRunning ? "Waiting for Minecraft process output…" : "Start AlphaClient to view live Minecraft output here."}
+                    </div>
+                  ) : (
+                    alphaNexusLogs.map((entry, index) => (
+                      <div className={`alpha-nexus-log-line ${entry.stream === "stderr" ? "is-stderr" : ""}`} key={`${entry.timestamp}-${index}`}>
+                        <time>{new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</time>
+                        <span className="alpha-nexus-stream">{entry.stream === "stderr" ? "STDERR" : "STDOUT"}</span>
+                        <span className="alpha-nexus-message">{entry.message}</span>
+                      </div>
+                    ))
+                  )}
+                  <div ref={alphaNexusLogEndRef} />
+                </div>
+                <div className="alpha-nexus-console-footer">
+                  <span>{alphaNexusLogs.length.toLocaleString()} captured lines</span>
+                  <span>Output is kept when this view is hidden</span>
                 </div>
               </section>
             </div>
