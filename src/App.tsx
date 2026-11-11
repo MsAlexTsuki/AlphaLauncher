@@ -1068,7 +1068,7 @@ console.error("Developer permission check failed:", errorMessage);
     { name: "Friends", icon: "♧" },
     { name: "Developer", icon: "⌘" },
     { name: "Chats", icon: "✉" },
-    { name: "Alpha Nexus", icon: "⌘" },
+    { name: "Alpha Nexus", icon: "⌂" },
   ];
 
   const bottomNavigation: { name: Page; icon: string }[] = [
