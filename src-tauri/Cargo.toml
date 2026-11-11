@@ -1,6 +1,6 @@
 [package]
 name = "alphalauncher"
-version = "0.1.0"
+version = "0.1.2"
 description = "AlphaClient Launcher"
 authors = ["MsAlexTsuki"]
 edition = "2021"
@@ -15,7 +15,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
-tauri-plugin-deep-link = "2.4.10"
+tauri-plugin-deep-link = "=2.6.2"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
@@ -38,6 +38,7 @@ zip = "2"
 sha2 = "0.10"
 base64 = "0.22"
 rand = "0.8"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 url = "2"
 
 [profile.release]

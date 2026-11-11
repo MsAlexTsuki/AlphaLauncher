@@ -626,6 +626,7 @@ fn logout_microsoft()
     }
 
     clear_microsoft_auth_state();
+    delete_microsoft_credentials();
     Ok(())
 }
 
@@ -648,6 +649,120 @@ fn get_microsoft_account()
         .and_then(|account| {
             account.clone()
         })
+}
+
+
+#[derive(Serialize, Deserialize)]
+struct PersistedMicrosoftSession {
+    refresh_token: String,
+    account: MicrosoftAccount,
+}
+
+fn microsoft_credential_entry() -> Result<keyring::Entry, String> {
+    keyring::Entry::new("com.alphaclient.launcher", "microsoft-session")
+        .map_err(|error| format!("Could not access the system credential store: {}", error))
+}
+
+fn save_microsoft_credentials(refresh_token: &str, account: &MicrosoftAccount) -> Result<(), String> {
+    let session = PersistedMicrosoftSession {
+        refresh_token: refresh_token.to_string(),
+        account: account.clone(),
+    };
+    let serialized = serde_json::to_string(&session)
+        .map_err(|error| format!("Could not serialize the Microsoft session: {}", error))?;
+    microsoft_credential_entry()?
+        .set_password(&serialized)
+        .map_err(|error| format!("Could not securely save the Microsoft session: {}", error))
+}
+
+fn load_microsoft_credentials() -> Result<Option<(String, MicrosoftAccount)>, String> {
+    let serialized = match microsoft_credential_entry()?.get_password() {
+        Ok(value) => value,
+        Err(keyring::Error::NoEntry) => return Ok(None),
+        Err(error) => return Err(format!("Could not read the saved Microsoft session: {}", error)),
+    };
+    let session = serde_json::from_str::<PersistedMicrosoftSession>(&serialized)
+        .map_err(|error| format!("The saved Microsoft session is invalid: {}", error))?;
+    Ok(Some((session.refresh_token, session.account)))
+}
+
+fn delete_microsoft_credentials() {
+    let _ = microsoft_credential_entry()
+        .and_then(|entry| entry.delete_credential().map_err(|error| error.to_string()));
+}
+
+fn refresh_microsoft_access_token(refresh_token: &str) -> Result<MicrosoftTokenResponse, String> {
+    let client = http_client()?;
+    let response = client
+        .post(MICROSOFT_TOKEN_URL)
+        .form(&[
+            ("client_id", MICROSOFT_CLIENT_ID),
+            ("grant_type", "refresh_token"),
+            ("refresh_token", refresh_token),
+            ("scope", MICROSOFT_SCOPES),
+        ])
+        .send()
+        .map_err(|error| format!("Microsoft session refresh request failed: {}", error))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().unwrap_or_else(|_| "Unknown Microsoft session refresh error.".to_string());
+        return Err(format!("Microsoft session refresh failed ({}): {}", status, body));
+    }
+
+    response.json::<MicrosoftTokenResponse>()
+        .map_err(|error| format!("Could not parse Microsoft session refresh response: {}", error))
+}
+
+fn restore_microsoft_session_internal() -> Result<Option<MicrosoftAccount>, String> {
+    let Some((saved_refresh_token, saved_account)) = load_microsoft_credentials()? else {
+        return Ok(None);
+    };
+
+    let token_response = match refresh_microsoft_access_token(&saved_refresh_token) {
+        Ok(response) => response,
+        Err(error) => {
+            if error.contains("invalid_grant") || error.contains("AADSTS700082") || error.contains("AADSTS700084") {
+                delete_microsoft_credentials();
+            }
+            return Err(error);
+        }
+    };
+
+    let refresh_token = token_response.refresh_token.as_deref().unwrap_or(&saved_refresh_token);
+    let xbox_response = authenticate_xbox_live(&token_response.access_token)?;
+    let user_hash = xbox_response.display_claims.xui.first()
+        .map(|claim| claim.user_hash.clone())
+        .ok_or_else(|| "Xbox Live did not return a user hash while restoring the session.".to_string())?;
+    let xsts_response = authenticate_xsts(&xbox_response.token)?;
+    let minecraft_login = authenticate_minecraft_services(&user_hash, &xsts_response.token)?;
+    verify_minecraft_entitlement(&minecraft_login.access_token)?;
+    let profile = get_minecraft_profile(&minecraft_login.access_token)?;
+
+    let account = MicrosoftAccount {
+        name: profile.name,
+        email: saved_account.email,
+        uuid: profile.id,
+    };
+
+    save_microsoft_credentials(refresh_token, &account)?;
+
+    if let Ok(mut value) = microsoft_account_state().lock() { *value = Some(account.clone()); }
+    if let Ok(mut value) = microsoft_access_token_state().lock() { *value = Some(token_response.access_token); }
+    if let Ok(mut value) = microsoft_refresh_token_state().lock() { *value = Some(refresh_token.to_string()); }
+    if let Ok(mut value) = xbox_live_token_state().lock() { *value = Some(xbox_response.token); }
+    if let Ok(mut value) = xsts_token_state().lock() { *value = Some(xsts_response.token); }
+    if let Ok(mut value) = xbox_user_hash_state().lock() { *value = Some(user_hash); }
+    if let Ok(mut value) = minecraft_access_token_state().lock() { *value = Some(minecraft_login.access_token); }
+    if let Ok(mut value) = minecraft_uuid_state().lock() { *value = Some(account.uuid.clone()); }
+    Ok(Some(account))
+}
+
+#[tauri::command]
+async fn restore_microsoft_session() -> Result<Option<MicrosoftAccount>, String> {
+    tauri::async_runtime::spawn_blocking(restore_microsoft_session_internal)
+        .await
+        .map_err(|error| format!("Microsoft session restore task failed: {}", error))?
 }
 
 
@@ -1084,6 +1199,8 @@ fn perform_microsoft_login_inner(login_hint: Option<String>)
     // Complete authentication chain
     // --------------------------------------------------------
 
+    let mut refresh_token_to_persist: Option<String> = None;
+
     let login_result:
         Result<MicrosoftAccount, String> =
         (|| {
@@ -1098,6 +1215,8 @@ fn perform_microsoft_login_inner(login_hint: Option<String>)
                     &redirect_uri,
                     &code_verifier
                 )?;
+
+            refresh_token_to_persist = token_response.refresh_token.clone();
 
             // ------------------------------------------------
             // Store Microsoft access token
@@ -1318,6 +1437,9 @@ fn perform_microsoft_login_inner(login_hint: Option<String>)
 
     match login_result {
         Ok(account) => {
+            let refresh_token = refresh_token_to_persist.as_deref()
+                .ok_or_else(|| "Microsoft did not return a refresh token. The account session cannot be saved.".to_string())?;
+            save_microsoft_credentials(refresh_token, &account)?;
 
             let _ =
                 send_callback_response(
@@ -5959,7 +6081,13 @@ pub fn run()
     #[cfg(desktop)]
     {
         builder = builder.plugin(
-            tauri_plugin_single_instance::init(|_app, _argv, _cwd| {})
+            tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.unminimize();
+                    let _ = window.set_focus();
+                }
+            })
         );
     }
 
@@ -6024,6 +6152,7 @@ pub fn run()
                 start_microsoft_login,
                 logout_microsoft,
                 get_microsoft_account,
+                restore_microsoft_session,
                 get_minecraft_process_status
             ]
         )
