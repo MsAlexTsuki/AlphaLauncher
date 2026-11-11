@@ -34,6 +34,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
           git commit -m "chore: bump Alpha Launcher version"
+          git push origin HEAD:feature/changelog-audit-logging
 
       - name: Install frontend dependencies
         run: npm install
