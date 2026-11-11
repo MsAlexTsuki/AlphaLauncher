@@ -8359,3 +8359,29 @@ button:not(:disabled):active {
     flex: 1;
   }
 }
+
+
+/* Alpha Nexus live Minecraft console */
+.alpha-nexus-page { display:flex; flex-direction:column; min-height:0; }
+.alpha-nexus-console { display:flex; flex:1 1 auto; flex-direction:column; min-height:300px; padding:0; overflow:hidden; }
+.alpha-nexus-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:70px; padding:16px 20px; border-bottom:1px solid var(--border); }
+.alpha-nexus-console-heading { display:flex; align-items:center; gap:12px; min-width:0; }
+.alpha-nexus-console-heading > div { display:flex; flex-direction:column; gap:4px; }
+.alpha-nexus-console-heading strong { color:var(--text); font-size:13px; font-weight:700; }
+.alpha-nexus-console-heading span:not(.alpha-nexus-status-dot) { color:var(--muted); font-size:11px; }
+.alpha-nexus-status-dot { width:9px; height:9px; flex:0 0 9px; border-radius:50%; background:#777b86; }
+.alpha-nexus-status-dot.is-running { background:var(--green); box-shadow:0 0 10px rgba(113,217,155,.55); }
+.alpha-nexus-hide { display:grid; place-items:center; width:30px; height:30px; border:1px solid var(--border); border-radius:8px; background:rgba(255,255,255,.035); color:var(--muted); font-size:21px; line-height:1; cursor:pointer; }
+.alpha-nexus-hide:hover { border-color:var(--border-hover); color:var(--text); background:rgba(255,200,61,.08); }
+.alpha-nexus-output { flex:1 1 auto; min-height:240px; max-height:calc(100vh - 310px); overflow:auto; padding:14px 16px; background:#0b0d12; color:#d7d9e0; font:11px/1.65 Consolas,"Cascadia Code",monospace; scrollbar-color:#41434c #0b0d12; }
+.alpha-nexus-empty { padding:12px 4px; color:var(--muted); font:12px/1.6 Inter,sans-serif; }
+.alpha-nexus-log-line { display:grid; grid-template-columns:74px 58px minmax(0,1fr); gap:10px; padding:2px 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.alpha-nexus-log-line time { color:#777e8d; font-variant-numeric:tabular-nums; }
+.alpha-nexus-stream { color:#9da4b3; font-size:10px; font-weight:700; }
+.alpha-nexus-log-line.is-stderr .alpha-nexus-stream,.alpha-nexus-log-line.is-stderr .alpha-nexus-message { color:#e6a0a0; }
+.alpha-nexus-message { min-width:0; }
+.alpha-nexus-console-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 16px; border-top:1px solid var(--border); color:var(--muted); font-size:10px; }
+@media (max-width:700px) {
+  .alpha-nexus-log-line { grid-template-columns:62px 48px minmax(0,1fr); gap:6px; }
+  .alpha-nexus-console-footer { align-items:flex-start; flex-direction:column; }
+}
