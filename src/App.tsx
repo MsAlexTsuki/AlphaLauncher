@@ -19,6 +19,7 @@ type Page =
   | "Friends"
   | "Developer"
   | "Chats"
+  | "Alpha Nexus"
   | "Settings"
   | "Account";
 
@@ -1040,6 +1041,7 @@ console.error("Developer permission check failed:", errorMessage);
     { name: "Friends", icon: "♧" },
     { name: "Developer", icon: "⌘" },
     { name: "Chats", icon: "✉" },
+    { name: "Alpha Nexus", icon: "⌘" },
   ];
 
   const bottomNavigation: { name: Page; icon: string }[] = [
@@ -1260,6 +1262,20 @@ console.error("Developer permission check failed:", errorMessage);
 
           {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} initialFriendId={chatTargetFriendId} onInitialFriendHandled={() => setChatTargetFriendId(null)} onOpenProfile={(profileId) => { setChatProfileTargetId(profileId); navigate("Friends"); }} />}
 
+          {page === "Alpha Nexus" && (
+            <div className="page">
+              <PageTitle eyebrow="ALPHA TOOLS" title="Alpha Nexus" description="Minecraft process console and runtime output." />
+              <section className="section-card">
+                <div className="section-header">
+                  <div>
+                    <span className="card-label">ALPHA NEXUS</span>
+                    <h3>Minecraft Console</h3>
+                    <p className="subtitle">Process log streaming is not connected yet.</p>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
 
           {page === "Developer" && (
             <DeveloperPage
