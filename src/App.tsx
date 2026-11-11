@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { check as checkLauncherUpdate } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { supabase } from "./lib/supabase";
 import PrivateChatPanel from "./PrivateChatPanel";
 import InboxButton from "./InboxButton";
@@ -51,7 +53,7 @@ const MAX_LAUNCH_HISTORY = 3;
 type ModalContent = {
   title: string;
   body: string;
-  kind?: "settings" | "changelog";
+  kind?: "settings" | "changelog" | "launcher-update";
 } | null;
 
 type Settings = {
@@ -320,6 +322,10 @@ function LauncherApp() {
     useState<AlphaClientUpdateInfo | null>(null);
   const [isUpdatingClient, setIsUpdatingClient] = useState(false);
   const [clientDirectory, setClientDirectory] = useState<string | null>(null);
+  const [launcherUpdate, setLauncherUpdate] = useState<Awaited<ReturnType<typeof checkLauncherUpdate>>>(null);
+  const [isCheckingLauncherUpdate, setIsCheckingLauncherUpdate] = useState(false);
+  const [isInstallingLauncherUpdate, setIsInstallingLauncherUpdate] = useState(false);
+  const [launcherUpdateStatus, setLauncherUpdateStatus] = useState("");
 
   useEffect(() => {
     let disposed = false;
@@ -1051,6 +1057,56 @@ console.error("Developer permission check failed:", errorMessage);
     setAlphaAuthModalOpen(true);
   };
 
+  const handleCheckLauncherUpdate = async () => {
+    setIsCheckingLauncherUpdate(true);
+    setLauncherUpdateStatus("Checking for launcher updates...");
+    try {
+      const availableUpdate = await checkLauncherUpdate();
+      setLauncherUpdate(availableUpdate);
+      if (availableUpdate) {
+        setLauncherUpdateStatus("");
+        setModal({ title: `Alpha Launcher ${availableUpdate.version} is available`, kind: "launcher-update", body: "" });
+      } else {
+        setLauncherUpdateStatus("Alpha Launcher is up to date.");
+      }
+    } catch (error) {
+      setLauncherUpdateStatus(`Could not check for updates: ${errorText(error)}`);
+    } finally {
+      setIsCheckingLauncherUpdate(false);
+    }
+  };
+
+  const handleInstallLauncherUpdate = async () => {
+    if (!launcherUpdate || isInstallingLauncherUpdate) return;
+    setIsInstallingLauncherUpdate(true);
+    setLauncherUpdateStatus("Downloading and installing the launcher update...");
+    try {
+      await launcherUpdate.downloadAndInstall();
+      setLauncherUpdateStatus("Update installed. Restarting Alpha Launcher...");
+      await relaunch();
+    } catch (error) {
+      setLauncherUpdateStatus(`Update failed: ${errorText(error)}`);
+      setIsInstallingLauncherUpdate(false);
+    }
+  };
+
+  useEffect(() => {
+    if (import.meta.env.DEV) return;
+    let disposed = false;
+    const checkAtStartup = async () => {
+      try {
+        const availableUpdate = await checkLauncherUpdate();
+        if (disposed || !availableUpdate) return;
+        setLauncherUpdate(availableUpdate);
+        setModal({ title: `Alpha Launcher ${availableUpdate.version} is available`, kind: "launcher-update", body: "" });
+      } catch (error) {
+        console.warn("Could not check for Alpha Launcher updates:", error);
+      }
+    };
+    void checkAtStartup();
+    return () => { disposed = true; };
+  }, []);
+
   const openSettings = (section: string) => {
     setModal({
       title: `${section} settings`,
@@ -1500,6 +1556,19 @@ console.error("Developer permission check failed:", errorMessage);
                   CLOSE
                 </button>
               </div>
+            ) : modal.kind === "launcher-update" ? (
+              <div className="modal-settings">
+                <p>A new signed version of Alpha Launcher is available.</p>
+                <p><strong>Version {launcherUpdate?.version}</strong></p>
+                {launcherUpdate?.body ? <p className="modal-body-text">{launcherUpdate.body}</p> : <p className="modal-body-text">Install the latest launcher version from GitHub Releases.</p>}
+                {launcherUpdateStatus && <p className="modal-body-text">{launcherUpdateStatus}</p>}
+                <button type="button" className="large-play-button" disabled={isInstallingLauncherUpdate || !launcherUpdate} onClick={() => void handleInstallLauncherUpdate()}>
+                  {isInstallingLauncherUpdate ? "DOWNLOADING AND INSTALLING..." : "UPDATE AND RESTART"}
+                </button>
+                <button type="button" className="large-play-button" disabled={isInstallingLauncherUpdate} onClick={() => setModal(null)}>
+                  LATER
+                </button>
+              </div>
             ) : modal.kind === "settings" ? (
               <div className="modal-settings">
                 {modal.body === "General" && (
@@ -1595,10 +1664,19 @@ console.error("Developer permission check failed:", errorMessage);
                 )}
 
                 {modal.body === "Launcher" && (
-                  <p>
-                    Launcher preferences are saved locally on this device.
-                    Automatic updates and notifications are not connected yet.
-                  </p>
+                  <div className="launcher-update-settings">
+                    <p>Alpha Launcher checks GitHub Releases for signed updates when it starts.</p>
+                    {launcherUpdate && <p>Update available: <strong>{launcherUpdate.version}</strong></p>}
+                    {launcherUpdateStatus && <p className="modal-body-text">{launcherUpdateStatus}</p>}
+                    <button type="button" className="large-play-button" disabled={isCheckingLauncherUpdate || isInstallingLauncherUpdate} onClick={() => void handleCheckLauncherUpdate()}>
+                      {isCheckingLauncherUpdate ? "CHECKING..." : "CHECK FOR UPDATES"}
+                    </button>
+                    {launcherUpdate && (
+                      <button type="button" className="large-play-button" disabled={isInstallingLauncherUpdate} onClick={() => void handleInstallLauncherUpdate()}>
+                        {isInstallingLauncherUpdate ? "INSTALLING..." : "UPDATE AND RESTART"}
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {modal.body === "AlphaClient" && (
