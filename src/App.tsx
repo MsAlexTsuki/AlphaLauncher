@@ -1456,7 +1456,9 @@ console.error("Developer permission check failed:", errorMessage);
           className="modal-backdrop"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setModal(null);
+            if (event.target === event.currentTarget && modal.kind !== "launcher-update") {
+              setModal(null);
+            }
           }}
         >
           <section
