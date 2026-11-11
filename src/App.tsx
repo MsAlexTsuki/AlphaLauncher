@@ -413,15 +413,17 @@ function LauncherApp() {
   }, []);
 
   useEffect(() => {
-    invoke<MicrosoftAccount | null>("get_microsoft_account")
+    invoke<MicrosoftAccount | null>("restore_microsoft_session")
       .then((restoredAccount) => {
-        setAccount(restoredAccount);
-        if (restoredAccount) {
-          setSavedAccounts((current) => [restoredAccount, ...current.filter((saved) => saved.uuid !== restoredAccount.uuid && saved.email.toLowerCase() !== restoredAccount.email.toLowerCase())].slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS));
+        if (!restoredAccount) {
+          setAccount(null);
+          return;
         }
+        setAccount(restoredAccount);
+        setSavedAccounts((current) => [restoredAccount, ...current.filter((saved) => saved.uuid !== restoredAccount.uuid && saved.email.toLowerCase() !== restoredAccount.email.toLowerCase())].slice(0, MAX_SAVED_MICROSOFT_ACCOUNTS));
       })
       .catch((error) =>
-        console.warn("Could not restore Microsoft account:", error),
+        console.warn("Could not restore Microsoft account session:", error),
       );
 
     invoke<string>("get_alphaclient_directory_path")
