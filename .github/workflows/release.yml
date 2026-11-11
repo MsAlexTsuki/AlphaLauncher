@@ -49,7 +49,7 @@ jobs:
           tagName: launcher-v__VERSION__
           releaseName: "Alpha Launcher v__VERSION__"
           releaseBody: "Add the user-facing changelog for this version before publishing. These notes are displayed in Alpha Launcher."
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           uploadUpdaterJson: true
           uploadUpdaterSignatures: true
