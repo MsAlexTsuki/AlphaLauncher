@@ -49,6 +49,9 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 use url::Url;
 
 use zip::ZipArchive;
@@ -5529,6 +5532,9 @@ async fn launch_alphaclient_for_server(
                 .arg(main_class)
                 .args(game_arguments);
 
+            #[cfg(target_os = "windows")]
+            command.creation_flags(0x08000000); // CREATE_NO_WINDOW: keep Minecraft output in Alpha Nexus without opening a console window.
+
             let mut child = command
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
@@ -5807,6 +5813,9 @@ fn start_offline_test_internal(
         .arg(classpath)
         .arg(main_class)
         .args(game_arguments);
+
+    #[cfg(target_os = "windows")]
+    command.creation_flags(0x08000000); // CREATE_NO_WINDOW: keep Minecraft output in Alpha Nexus without opening a console window.
 
     let mut child = command
         .stdout(Stdio::piped())
