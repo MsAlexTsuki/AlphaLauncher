@@ -1289,7 +1289,7 @@ console.error("Developer permission check failed:", errorMessage);
               isLaunching={isLaunching || isUpdatingClient}
               launchError={launchError}
               launchMessage={launchMessage}
-              onOpenAlphaAuth={() => void handleOpenAlphaAuth()}
+              onOpenAlphaAuth={(mode) => void handleOpenAlphaAuth(mode)}
               onChangelog={() => {
                 setActiveChangelogTab("client");
                 setModal({
