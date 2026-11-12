@@ -2931,6 +2931,11 @@ function HomePage(props: {
     onNews,
   } = props;
   const [accountsExpanded, setAccountsExpanded] = useState(false);
+  const [alphaAvatarFailed, setAlphaAvatarFailed] = useState(false);
+
+  useEffect(() => {
+    setAlphaAvatarFailed(false);
+  }, [alphaAccountAvatarUrl]);
 
   useEffect(() => {
     if (!accountsExpanded) return;
@@ -3107,8 +3112,8 @@ function HomePage(props: {
             {alphaAccountName ? (
               <div className="home-alpha-profile">
                 <div className="community-avatar home-alpha-profile-avatar">
-                  {alphaAccountAvatarUrl ? (
-                    <img src={alphaAccountAvatarUrl} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                  {alphaAccountAvatarUrl && !alphaAvatarFailed ? (
+                    <img src={alphaAccountAvatarUrl} alt="" onError={() => setAlphaAvatarFailed(true)} />
                   ) : (
                     alphaAccountName.trim().charAt(0).toUpperCase() || "A"
                   )}
