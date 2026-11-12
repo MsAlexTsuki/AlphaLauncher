@@ -275,6 +275,8 @@ function LauncherApp() {
   const [alphaAuthInitialMode, setAlphaAuthInitialMode] = useState<"login" | "signup">("login");
   const [alphaAccountUser, setAlphaAccountUser] = useState<User | null>(null);
   const [alphaAccountName, setAlphaAccountName] = useState<string | null>(null);
+  const [alphaAccountRank, setAlphaAccountRank] = useState("member");
+  const [alphaAccountAvatarUrl, setAlphaAccountAvatarUrl] = useState<string | null>(null);
   const [openProfileEditor, setOpenProfileEditor] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -303,27 +305,38 @@ function LauncherApp() {
   useEffect(() => {
     if (!alphaAccountUser) {
       setAlphaAccountName(null);
+      setAlphaAccountRank("member");
+      setAlphaAccountAvatarUrl(null);
       return;
     }
 
     let cancelled = false;
-    const metadata = alphaAccountUser.user_metadata ?? {};
-    const metadataName = [metadata.username, metadata.display_name, metadata.full_name].find(
-      (value): value is string => typeof value === "string" && value.trim().length > 0,
-    );
-    setAlphaAccountName(metadataName?.trim() || alphaAccountUser.email?.split("@")[0] || "Alpha Account");
-
     void supabase
       .from("profiles")
-      .select("username, display_name")
+      .select("username, display_name, rank_key, is_founder, avatar_url")
       .eq("id", alphaAccountUser.id)
       .maybeSingle()
       .then(({ data, error }) => {
-        if (cancelled || error) return;
-        const profileName = [data?.username, data?.display_name].find(
-          (value): value is string => typeof value === "string" && value.trim().length > 0,
+        if (cancelled) return;
+        if (error) {
+          console.warn("Could not load Alpha Account profile:", error.message);
+        }
+
+        const metadata = alphaAccountUser.user_metadata ?? {};
+        const candidates = [data?.username, data?.display_name, metadata.username, metadata.display_name, metadata.full_name];
+        const profileName = candidates.find(
+          (value): value is string =>
+            typeof value === "string" &&
+            value.trim().length > 0 &&
+            value.trim().toLowerCase() !== (alphaAccountUser.email ?? "").trim().toLowerCase(),
         );
-        if (profileName) setAlphaAccountName(profileName.trim());
+        setAlphaAccountName(profileName?.trim() ?? "Community member");
+        setAlphaAccountRank(data?.rank_key || (data?.is_founder ? "founder" : "member"));
+        setAlphaAccountAvatarUrl(
+          typeof data?.avatar_url === "string" && data.avatar_url.trim()
+            ? data.avatar_url
+            : null,
+        );
       });
 
     return () => {
@@ -1326,7 +1339,8 @@ console.error("Developer permission check failed:", errorMessage);
             <HomePage
               account={account}
               alphaAccountName={alphaAccountName}
-              alphaAccountEmail={alphaAccountUser?.email ?? null}
+              alphaAccountRank={alphaAccountRank}
+              alphaAccountAvatarUrl={alphaAccountAvatarUrl}
               savedAccounts={savedAccounts}
               onSwitchAccount={(savedAccount) => void handleMicrosoftLogin(savedAccount)}
               onAddAccount={() => void handleMicrosoftLogin()}
@@ -2873,7 +2887,8 @@ function AlphaAccountAuthModal({ initialMode = "login", onClose }: { initialMode
 function HomePage(props: {
   account: MicrosoftAccount | null;
   alphaAccountName: string | null;
-  alphaAccountEmail: string | null;
+  alphaAccountRank: string;
+  alphaAccountAvatarUrl: string | null;
   savedAccounts: MicrosoftAccount[];
   onSwitchAccount: (account: MicrosoftAccount) => void;
   onAddAccount: () => void;
@@ -2895,7 +2910,8 @@ function HomePage(props: {
   const {
     account,
     alphaAccountName,
-    alphaAccountEmail,
+    alphaAccountRank,
+    alphaAccountAvatarUrl,
     savedAccounts,
     onSwitchAccount,
     onAddAccount,
@@ -3087,11 +3103,26 @@ function HomePage(props: {
           </div>
 
           <div className="info-card home-alpha-account-card">
-            <div className="card-label">ALPHA ACCOUNT</div>
+            <div className="card-label">YOUR ALPHA ACCOUNT</div>
             {alphaAccountName ? (
-              <div className="home-alpha-account-actions">
-                <strong>{alphaAccountName}</strong>
-                {alphaAccountEmail && <span>{alphaAccountEmail}</span>}
+              <div className="home-alpha-profile">
+                <div className="community-avatar home-alpha-profile-avatar">
+                  {alphaAccountAvatarUrl ? (
+                    <img src={alphaAccountAvatarUrl} alt="" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                  ) : (
+                    alphaAccountName.trim().charAt(0).toUpperCase() || "A"
+                  )}
+                </div>
+                <div className="home-alpha-profile-copy">
+                  <strong>{alphaAccountName}</strong>
+                  <span
+                    className={`community-menu-rank ${alphaAccountRank === "founder" ? "is-founder" : ""}`}
+                    style={{ "--rank-color": COMMUNITY_RANKS[alphaAccountRank]?.color ?? COMMUNITY_RANKS.member.color } as React.CSSProperties}
+                  >
+                    <CommunityRankIcon rankKey={alphaAccountRank} className="community-rank-icon" />
+                    {COMMUNITY_RANKS[alphaAccountRank]?.label ?? "MEMBER"}
+                  </span>
+                </div>
               </div>
             ) : (
               <div className="home-alpha-account-actions">
