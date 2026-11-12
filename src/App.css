@@ -8401,3 +8401,12 @@ button:not(:disabled):active {
   .alpha-nexus-log-line { grid-template-columns:62px 48px minmax(0,1fr); gap:6px; }
   .alpha-nexus-console-footer { align-items:flex-start; flex-direction:column; }
 }
+
+
+/* Compact signed-in Alpha Account profile on the Home page. */
+.home-alpha-account-card .card-label { display: block; margin-bottom: 13px; }
+.home-alpha-profile { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.home-alpha-profile-avatar { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 13px; }
+.home-alpha-profile-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; min-width: 0; }
+.home-alpha-profile-copy > strong { color: var(--text, #fff); font: 600 16px "Space Grotesk",sans-serif; overflow-wrap: anywhere; }
+.home-alpha-profile-copy .community-menu-rank { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; }
