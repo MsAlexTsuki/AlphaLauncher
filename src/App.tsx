@@ -271,6 +271,7 @@ function LauncherApp() {
   const [chatProfileTargetId, setChatProfileTargetId] = useState<string | null>(null);
   const [communityLoginRequested, setCommunityLoginRequested] = useState(false);
   const [alphaAuthModalOpen, setAlphaAuthModalOpen] = useState(false);
+  const [alphaAuthInitialMode, setAlphaAuthInitialMode] = useState<"login" | "signup">("login");
   const [openProfileEditor, setOpenProfileEditor] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -1049,13 +1050,14 @@ console.error("Developer permission check failed:", errorMessage);
     navigate(next);
   };
 
-  const handleOpenAlphaAuth = async () => {
+  const handleOpenAlphaAuth = async (mode: "login" | "signup" = "login") => {
     try {
       const { data, error } = await supabase.auth.getUser();
       if (!error && data.user) return;
     } catch {
       // If the session cannot be checked, keep the login option available.
     }
+    setAlphaAuthInitialMode(mode);
     setAlphaAuthModalOpen(true);
   };
 
@@ -1450,7 +1452,7 @@ console.error("Developer permission check failed:", errorMessage);
       </div>
 
       {alphaAuthModalOpen && (
-        <AlphaAccountAuthModal onClose={() => setAlphaAuthModalOpen(false)} />
+        <AlphaAccountAuthModal initialMode={alphaAuthInitialMode} onClose={() => setAlphaAuthModalOpen(false)} />
       )}
 
       {modal && (
@@ -2646,8 +2648,8 @@ function PageTitle({
 }
 
 
-function AlphaAccountAuthModal({ onClose }: { onClose: () => void }) {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+function AlphaAccountAuthModal({ initialMode = "login", onClose }: { initialMode?: "login" | "signup"; onClose: () => void }) {
+  const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -2830,7 +2832,7 @@ function HomePage(props: {
   isLaunching: boolean;
   launchError: string | null;
   launchMessage: string | null;
-  onOpenAlphaAuth: () => void;
+  onOpenAlphaAuth: (mode?: "login" | "signup") => void;
   onChangelog: () => void;
   onNews: () => void;
 }) {
@@ -3026,6 +3028,14 @@ function HomePage(props: {
           </div>
           </div>
 
+          <div className="info-card home-alpha-account-card">
+            <div className="card-label">ALPHA ACCOUNT</div>
+            <div className="home-alpha-account-actions">
+              <button type="button" className="small-button" onClick={() => onOpenAlphaAuth("login")}>Login</button>
+              <button type="button" className="small-button" onClick={() => onOpenAlphaAuth("signup")}>Register</button>
+            </div>
+          </div>
+
           <div className="info-card">
             <div className="card-label">CLIENT STATUS</div>
             <div className="status-row">
@@ -3119,7 +3129,7 @@ function HomePage(props: {
           </div>
           <div className="launch-history-list">
             {launchHistory.length > 0 ? (
-              launchHistory.slice(0, MAX_LAUNCH_HISTORY).map((session, index) => (
+              launchHistory.slice(0, 3).map((session, index) => (
                 <div
                   className="last-played"
                   key={`${session.timestamp}-${index}`}
@@ -3159,18 +3169,6 @@ function HomePage(props: {
           </div>
         </div>
       </section>
-
-      <div className="home-community-account-wrap">
-        <button
-          type="button"
-          className="home-community-account-button"
-          onClick={onOpenAlphaAuth}
-        >
-          <span aria-hidden="true">✦</span>
-          Login to your Alpha Account
-          <span className="home-community-account-arrow" aria-hidden="true">›</span>
-        </button>
-      </div>
     </div>
   );
 }
