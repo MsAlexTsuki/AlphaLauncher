@@ -1038,11 +1038,13 @@ console.error("Developer permission check failed:", errorMessage);
         const { data, error } = await supabase.auth.getUser();
         if (error || !data.user) {
           navigate("Friends");
+          setAlphaAuthInitialMode("login");
           setAlphaAuthModalOpen(true);
           return;
         }
       } catch {
         navigate("Friends");
+        setAlphaAuthInitialMode("login");
         setAlphaAuthModalOpen(true);
         return;
       }
@@ -1343,11 +1345,11 @@ console.error("Developer permission check failed:", errorMessage);
 
           {page === "Mods" && <ModsPage />}
 
-          {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
+          {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => { setAlphaAuthInitialMode("login"); setAlphaAuthModalOpen(true); }} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
-          {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} onOpenChat={(friendId) => { setChatTargetFriendId(friendId); navigate("Chats"); }} initialProfileId={chatProfileTargetId} onInitialProfileHandled={() => setChatProfileTargetId(null)} />}
+          {page === "Friends" && <FriendsPage onOpenAlphaAuth={() => { setAlphaAuthInitialMode("login"); setAlphaAuthModalOpen(true); }} onOpenChat={(friendId) => { setChatTargetFriendId(friendId); navigate("Chats"); }} initialProfileId={chatProfileTargetId} onInitialProfileHandled={() => setChatProfileTargetId(null)} />}
 
-          {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => setAlphaAuthModalOpen(true)} initialFriendId={chatTargetFriendId} onInitialFriendHandled={() => setChatTargetFriendId(null)} onOpenProfile={(profileId) => { setChatProfileTargetId(profileId); navigate("Friends"); }} />}
+          {page === "Chats" && <ChatsPage onOpenAlphaAuth={() => { setAlphaAuthInitialMode("login"); setAlphaAuthModalOpen(true); }} initialFriendId={chatTargetFriendId} onInitialFriendHandled={() => setChatTargetFriendId(null)} onOpenProfile={(profileId) => { setChatProfileTargetId(profileId); navigate("Friends"); }} />}
 
           {page === "Alpha Nexus" && (
             <div className="page alpha-nexus-page">
