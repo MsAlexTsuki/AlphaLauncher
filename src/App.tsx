@@ -5,6 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { check as checkLauncherUpdate } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { supabase } from "./lib/supabase";
+import type { User } from "@supabase/supabase-js";
 import PrivateChatPanel from "./PrivateChatPanel";
 import InboxButton from "./InboxButton";
 import RankPermissionsManager from "./RankPermissionsManager";
@@ -272,6 +273,8 @@ function LauncherApp() {
   const [communityLoginRequested, setCommunityLoginRequested] = useState(false);
   const [alphaAuthModalOpen, setAlphaAuthModalOpen] = useState(false);
   const [alphaAuthInitialMode, setAlphaAuthInitialMode] = useState<"login" | "signup">("login");
+  const [alphaAccountUser, setAlphaAccountUser] = useState<User | null>(null);
+  const [alphaAccountName, setAlphaAccountName] = useState<string | null>(null);
   const [openProfileEditor, setOpenProfileEditor] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -280,6 +283,53 @@ function LauncherApp() {
   const [launchMessage, setLaunchMessage] = useState<string | null>(null);
   const [launchHistory, setLaunchHistory] = useState<LastPlayed[]>(readLastPlayed);
   const [changelogs, setChangelogs] = useState<ChangelogEntry[]>([]);
+
+  useEffect(() => {
+    let disposed = false;
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (!disposed && !error) setAlphaAccountUser(data.user);
+    }).catch(() => {});
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAlphaAccountUser(session?.user ?? null);
+    });
+
+    return () => {
+      disposed = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!alphaAccountUser) {
+      setAlphaAccountName(null);
+      return;
+    }
+
+    let cancelled = false;
+    const metadata = alphaAccountUser.user_metadata ?? {};
+    const metadataName = [metadata.username, metadata.display_name, metadata.full_name].find(
+      (value): value is string => typeof value === "string" && value.trim().length > 0,
+    );
+    setAlphaAccountName(metadataName?.trim() || alphaAccountUser.email?.split("@")[0] || "Alpha Account");
+
+    void supabase
+      .from("profiles")
+      .select("username, display_name")
+      .eq("id", alphaAccountUser.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled || error) return;
+        const profileName = [data?.username, data?.display_name].find(
+          (value): value is string => typeof value === "string" && value.trim().length > 0,
+        );
+        if (profileName) setAlphaAccountName(profileName.trim());
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [alphaAccountUser]);
 
   const [account, setAccount] = useState<MicrosoftAccount | null>(null);
   const [savedAccounts, setSavedAccounts] = useState<MicrosoftAccount[]>(readSavedMicrosoftAccounts);
@@ -1275,6 +1325,8 @@ console.error("Developer permission check failed:", errorMessage);
           {page === "Home" && (
             <HomePage
               account={account}
+              alphaAccountName={alphaAccountName}
+              alphaAccountEmail={alphaAccountUser?.email ?? null}
               savedAccounts={savedAccounts}
               onSwitchAccount={(savedAccount) => void handleMicrosoftLogin(savedAccount)}
               onAddAccount={() => void handleMicrosoftLogin()}
@@ -2820,6 +2872,8 @@ function AlphaAccountAuthModal({ initialMode = "login", onClose }: { initialMode
 
 function HomePage(props: {
   account: MicrosoftAccount | null;
+  alphaAccountName: string | null;
+  alphaAccountEmail: string | null;
   savedAccounts: MicrosoftAccount[];
   onSwitchAccount: (account: MicrosoftAccount) => void;
   onAddAccount: () => void;
@@ -2840,6 +2894,8 @@ function HomePage(props: {
 }) {
   const {
     account,
+    alphaAccountName,
+    alphaAccountEmail,
     savedAccounts,
     onSwitchAccount,
     onAddAccount,
@@ -3032,10 +3088,17 @@ function HomePage(props: {
 
           <div className="info-card home-alpha-account-card">
             <div className="card-label">ALPHA ACCOUNT</div>
-            <div className="home-alpha-account-actions">
-              <button type="button" className="small-button" onClick={() => onOpenAlphaAuth("login")}>Login</button>
-              <button type="button" className="small-button" onClick={() => onOpenAlphaAuth("signup")}>Register</button>
-            </div>
+            {alphaAccountName ? (
+              <div className="home-alpha-account-actions">
+                <strong>{alphaAccountName}</strong>
+                {alphaAccountEmail && <span>{alphaAccountEmail}</span>}
+              </div>
+            ) : (
+              <div className="home-alpha-account-actions">
+                <button type="button" className="small-button" onClick={() => onOpenAlphaAuth("login")}>Login</button>
+                <button type="button" className="small-button" onClick={() => onOpenAlphaAuth("signup")}>Register</button>
+              </div>
+            )}
           </div>
 
           <div className="info-card">
