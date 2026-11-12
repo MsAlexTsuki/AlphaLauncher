@@ -2,6 +2,11 @@ name: Publish Alpha Launcher
 
 on:
   workflow_dispatch:
+    inputs:
+      changelog:
+        description: "Release notes displayed in Alpha Launcher."
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -48,7 +53,7 @@ jobs:
         with:
           tagName: launcher-v__VERSION__
           releaseName: "Alpha Launcher v__VERSION__"
-          releaseBody: "Add the user-facing changelog for this version before publishing. These notes are displayed in Alpha Launcher."
+          releaseBody: ${{ inputs.changelog }}
           releaseDraft: false
           prerelease: false
           uploadUpdaterJson: true

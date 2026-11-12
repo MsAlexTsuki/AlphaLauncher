@@ -1643,6 +1643,8 @@ button:disabled {
 
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 
+  align-items: start;
+
   gap: 17px;
 
   margin-top: 17px;
@@ -1711,6 +1713,20 @@ button:disabled {
 
   flex-direction: column;
 
+}
+
+.lower-grid .news-list {
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+}
+
+.home-alpha-account-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 
