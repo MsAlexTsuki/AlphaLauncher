@@ -44,7 +44,6 @@ const CLIENT_RANK_FOLDERS = [
   { key: "senior_admin", label: "Sr Admin", description: "Senior Admin modules." },
   { key: "management", label: "Management", description: "Platform Admin and Manager subfolders." },
   { key: "owner", label: "Owner", description: "Owner folder." },
-  { key: "founder", label: "Founder", description: "Founder-only client modules." },
 ] as const;
 const MANAGEMENT_SUBFOLDERS = [
   { key: "plat_admin", label: "Platform Admin", description: "Platform Admin permissions." },
@@ -90,7 +89,7 @@ export default function ClientModPermissionsManager() {
         supabase.rpc("admin_list_client_mod_user_overrides"),
       ]);
       for (const result of [catalog, rankRows, playerRows, grantRows, overrideRows]) if (result.error) throw result.error;
-      setMods((catalog.data ?? []) as ModRecord[]);
+      // Founder-only personal modules are intentionally excluded from Developer → Mods.\n      setMods(((catalog.data ?? []) as ModRecord[]).filter(mod => mod.category_key !== "founder"));
       setPermissions((rankRows.data ?? []) as RankPermission[]);
       setPlayers(((playerRows.data ?? []) as RankSearchPlayer[]).map(player => ({
         user_id: player.user_id,
