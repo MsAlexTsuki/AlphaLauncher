@@ -1,0 +1,4 @@
+project_id = "lescvpixttmmbnaluidd"
+
+[functions.alphaclient-releases]
+verify_jwt = false
