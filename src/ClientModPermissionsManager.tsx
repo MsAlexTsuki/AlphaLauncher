@@ -28,7 +28,7 @@ function errorMessage(error: unknown): string {
 const RANKS = [
   ["founder", "Founder"], ["owner", "Owner"], ["manager", "Manager"], ["developer", "Developer"], ["plat_admin", "Platform Admin"],
   ["senior_admin", "Sr Admin"], ["admin", "Admin"], ["senior_moderator", "Sr Mod"], ["moderator", "Moderator"],
-  ["trial_moderator", "T-Mod"], ["donator", "Donator"], ["beta", "Beta"], ["alpha_plus", "Alpha+"], ["alpha", "Alpha"],
+  ["trial_moderator", "T-Mod"], ["beta", "Beta"], ["alpha_plus", "Alpha+"], ["alpha", "Alpha"],
   ["elite", "Elite"], ["rogue", "Rogue"], ["scout", "Scout"], ["the_nibbler", "The Nibbler"],
   ["media", "Media"], ["famous", "Famous"], ["partner", "Partner"], ["member", "Member"],
 ] as const;
