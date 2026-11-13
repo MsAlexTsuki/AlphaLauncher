@@ -67,7 +67,6 @@ const ALPHACLIENT_VERSION: &str = "0.3.81";
 // to enable the live AlphaClient release manifest. If it is not configured,
 // the launcher safely continues with the installed client version.
 const ALPHACLIENT_UPDATE_MANIFEST_ENV: &str = "ALPHACLIENT_UPDATE_MANIFEST_URL";
-const ALPHACLIENT_DEFAULT_UPDATE_MANIFEST_URL: &str = "https://lescvpixttmmbnaluidd.supabase.co/functions/v1/alphaclient-releases";
 
 const ALPHACLIENT_VERSION_FILE: &str = "alpha-client-version.json";
 const ALPHACLIENT_UPDATE_ZIP_NAME: &str = "alphaclient-update.jar";
@@ -4445,7 +4444,6 @@ fn update_manifest_url()
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
-        .or_else(|| Some(ALPHACLIENT_DEFAULT_UPDATE_MANIFEST_URL.to_string()))
 }
 
 
