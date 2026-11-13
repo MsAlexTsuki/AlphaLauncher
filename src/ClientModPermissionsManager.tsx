@@ -89,7 +89,8 @@ export default function ClientModPermissionsManager() {
         supabase.rpc("admin_list_client_mod_user_overrides"),
       ]);
       for (const result of [catalog, rankRows, playerRows, grantRows, overrideRows]) if (result.error) throw result.error;
-      // Founder-only personal modules are intentionally excluded from Developer → Mods.\n      setMods(((catalog.data ?? []) as ModRecord[]).filter(mod => mod.category_key !== "founder"));
+      // Founder-only personal modules are intentionally excluded from Developer → Mods.
+      setMods(((catalog.data ?? []) as ModRecord[]).filter(mod => mod.category_key !== "founder"));
       setPermissions((rankRows.data ?? []) as RankPermission[]);
       setPlayers(((playerRows.data ?? []) as RankSearchPlayer[]).map(player => ({
         user_id: player.user_id,
