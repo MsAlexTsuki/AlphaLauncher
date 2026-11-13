@@ -31,3 +31,19 @@ revoke all on table public.alphaclient_releases from anon, authenticated;
 revoke all on table public.alphaclient_release_settings from anon, authenticated;
 grant all on table public.alphaclient_releases to service_role;
 grant all on table public.alphaclient_release_settings to service_role;
+
+-- Seed the current public GitHub release as the initial official version.
+insert into public.alphaclient_releases (
+  version, channel, asset_name, github_asset_id, download_url, storage_path,
+  sha256, file_size, release_notes
+) values (
+  '0.9.22', 'official', 'AlphaClient-0.9.22.jar', 745243572,
+  'https://github.com/MsAlexTsuki/AlphaClient/releases/download/Release/AlphaClient-0.9.22.jar',
+  null, '8d4ffc789f75ca28bfe28e706074beecb5dfa374c0036ef11f1bf43d6a1c7105',
+  4354255, ''
+)
+on conflict (version) do nothing;
+
+update public.alphaclient_release_settings
+set official_version = '0.9.22', updated_at = now()
+where singleton = true and official_version is null;
