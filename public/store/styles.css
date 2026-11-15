@@ -377,3 +377,76 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
   .bow-card-upper,.modal-art[data-item="bow-emote"] .player-upper-body{transform:rotateX(-36deg)}
   .bow-card-upper .emote-card-head,.modal-art[data-item="bow-emote"] .player-head{transform:rotateX(-8deg)}
 }
+
+
+/* Bow Emote: use MsAlexTsuki's live Minecraft skin texture with Classic (Steve) proportions. */
+.bow-card-model{width:116px;height:196px;transform:translate(-50%,-50%) scale(.58);transform-style:preserve-3d}
+.bow-card-upper{position:absolute;left:0;top:0;width:116px;height:120px;inset:auto;transform-origin:50% 120px}
+.bow-card-upper .emote-card-head{left:34px;top:0;width:48px;height:48px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-position:-48px -48px;background-repeat:no-repeat;image-rendering:pixelated}
+.bow-card-upper .emote-card-head:before,.bow-card-upper .emote-card-head:after{display:none}
+.bow-card-upper .emote-card-body{left:34px;top:48px;width:48px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-position:-120px -120px;background-repeat:no-repeat;image-rendering:pixelated}
+.bow-card-upper .emote-card-arm-left,.bow-card-upper .emote-card-arm-right{top:48px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated;animation:none}
+.bow-card-upper .emote-card-arm-left{left:10px;background-position:-216px -312px}
+.bow-card-upper .emote-card-arm-right{left:82px;background-position:-264px -120px}
+.bow-card-model .emote-card-leg-left,.bow-card-model .emote-card-leg-right{top:120px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
+.bow-card-model .emote-card-leg-left{left:34px;background-position:-120px -312px}
+.bow-card-model .emote-card-leg-right{left:58px;background-position:-24px -120px}
+.bow-card-upper{animation:alpha-card-bow-upper 2600ms ease-in-out infinite}
+.bow-card-upper .emote-card-head{transform-origin:50% 100%;animation:alpha-card-bow-head 2600ms ease-in-out infinite}
+
+/* Match the detail model to Minecraft's 8x8 head, 8x12 torso and 4x12 Classic limbs. */
+.modal-art[data-item="bow-emote"] .player-model{width:116px;height:196px}
+.modal-art[data-item="bow-emote"] .player-head{left:34px;top:4px;width:48px;height:48px}
+.modal-art[data-item="bow-emote"] .player-body{left:34px;top:52px;width:48px;height:72px}
+.modal-art[data-item="bow-emote"] .player-arm{top:52px;width:24px;height:72px}
+.modal-art[data-item="bow-emote"] .player-arm-left{left:10px}
+.modal-art[data-item="bow-emote"] .player-arm-right{right:10px}
+.modal-art[data-item="bow-emote"] .player-leg{top:124px;width:24px;height:72px}
+.modal-art[data-item="bow-emote"] .player-leg-left{left:34px}
+.modal-art[data-item="bow-emote"] .player-leg-right{right:34px}
+.modal-art[data-item="bow-emote"] .player-model .cube .face{border:0;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
+.modal-art[data-item="bow-emote"] .player-head .front{width:48px;height:48px;transform:translateZ(24px);background-position:-48px -48px}
+.modal-art[data-item="bow-emote"] .player-head .back{width:48px;height:48px;transform:rotateY(180deg) translateZ(24px);background-position:-144px -48px}
+.modal-art[data-item="bow-emote"] .player-head .left{width:48px;height:48px;transform:rotateY(-90deg) translateZ(24px);background-position:0 -48px}
+.modal-art[data-item="bow-emote"] .player-head .right{width:48px;height:48px;transform:rotateY(90deg) translateZ(24px);background-position:-96px -48px}
+.modal-art[data-item="bow-emote"] .player-head .top{width:48px;height:48px;transform:rotateX(90deg) translateZ(24px);background-position:-48px 0}
+.modal-art[data-item="bow-emote"] .player-head .bottom{width:48px;height:48px;transform:rotateX(-90deg) translateZ(24px);background-position:-96px 0}
+.modal-art[data-item="bow-emote"] .player-body .front{width:48px;height:72px;transform:translateZ(12px);background-position:-120px -120px}
+.modal-art[data-item="bow-emote"] .player-body .back{width:48px;height:72px;transform:rotateY(180deg) translateZ(12px);background-position:-192px -120px}
+.modal-art[data-item="bow-emote"] .player-body .left{width:24px;height:72px;transform:rotateY(-90deg) translateZ(12px);background-position:-96px -120px}
+.modal-art[data-item="bow-emote"] .player-body .right{width:24px;height:72px;transform:rotateY(90deg) translateZ(36px);background-position:-168px -120px}
+.modal-art[data-item="bow-emote"] .player-body .top{width:48px;height:24px;transform:rotateX(90deg) translateZ(12px);background-position:-120px -96px}
+.modal-art[data-item="bow-emote"] .player-body .bottom{width:48px;height:24px;transform:rotateX(-90deg) translateZ(60px);background-position:-168px -96px}
+.modal-art[data-item="bow-emote"] .player-arm-left .front{width:24px;height:72px;transform:translateZ(12px);background-position:-216px -312px}
+.modal-art[data-item="bow-emote"] .player-arm-left .back{width:24px;height:72px;transform:rotateY(180deg) translateZ(12px);background-position:-264px -312px}
+.modal-art[data-item="bow-emote"] .player-arm-left .left{width:24px;height:72px;transform:rotateY(-90deg) translateZ(12px);background-position:-192px -312px}
+.modal-art[data-item="bow-emote"] .player-arm-left .right{width:24px;height:72px;transform:rotateY(90deg) translateZ(12px);background-position:-240px -312px}
+.modal-art[data-item="bow-emote"] .player-arm-left .top{width:24px;height:24px;transform:rotateX(90deg) translateZ(12px);background-position:-216px -288px}
+.modal-art[data-item="bow-emote"] .player-arm-left .bottom{width:24px;height:24px;transform:rotateX(-90deg) translateZ(60px);background-position:-240px -288px}
+.modal-art[data-item="bow-emote"] .player-arm-right .front{width:24px;height:72px;transform:translateZ(12px);background-position:-264px -120px}
+.modal-art[data-item="bow-emote"] .player-arm-right .back{width:24px;height:72px;transform:rotateY(180deg) translateZ(12px);background-position:-312px -120px}
+.modal-art[data-item="bow-emote"] .player-arm-right .left{width:24px;height:72px;transform:rotateY(-90deg) translateZ(12px);background-position:-240px -120px}
+.modal-art[data-item="bow-emote"] .player-arm-right .right{width:24px;height:72px;transform:rotateY(90deg) translateZ(12px);background-position:-288px -120px}
+.modal-art[data-item="bow-emote"] .player-arm-right .top{width:24px;height:24px;transform:rotateX(90deg) translateZ(12px);background-position:-264px -96px}
+.modal-art[data-item="bow-emote"] .player-arm-right .bottom{width:24px;height:24px;transform:rotateX(-90deg) translateZ(60px);background-position:-288px -96px}
+.modal-art[data-item="bow-emote"] .player-leg-left .front{width:24px;height:72px;transform:translateZ(12px);background-position:-120px -312px}
+.modal-art[data-item="bow-emote"] .player-leg-left .back{width:24px;height:72px;transform:rotateY(180deg) translateZ(12px);background-position:-168px -312px}
+.modal-art[data-item="bow-emote"] .player-leg-left .left{width:24px;height:72px;transform:rotateY(-90deg) translateZ(12px);background-position:-96px -312px}
+.modal-art[data-item="bow-emote"] .player-leg-left .right{width:24px;height:72px;transform:rotateY(90deg) translateZ(12px);background-position:-144px -312px}
+.modal-art[data-item="bow-emote"] .player-leg-left .top{width:24px;height:24px;transform:rotateX(90deg) translateZ(12px);background-position:-120px -288px}
+.modal-art[data-item="bow-emote"] .player-leg-left .bottom{width:24px;height:24px;transform:rotateX(-90deg) translateZ(60px);background-position:-144px -288px}
+.modal-art[data-item="bow-emote"] .player-leg-right .front{width:24px;height:72px;transform:translateZ(12px);background-position:-24px -120px}
+.modal-art[data-item="bow-emote"] .player-leg-right .back{width:24px;height:72px;transform:rotateY(180deg) translateZ(12px);background-position:-72px -120px}
+.modal-art[data-item="bow-emote"] .player-leg-right .left{width:24px;height:72px;transform:rotateY(-90deg) translateZ(12px);background-position:0 -120px}
+.modal-art[data-item="bow-emote"] .player-leg-right .right{width:24px;height:72px;transform:rotateY(90deg) translateZ(12px);background-position:-48px -120px}
+.modal-art[data-item="bow-emote"] .player-leg-right .top{width:24px;height:24px;transform:rotateX(90deg) translateZ(12px);background-position:-24px -96px}
+.modal-art[data-item="bow-emote"] .player-leg-right .bottom{width:24px;height:24px;transform:rotateX(-90deg) translateZ(60px);background-position:-48px -96px}
+.modal-art[data-item="bow-emote"] .player-head .pixel-eye,.modal-art[data-item="bow-emote"] .player-head .pixel-mouth{display:none}
+.modal-art[data-item="bow-emote"] .player-upper-body{height:124px;transform-origin:50% 124px}
+.modal-art[data-item="bow-emote"] .player-head{transform-origin:50% 100%}
+.modal-art[data-item="bow-emote"] .player-leg{top:124px}
+@media(prefers-reduced-motion:reduce){
+  .bow-card-upper,.bow-card-upper .emote-card-head,.modal-art[data-item="bow-emote"] .player-upper-body,.modal-art[data-item="bow-emote"] .player-head{animation:none}
+  .bow-card-upper,.modal-art[data-item="bow-emote"] .player-upper-body{transform:rotateX(-36deg)}
+  .bow-card-upper .emote-card-head,.modal-art[data-item="bow-emote"] .player-head{transform:rotateX(-8deg)}
+}
