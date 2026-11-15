@@ -461,7 +461,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .wave-card-upper .emote-card-body{left:34px;top:48px;width:48px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-position:-120px -120px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-upper .emote-card-arm-left,.wave-card-upper .emote-card-arm-right{top:48px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-upper .emote-card-arm-left{left:10px;background-position:-216px -312px;animation:none}
-.wave-card-upper .emote-card-arm-right{left:82px;background-position:-264px -120px;transform-origin:0% 0%;animation:alpha-card-wave 2600ms ease-in-out infinite}
+.wave-card-upper .emote-card-arm-right{left:81px;background-position:-264px -120px;transform-origin:1px 0% 0px;animation:alpha-card-wave 2600ms ease-in-out infinite}
 .wave-card-model .emote-card-leg-left,.wave-card-model .emote-card-leg-right{top:120px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-model .emote-card-leg-left{left:34px;background-position:-120px -312px}
 .wave-card-model .emote-card-leg-right{left:58px;background-position:-24px -120px}
@@ -473,7 +473,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .modal-art[data-item="wave-emote"] .player-body{left:34px;top:52px;width:48px;height:72px}
 .modal-art[data-item="wave-emote"] .player-arm{top:52px;width:24px;height:72px}
 .modal-art[data-item="wave-emote"] .player-arm-left{left:10px}
-.modal-art[data-item="wave-emote"] .player-arm-right{left:82px;right:auto;transform-origin:0% 0% 0px;animation:alpha-player-wave 2600ms ease-in-out infinite}
+.modal-art[data-item="wave-emote"] .player-arm-right{left:81px;right:auto;transform-origin:1px 0% 0px;animation:alpha-player-wave 2600ms ease-in-out infinite}
 .modal-art[data-item="wave-emote"] .player-leg{top:124px;width:24px;height:72px}
 .modal-art[data-item="wave-emote"] .player-leg-left{left:34px}
 .modal-art[data-item="wave-emote"] .player-leg-right{right:34px}
