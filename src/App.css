@@ -8410,3 +8410,24 @@ button:not(:disabled):active {
 .home-alpha-profile-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; min-width: 0; }
 .home-alpha-profile-copy > strong { color: var(--text, #fff); font: 600 16px "Space Grotesk",sans-serif; overflow-wrap: anywhere; }
 .home-alpha-profile-copy .community-menu-rank { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; }
+
+
+/* Alpha Store page: preserve the standalone Store prototype inside the launcher shell. */
+.store-page {
+  max-width: none;
+  height: 100%;
+  min-height: calc(100vh - 110px);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.store-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 110px);
+  border: 0;
+  border-radius: 12px;
+  background: #090a0d;
+}
