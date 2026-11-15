@@ -19,6 +19,7 @@ type Page =
   | "Play"
   | "Versions"
   | "Mods"
+  | "Store"
   | "Community"
   | "Friends"
   | "Developer"
@@ -1189,6 +1190,7 @@ console.error("Developer permission check failed:", errorMessage);
     { name: "Play", icon: "▶" },
     { name: "Versions", icon: "▣" },
     { name: "Mods", icon: "◆" },
+    { name: "Store", icon: "◇" },
     { name: "Community", icon: "◉" },
     { name: "Friends", icon: "♧" },
     { name: "Developer", icon: "⌘" },
@@ -1410,6 +1412,16 @@ console.error("Developer permission check failed:", errorMessage);
           )}
 
           {page === "Mods" && <ModsPage />}
+
+          {page === "Store" && (
+            <div className="page store-page">
+              <iframe
+                title="Alpha Store"
+                src="/store/index.html"
+                className="store-frame"
+              />
+            </div>
+          )}
 
           {page === "Community" && <CommunityPage isMinecraftRunning={isMinecraftRunning} onOpenProfile={() => { setOpenProfileEditor(true); navigate("Account"); }} onOpenAlphaAuth={() => { setAlphaAuthInitialMode("login"); setAlphaAuthModalOpen(true); }} openLoginRequested={communityLoginRequested} onLoginRequestHandled={() => setCommunityLoginRequested(false)} />}
 
