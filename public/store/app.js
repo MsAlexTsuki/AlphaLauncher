@@ -29,18 +29,7 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "alpha-cosmetics-core",
-    "sourceClass": "AlphaCosmeticsCore",
-    "name": "Alpha Cosmetics Core",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Alpha Cosmetics Core.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
   {
     "id": "alpha-logo-kill-effect",
     "sourceClass": "AlphaLogoKillEffect",
@@ -101,30 +90,8 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "animated-prefixes",
-    "sourceClass": "AnimatedPrefixes",
-    "name": "Animated Prefixes",
-    "category": "nametags",
-    "label": "NAMETAG",
-    "description": "AlphaClient cosmetic component: Animated Prefixes.",
-    "glyph": "Aa",
-    "art": "name",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "animation-customizer",
-    "sourceClass": "AnimationCustomizer",
-    "name": "Animation Customizer",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Animation Customizer.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
   {
     "id": "big-name",
     "sourceClass": "BigName",
@@ -149,30 +116,8 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "cape-manager",
-    "sourceClass": "CapeManager",
-    "name": "Cape Manager",
-    "category": "capes",
-    "label": "CAPE",
-    "description": "AlphaClient cosmetic component: Cape Manager.",
-    "glyph": "✦",
-    "art": "cape",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "capes",
-    "sourceClass": "Capes",
-    "name": "Capes",
-    "category": "capes",
-    "label": "CAPE",
-    "description": "AlphaClient cosmetic component: Capes.",
-    "glyph": "✦",
-    "art": "cape",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
   {
     "id": "celebrate-emote",
     "sourceClass": "CelebrateEmote",
@@ -185,42 +130,9 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "chat-appearance-customization",
-    "sourceClass": "ChatAppearanceCustomization",
-    "name": "Chat Appearance Customization",
-    "category": "chat",
-    "label": "CHAT",
-    "description": "AlphaClient cosmetic component: Chat Appearance Customization.",
-    "glyph": "✉",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "chat-badges",
-    "sourceClass": "ChatBadges",
-    "name": "Chat Badges",
-    "category": "chat",
-    "label": "CHAT",
-    "description": "AlphaClient cosmetic component: Chat Badges.",
-    "glyph": "✉",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "chat-bubbles-above-player-heads",
-    "sourceClass": "ChatBubblesAbovePlayerHeads",
-    "name": "Chat Bubbles Above Player Heads",
-    "category": "chat",
-    "label": "CHAT",
-    "description": "AlphaClient cosmetic component: Chat Bubbles Above Player Heads.",
-    "glyph": "✉",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
+
   {
     "id": "coins-victory-effect",
     "sourceClass": "CoinsVictoryEffect",
@@ -269,234 +181,25 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "cosmetic-asset-management",
-    "sourceClass": "CosmeticAssetManagement",
-    "name": "Cosmetic Asset Management",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Asset Management.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-audit-history",
-    "sourceClass": "CosmeticAuditHistory",
-    "name": "Cosmetic Audit History",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Audit History.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-bundles",
-    "sourceClass": "CosmeticBundles",
-    "name": "Cosmetic Bundles",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Bundles.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-coin-shop",
-    "sourceClass": "CosmeticCoinShop",
-    "name": "Cosmetic Coin Shop",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Coin Shop.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-collection-screen",
-    "sourceClass": "CosmeticCollectionScreen",
-    "name": "Cosmetic Collection Screen",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Collection Screen.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-database",
-    "sourceClass": "CosmeticDatabase",
-    "name": "Cosmetic Database",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Database.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-loadouts",
-    "sourceClass": "CosmeticLoadouts",
-    "name": "Cosmetic Loadouts",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Loadouts.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-manager",
-    "sourceClass": "CosmeticManager",
-    "name": "Cosmetic Manager",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Manager.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-mixer",
-    "sourceClass": "CosmeticMixer",
-    "name": "Cosmetic Mixer",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Mixer.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-mystery-boxes",
-    "sourceClass": "CosmeticMysteryBoxes",
-    "name": "Cosmetic Mystery Boxes",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Mystery Boxes.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-performance-settings",
-    "sourceClass": "CosmeticPerformanceSettings",
-    "name": "Cosmetic Performance Settings",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Performance Settings.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-pets-lobby",
-    "sourceClass": "CosmeticPetsLobby",
-    "name": "Cosmetic Pets Lobby",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Pets Lobby.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-preview",
-    "sourceClass": "CosmeticPreview",
-    "name": "Cosmetic Preview",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Preview.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-security",
-    "sourceClass": "CosmeticSecurity",
-    "name": "Cosmetic Security",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Security.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-set-synergy",
-    "sourceClass": "CosmeticSetSynergy",
-    "name": "Cosmetic Set Synergy",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Set Synergy.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-shop-preview",
-    "sourceClass": "CosmeticShopPreview",
-    "name": "Cosmetic Shop Preview",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Shop Preview.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-store",
-    "sourceClass": "CosmeticStore",
-    "name": "Cosmetic Store",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Store.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-visibility",
-    "sourceClass": "CosmeticVisibility",
-    "name": "Cosmetic Visibility",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Visibility.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "cosmetic-visibility-settings",
-    "sourceClass": "CosmeticVisibilitySettings",
-    "name": "Cosmetic Visibility Settings",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Cosmetic Visibility Settings.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   {
     "id": "creator-badge-chat-cosmetic",
     "sourceClass": "CreatorBadgeChatCosmetic",
@@ -545,186 +248,21 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "cursor-skins",
-    "sourceClass": "CursorSkins",
-    "name": "Cursor Skins",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Cursor Skins.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-crosshair-manager",
-    "sourceClass": "CustomCrosshairManager",
-    "name": "Custom Crosshair Manager",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Crosshair Manager.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-grass-and-foliage-colors",
-    "sourceClass": "CustomGrassAndFoliageColors",
-    "name": "Custom Grass And Foliage Colors",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Custom Grass And Foliage Colors.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-hotbar-skin",
-    "sourceClass": "CustomHotbarSkin",
-    "name": "Custom Hotbar Skin",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Hotbar Skin.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-hud-font",
-    "sourceClass": "CustomHudFont",
-    "name": "Custom Hud Font",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Hud Font.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-loading-screens",
-    "sourceClass": "CustomLoadingScreens",
-    "name": "Custom Loading Screens",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Loading Screens.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-menu-button-styles",
-    "sourceClass": "CustomMenuButtonStyles",
-    "name": "Custom Menu Button Styles",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Menu Button Styles.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-menu-sounds",
-    "sourceClass": "CustomMenuSounds",
-    "name": "Custom Menu Sounds",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Menu Sounds.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-menu-soundscape",
-    "sourceClass": "CustomMenuSoundscape",
-    "name": "Custom Menu Soundscape",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Menu Soundscape.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-nametag-backgrounds-animations",
-    "sourceClass": "CustomNametagBackgroundsAnimations",
-    "name": "Custom Nametag Backgrounds Animations",
-    "category": "nametags",
-    "label": "NAMETAG",
-    "description": "AlphaClient cosmetic component: Custom Nametag Backgrounds Animations.",
-    "glyph": "Aa",
-    "art": "name",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-profile-banners",
-    "sourceClass": "CustomProfileBanners",
-    "name": "Custom Profile Banners",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Profile Banners.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-rain-snow-particles",
-    "sourceClass": "CustomRainSnowParticles",
-    "name": "Custom Rain Snow Particles",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Custom Rain Snow Particles.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-sky-and-stars",
-    "sourceClass": "CustomSkyAndStars",
-    "name": "Custom Sky And Stars",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Sky And Stars.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-weather-particles",
-    "sourceClass": "CustomWeatherParticles",
-    "name": "Custom Weather Particles",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Weather Particles.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "custom-xp-bar-color",
-    "sourceClass": "CustomXpBarColor",
-    "name": "Custom Xp Bar Color",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Custom Xp Bar Color.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   {
     "id": "dab-emote",
     "sourceClass": "DabEmote",
@@ -773,42 +311,9 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "emote-manager",
-    "sourceClass": "EmoteManager",
-    "name": "Emote Manager",
-    "category": "emotes",
-    "label": "EMOTE",
-    "description": "AlphaClient cosmetic component: Emote Manager.",
-    "glyph": "↗",
-    "art": "emote",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "emote-wheel",
-    "sourceClass": "EmoteWheel",
-    "name": "Emote Wheel",
-    "category": "emotes",
-    "label": "EMOTE",
-    "description": "AlphaClient cosmetic component: Emote Wheel.",
-    "glyph": "↗",
-    "art": "emote",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "emote-wheel-customization",
-    "sourceClass": "EmoteWheelCustomization",
-    "name": "Emote Wheel Customization",
-    "category": "emotes",
-    "label": "EMOTE",
-    "description": "AlphaClient cosmetic component: Emote Wheel Customization.",
-    "glyph": "↗",
-    "art": "emote",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
+
   {
     "id": "energy-burst-victory-effect",
     "sourceClass": "EnergyBurstVictoryEffect",
@@ -881,42 +386,9 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "friend-nametag-colors",
-    "sourceClass": "FriendNametagColors",
-    "name": "Friend Nametag Colors",
-    "category": "nametags",
-    "label": "NAMETAG",
-    "description": "AlphaClient cosmetic component: Friend Nametag Colors.",
-    "glyph": "Aa",
-    "art": "name",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "friend-nametags",
-    "sourceClass": "FriendNametags",
-    "name": "Friend Nametags",
-    "category": "nametags",
-    "label": "NAMETAG",
-    "description": "AlphaClient cosmetic component: Friend Nametags.",
-    "glyph": "Aa",
-    "art": "name",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "friends-cosmetic-integration",
-    "sourceClass": "FriendsCosmeticIntegration",
-    "name": "Friends Cosmetic Integration",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Friends Cosmetic Integration.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
+
   {
     "id": "glow-name",
     "sourceClass": "GlowName",
@@ -965,18 +437,7 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "launcher-cosmetic-integration",
-    "sourceClass": "LauncherCosmeticIntegration",
-    "name": "Launcher Cosmetic Integration",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Launcher Cosmetic Integration.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
   {
     "id": "lightning-trail",
     "sourceClass": "LightningTrail",
@@ -1001,30 +462,8 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "limited-cosmetics-system",
-    "sourceClass": "LimitedCosmeticsSystem",
-    "name": "Limited Cosmetics System",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Limited Cosmetics System.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "limited-time-event-badges",
-    "sourceClass": "LimitedTimeEventBadges",
-    "name": "Limited Time Event Badges",
-    "category": "chat",
-    "label": "CHAT",
-    "description": "AlphaClient cosmetic component: Limited Time Event Badges.",
-    "glyph": "✉",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
   {
     "id": "linked-account-verification-badge",
     "sourceClass": "LinkedAccountVerificationBadge",
@@ -1037,30 +476,8 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "local-skin-preview-switcher",
-    "sourceClass": "LocalSkinPreviewSwitcher",
-    "name": "Local Skin Preview Switcher",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Local Skin Preview Switcher.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "menu-opening-animations",
-    "sourceClass": "MenuOpeningAnimations",
-    "name": "Menu Opening Animations",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Menu Opening Animations.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
   {
     "id": "mouse-trail",
     "sourceClass": "MouseTrail",
@@ -1073,30 +490,8 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "multiple-achievement-badges",
-    "sourceClass": "MultipleAchievementBadges",
-    "name": "Multiple Achievement Badges",
-    "category": "chat",
-    "label": "CHAT",
-    "description": "AlphaClient cosmetic component: Multiple Achievement Badges.",
-    "glyph": "✉",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "name-tag-customizer",
-    "sourceClass": "NameTagCustomizer",
-    "name": "Name Tag Customizer",
-    "category": "nametags",
-    "label": "NAMETAG",
-    "description": "AlphaClient cosmetic component: Name Tag Customizer.",
-    "glyph": "Aa",
-    "art": "name",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
   {
     "id": "owner-emote-pack",
     "sourceClass": "OwnerEmotePack",
@@ -1109,18 +504,7 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "particle-customizer",
-    "sourceClass": "ParticleCustomizer",
-    "name": "Particle Customizer",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Particle Customizer.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
   {
     "id": "pixel-explosion-kill-effect",
     "sourceClass": "PixelExplosionKillEffect",
@@ -1181,18 +565,7 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "radial-emote-menu",
-    "sourceClass": "RadialEmoteMenu",
-    "name": "Radial Emote Menu",
-    "category": "emotes",
-    "label": "EMOTE",
-    "description": "AlphaClient cosmetic component: Radial Emote Menu.",
-    "glyph": "↗",
-    "art": "emote",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
   {
     "id": "rainbow-name",
     "sourceClass": "RainbowName",
@@ -1229,30 +602,8 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "rank-based-cosmetics",
-    "sourceClass": "RankBasedCosmetics",
-    "name": "Rank Based Cosmetics",
-    "category": "other",
-    "label": "COSMETIC",
-    "description": "AlphaClient cosmetic component: Rank Based Cosmetics.",
-    "glyph": "◇",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "rotating-skin-preview-in-menus",
-    "sourceClass": "RotatingSkinPreviewInMenus",
-    "name": "Rotating Skin Preview In Menus",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Rotating Skin Preview In Menus.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
   {
     "id": "salute-emote",
     "sourceClass": "SaluteEmote",
@@ -1265,42 +616,9 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "screenshot-filters",
-    "sourceClass": "ScreenshotFilters",
-    "name": "Screenshot Filters",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Screenshot Filters.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "selectable-main-menu-backgrounds",
-    "sourceClass": "SelectableMainMenuBackgrounds",
-    "name": "Selectable Main Menu Backgrounds",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Selectable Main Menu Backgrounds.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "silent-notification-skin",
-    "sourceClass": "SilentNotificationSkin",
-    "name": "Silent Notification Skin",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Silent Notification Skin.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
+
   {
     "id": "sit-emote",
     "sourceClass": "SitEmote",
@@ -1313,30 +631,8 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "skin-layer-toggle",
-    "sourceClass": "SkinLayerToggle",
-    "name": "Skin Layer Toggle",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Skin Layer Toggle.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "skin-manager",
-    "sourceClass": "SkinManager",
-    "name": "Skin Manager",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Skin Manager.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
   {
     "id": "smoke-kill-effect",
     "sourceClass": "SmokeKillEffect",
@@ -1361,18 +657,7 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "social-badge-showcase",
-    "sourceClass": "SocialBadgeShowcase",
-    "name": "Social Badge Showcase",
-    "category": "chat",
-    "label": "CHAT",
-    "description": "AlphaClient cosmetic component: Social Badge Showcase.",
-    "glyph": "✉",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
   {
     "id": "soul-kill-effect",
     "sourceClass": "SoulKillEffect",
@@ -1433,78 +718,12 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   },
-  {
-    "id": "swing-animation-speed",
-    "sourceClass": "SwingAnimationSpeed",
-    "name": "Swing Animation Speed",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Swing Animation Speed.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "three-dskins",
-    "sourceClass": "ThreeDSkins",
-    "name": "Three DSkins",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Three DSkins.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "trail-effects",
-    "sourceClass": "TrailEffects",
-    "name": "Trail Effects",
-    "category": "trails",
-    "label": "TRAIL",
-    "description": "AlphaClient cosmetic component: Trail Effects.",
-    "glyph": "✧",
-    "art": "effect",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "unlockable-gradient-colored-names",
-    "sourceClass": "UnlockableGradientColoredNames",
-    "name": "Unlockable Gradient Colored Names",
-    "category": "nametags",
-    "label": "NAMETAG",
-    "description": "AlphaClient cosmetic component: Unlockable Gradient Colored Names.",
-    "glyph": "Aa",
-    "art": "name",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "unlockable-hotbar-skins",
-    "sourceClass": "UnlockableHotbarSkins",
-    "name": "Unlockable Hotbar Skins",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Unlockable Hotbar Skins.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
-  {
-    "id": "viewmodel-customizer",
-    "sourceClass": "ViewmodelCustomizer",
-    "name": "Viewmodel Customizer",
-    "category": "ui",
-    "label": "UI STYLE",
-    "description": "AlphaClient cosmetic component: Viewmodel Customizer.",
-    "glyph": "A",
-    "art": "ui",
-    "badge": "ALPHA CLIENT",
-    "owned": false
-  },
+
+
+
+
+
+
   {
     "id": "void-trail",
     "sourceClass": "VoidTrail",
