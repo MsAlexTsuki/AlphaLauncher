@@ -5,7 +5,6 @@ const products = [
   {id:"alpha-tag",name:"Alpha Nameplate",category:"nametags",label:"NAMETAG",description:"A distinctive Alpha-styled nameplate treatment designed to make a player name stand out.",glyph:"MsAlexTsuki",art:"name",badge:"COMMUNITY",owned:true},
   {id:"spark-effect",name:"Golden Spark",category:"effects",label:"EFFECT",description:"A golden movement trail that follows the player while walking or flying.",glyph:"✧",art:"effect",badge:"PREVIEW",owned:false},
   {id:"dark-ui",name:"Obsidian UI",category:"ui",label:"UI STYLE",description:"A dark interface accent concept for the Alpha experience.",glyph:"A",art:"ui",badge:"PREVIEW",owned:false},
-[
   {
     "id": "alpha-badge-chat-cosmetic",
     "sourceClass": "AlphaBadgeChatCosmetic",
@@ -1530,7 +1529,6 @@ const products = [
     "badge": "ALPHA CLIENT",
     "owned": false
   }
-]
 ];
 
 const grid = document.getElementById("product-grid");
