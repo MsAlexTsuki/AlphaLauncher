@@ -457,7 +457,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .wave-card-upper .emote-card-head{left:34px;top:0;width:48px;height:48px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-position:-48px -48px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-upper .emote-card-head:before,.wave-card-upper .emote-card-head:after{display:none}
 .wave-card-upper .emote-card-body{left:34px;top:48px;width:48px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-position:-120px -120px;background-repeat:no-repeat;image-rendering:pixelated}
-.wave-card-upper .emote-card-arm-left,.wave-card-upper .emote-card-arm-right{top:48px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
+.wave-card-upper .emote-card-arm-left,.wave-card-upper .emote-card-arm-right{top:49px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-upper .emote-card-arm-left{left:10px;background-position:-216px -312px;animation:none}
 .wave-card-upper .emote-card-arm-right{left:81px;background-position:-264px -120px;transform-origin:0% 0%;animation:alpha-card-wave 2600ms ease-in-out infinite}
 .wave-card-model .emote-card-leg-left,.wave-card-model .emote-card-leg-right{top:120px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
@@ -469,7 +469,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .modal-art[data-item="wave-emote"] .player-upper-body{position:absolute;inset:0;height:124px;transform-style:preserve-3d}
 .modal-art[data-item="wave-emote"] .player-head{left:34px;top:4px;width:48px;height:48px}
 .modal-art[data-item="wave-emote"] .player-body{left:34px;top:52px;width:48px;height:72px}
-.modal-art[data-item="wave-emote"] .player-arm{top:52px;width:24px;height:72px}
+.modal-art[data-item="wave-emote"] .player-arm{top:53px;width:24px;height:72px}
 .modal-art[data-item="wave-emote"] .player-arm-left{left:10px}
 .modal-art[data-item="wave-emote"] .player-arm-right{left:81px;right:auto;transform-origin:0% 0% 0px;animation:alpha-player-wave 2600ms ease-in-out infinite}
 .modal-art[data-item="wave-emote"] .player-leg{top:124px;width:24px;height:72px}
