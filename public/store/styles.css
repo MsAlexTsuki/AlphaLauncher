@@ -283,7 +283,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 @media(prefers-reduced-motion:reduce){
   .emote-card-arm-right,.modal-art[data-item="wave-emote"] .player-arm-right{animation:none}
   .emote-card-arm-right{transform:rotate(-136deg)}
-  .modal-art[data-item="wave-emote"] .player-arm-right{transform:rotateZ(-136deg)}
+  .modal-art[data-item="wave-emote"] .player-arm-right{transform:rotateZ(132deg)}
 }
 
 
@@ -517,6 +517,6 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .modal-art[data-item="wave-emote"] .player-head .pixel-eye,.modal-art[data-item="wave-emote"] .player-head .pixel-mouth{display:none}
 @media(prefers-reduced-motion:reduce){
   .wave-card-upper .emote-card-arm-right,.modal-art[data-item="wave-emote"] .player-arm-right{animation:none}
-  .wave-card-upper .emote-card-arm-right{transform:rotate(-136deg)}
-  .modal-art[data-item="wave-emote"] .player-arm-right{transform:rotateZ(-136deg)}
+  .wave-card-upper .emote-card-arm-right{transform:rotate(132deg)}
+  .modal-art[data-item="wave-emote"] .player-arm-right{transform:rotateZ(132deg)}
 }
