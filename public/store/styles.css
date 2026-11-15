@@ -355,3 +355,30 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 @keyframes alpha-card-spark-arm{0%,100%{transform:rotateX(18deg)}50%{transform:rotateX(-18deg)}}
 @keyframes alpha-card-spark-leg{0%,100%{transform:rotateX(-16deg)}50%{transform:rotateX(16deg)}}
 @media(prefers-reduced-motion:reduce){.spark-card-trail i,.spark-card-model .emote-card-arm-left,.spark-card-model .emote-card-arm-right,.spark-card-model .emote-card-leg-left,.spark-card-model .emote-card-leg-right{animation:none}.spark-card-trail i{opacity:.8}
+
+/* Bow Emote: the character performs a clear, respectful forward bow in both Store previews. */
+.product-art[data-item="bow-emote"] .product-glyph{display:none}
+.bow-card-model{perspective:420px;transform-style:preserve-3d}
+.bow-card-model .emote-card-body{transform-origin:50% 0%;transform-style:preserve-3d;animation:alpha-card-bow-body 2600ms ease-in-out infinite}
+.bow-card-model .emote-card-head{transform-origin:50% 100%;animation:alpha-card-bow-head 2600ms ease-in-out infinite}
+.bow-card-model .emote-card-arm-left,.bow-card-model .emote-card-arm-right{transform-origin:50% 0%;animation:alpha-card-bow-arms 2600ms ease-in-out infinite}
+@keyframes alpha-card-bow-body{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(-38deg)}}
+@keyframes alpha-card-bow-head{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(-24deg)}}
+@keyframes alpha-card-bow-arms{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(-12deg)}}
+
+.modal-art[data-item="bow-emote"] .player-body{transform-origin:50% 0%;animation:alpha-player-bow-body 2600ms ease-in-out infinite}
+.modal-art[data-item="bow-emote"] .player-head{transform-origin:50% 100%;animation:alpha-player-bow-head 2600ms ease-in-out infinite}
+.modal-art[data-item="bow-emote"] .player-arm-left,.modal-art[data-item="bow-emote"] .player-arm-right{transform-origin:50% 0%;animation:alpha-player-bow-arms 2600ms ease-in-out infinite}
+@keyframes alpha-player-bow-body{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(-38deg)}}
+@keyframes alpha-player-bow-head{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(-24deg)}}
+@keyframes alpha-player-bow-arms{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(-12deg)}}
+
+@media(prefers-reduced-motion:reduce){
+  .bow-card-model .emote-card-body,.bow-card-model .emote-card-head,.bow-card-model .emote-card-arm-left,.bow-card-model .emote-card-arm-right,
+  .modal-art[data-item="bow-emote"] .player-body,.modal-art[data-item="bow-emote"] .player-head,
+  .modal-art[data-item="bow-emote"] .player-arm-left,.modal-art[data-item="bow-emote"] .player-arm-right{animation:none}
+  .bow-card-model .emote-card-body,.modal-art[data-item="bow-emote"] .player-body{transform:rotateX(-38deg)}
+  .bow-card-model .emote-card-head,.modal-art[data-item="bow-emote"] .player-head{transform:rotateX(-24deg)}
+  .bow-card-model .emote-card-arm-left,.bow-card-model .emote-card-arm-right,
+  .modal-art[data-item="bow-emote"] .player-arm-left,.modal-art[data-item="bow-emote"] .player-arm-right{transform:rotateX(-12deg)}
+}
