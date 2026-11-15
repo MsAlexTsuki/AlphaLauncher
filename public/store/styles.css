@@ -276,14 +276,14 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .emote-card-arm-right{left:85px;animation:alpha-card-wave 750ms ease-in-out infinite alternate}
 .emote-card-leg-left,.emote-card-leg-right{position:absolute;top:87px;width:25px;height:48px;background:linear-gradient(90deg,#202936,#3a4658);border:2px solid #171b22;box-sizing:border-box}
 .emote-card-leg-left{left:31px}.emote-card-leg-right{left:60px}
-@keyframes alpha-card-wave{from{transform:rotate(118deg)}to{transform:rotate(155deg)}}
+@keyframes alpha-card-wave{from{transform:rotate(-118deg)}to{transform:rotate(-155deg)}}
 .modal-art[data-item="wave-emote"] .player-cosmetic-mark{display:none}
 .modal-art[data-item="wave-emote"] .player-arm-right{transform-origin:50% 0%;animation:alpha-player-wave 750ms ease-in-out infinite alternate}
-@keyframes alpha-player-wave{from{transform:rotateZ(118deg)}to{transform:rotateZ(155deg)}}
+@keyframes alpha-player-wave{from{transform:rotateZ(-118deg)}to{transform:rotateZ(-155deg)}}
 @media(prefers-reduced-motion:reduce){
   .emote-card-arm-right,.modal-art[data-item="wave-emote"] .player-arm-right{animation:none}
   .emote-card-arm-right{transform:rotate(-136deg)}
-  .modal-art[data-item="wave-emote"] .player-arm-right{transform:rotateZ(136deg)}
+  .modal-art[data-item="wave-emote"] .player-arm-right{transform:rotateZ(-136deg)}
 }
 
 
@@ -461,7 +461,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .wave-card-upper .emote-card-body{left:34px;top:48px;width:48px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-position:-120px -120px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-upper .emote-card-arm-left,.wave-card-upper .emote-card-arm-right{top:48px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-upper .emote-card-arm-left{left:10px;background-position:-216px -312px;animation:none}
-.wave-card-upper .emote-card-arm-right{left:82px;background-position:-264px -120px;transform-origin:0% 0%;animation:alpha-card-wave 750ms ease-in-out infinite alternate}
+.wave-card-upper .emote-card-arm-right{left:82px;z-index:2;background-position:-264px -120px;transform-origin:0% 0%;animation:alpha-card-wave 750ms ease-in-out infinite alternate}
 .wave-card-model .emote-card-leg-left,.wave-card-model .emote-card-leg-right{top:120px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-model .emote-card-leg-left{left:34px;background-position:-120px -312px}
 .wave-card-model .emote-card-leg-right{left:58px;background-position:-24px -120px}
@@ -473,7 +473,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .modal-art[data-item="wave-emote"] .player-body{left:34px;top:52px;width:48px;height:72px}
 .modal-art[data-item="wave-emote"] .player-arm{top:52px;width:24px;height:72px}
 .modal-art[data-item="wave-emote"] .player-arm-left{left:10px}
-.modal-art[data-item="wave-emote"] .player-arm-right{right:10px;transform-origin:0% 0%;animation:alpha-player-wave 750ms ease-in-out infinite alternate}
+.modal-art[data-item="wave-emote"] .player-arm-right{right:10px;z-index:2;transform-origin:0% 0%;animation:alpha-player-wave 750ms ease-in-out infinite alternate}
 .modal-art[data-item="wave-emote"] .player-leg{top:124px;width:24px;height:72px}
 .modal-art[data-item="wave-emote"] .player-leg-left{left:34px}
 .modal-art[data-item="wave-emote"] .player-leg-right{right:34px}
@@ -517,6 +517,6 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .modal-art[data-item="wave-emote"] .player-head .pixel-eye,.modal-art[data-item="wave-emote"] .player-head .pixel-mouth{display:none}
 @media(prefers-reduced-motion:reduce){
   .wave-card-upper .emote-card-arm-right,.modal-art[data-item="wave-emote"] .player-arm-right{animation:none}
-  .wave-card-upper .emote-card-arm-right{transform:rotate(136deg)}
-  .modal-art[data-item="wave-emote"] .player-arm-right{transform:rotateZ(136deg)}
+  .wave-card-upper .emote-card-arm-right{transform:rotate(-136deg)}
+  .modal-art[data-item="wave-emote"] .player-arm-right{transform:rotateZ(-136deg)}
 }
