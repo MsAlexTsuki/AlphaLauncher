@@ -276,10 +276,10 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .emote-card-arm-right{left:85px;animation:alpha-card-wave 750ms ease-in-out infinite alternate}
 .emote-card-leg-left,.emote-card-leg-right{position:absolute;top:87px;width:25px;height:48px;background:linear-gradient(90deg,#202936,#3a4658);border:2px solid #171b22;box-sizing:border-box}
 .emote-card-leg-left{left:31px}.emote-card-leg-right{left:60px}
-@keyframes alpha-card-wave{from{transform:rotate(118deg)}to{transform:rotate(145deg)}}
+@keyframes alpha-card-wave{from{transform:rotate(-118deg)}to{transform:rotate(-155deg)}}
 .modal-art[data-item="wave-emote"] .player-cosmetic-mark{display:none}
 .modal-art[data-item="wave-emote"] .player-arm-right{transform-origin:50% 0%;animation:alpha-player-wave 750ms ease-in-out infinite alternate}
-@keyframes alpha-player-wave{from{transform:rotateZ(118deg)}to{transform:rotateZ(145deg)}}
+@keyframes alpha-player-wave{from{transform:rotateZ(-118deg)}to{transform:rotateZ(-155deg)}}
 @media(prefers-reduced-motion:reduce){
   .emote-card-arm-right,.modal-art[data-item="wave-emote"] .player-arm-right{animation:none}
   .emote-card-arm-right{transform:rotate(-136deg)}
