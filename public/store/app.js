@@ -830,7 +830,7 @@ function renderProducts() {
       ? (isEquipped ? '<span class="card-status equipped">Equipped</span>' : '<span class="card-status">In collection</span>')
       : '<span class="card-status">Preview item</span>';
     const artwork = item.id === "bow-emote"
-      ? '<div class="emote-card-model bow-card-model" role="img" aria-label="Minecraft character performing a respectful bow"><span class="emote-card-head"></span><span class="emote-card-body"></span><span class="emote-card-arm-left"></span><span class="emote-card-arm-right"></span><span class="emote-card-leg-left"></span><span class="emote-card-leg-right"></span></div>'
+      ? '<div class="emote-card-model bow-card-model" role="img" aria-label="Minecraft character performing a respectful bow"><span class="bow-card-upper"><span class="emote-card-head"></span><span class="emote-card-body"></span><span class="emote-card-arm-left"></span><span class="emote-card-arm-right"></span></span><span class="emote-card-leg-left"></span><span class="emote-card-leg-right"></span></div>'
       : item.id === "wave-emote"
         ? '<div class="emote-card-model" role="img" aria-label="Minecraft character performing the Wave Emote"><span class="emote-card-head"></span><span class="emote-card-body"></span><span class="emote-card-arm-left"></span><span class="emote-card-arm-right"></span><span class="emote-card-leg-left"></span><span class="emote-card-leg-right"></span></div>'
       : item.id === "spark-effect"
