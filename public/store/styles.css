@@ -150,7 +150,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 /* Interactive 3D-style player preview */
 .modal-art{perspective:850px;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
 .modal-art.is-dragging{cursor:grabbing}
-.player-stage{position:absolute;inset:12px 0 31px;display:grid;place-items:center;perspective:850px;overflow:hidden}
+.player-stage{position:absolute;inset:12px 0 31px;display:grid;place-items:center;perspective:850px;overflow:visible}
 .player-model{position:relative;width:116px;height:238px;transform-style:preserve-3d;transform:rotateY(0deg);will-change:transform}
 .cube{position:absolute;transform-style:preserve-3d}
 .cube .face{position:absolute;display:block;box-sizing:border-box;backface-visibility:hidden;border:1px solid #0002}
@@ -354,4 +354,4 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 @keyframes alpha-card-particle{0%{opacity:0;transform:translate3d(0,0,0) scale(.35)}20%{opacity:1}100%{opacity:0;transform:translate3d(var(--spark-drift),16px,0) scale(1.2)}}
 @keyframes alpha-card-spark-arm{0%,100%{transform:rotateX(18deg)}50%{transform:rotateX(-18deg)}}
 @keyframes alpha-card-spark-leg{0%,100%{transform:rotateX(-16deg)}50%{transform:rotateX(16deg)}}
-@media(prefers-reduced-motion:reduce){.spark-card-trail i,.spark-card-model .emote-card-arm-left,.spark-card-model .emote-card-arm-right,.spark-card-model .emote-card-leg-left,.spark-card-model .emote-card-leg-right{animation:none}.spark-card-trail i{opacity:.8}}.spark-card-trail i{opacity:.8}}
+@media(prefers-reduced-motion:reduce){.spark-card-trail i,.spark-card-model .emote-card-arm-left,.spark-card-model .emote-card-arm-right,.spark-card-model .emote-card-leg-left,.spark-card-model .emote-card-leg-right{animation:none}.spark-card-trail i{opacity:.8}
