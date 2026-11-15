@@ -314,7 +314,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 
 /* Golden Spark detail preview: preserve the existing trail and refine its continuous particle flow. */
 .modal-art[data-item="spark-effect"] .spark-trail{display:block}
-.spark-trail{display:none;position:absolute;left:50%;top:88px;width:112px;height:126px;transform:translateX(-50%) translateZ(-38px);pointer-events:none;z-index:3}
+.spark-trail{display:none;position:absolute;left:50%;top:202px;width:112px;height:126px;transform:translateX(-50%) rotateX(-90deg);transform-origin:top center;pointer-events:none;z-index:3}
 .spark-ribbon{position:absolute;left:50%;top:0;width:48px;height:118px;transform:translateX(-50%);border-radius:50% 50% 45% 45%;background:linear-gradient(180deg,rgba(255,226,139,.95) 0%,rgba(255,200,61,.72) 24%,rgba(255,176,30,.3) 66%,rgba(255,176,30,0) 100%);background-size:100% 180%;filter:blur(7px);opacity:.85;animation:alpha-spark-ribbon 900ms ease-in-out infinite,alpha-spark-flow 1250ms linear infinite}
 .spark-ribbon::before,.spark-ribbon::after{content:"";position:absolute;left:50%;top:5%;height:88%;border-radius:50%;transform:translateX(-50%);pointer-events:none}
 .spark-ribbon::before{width:13px;background:linear-gradient(180deg,rgba(255,245,190,.68),rgba(255,208,90,.28) 55%,transparent);filter:blur(3px);animation:alpha-spark-core 720ms ease-in-out infinite}
@@ -346,7 +346,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .product-art[data-item="spark-effect"] .product-glyph{display:none}
 .spark-card-scene{position:absolute;inset:0;z-index:1;overflow:hidden}
 .spark-card-model{transform:translate(-50%,-47%) scale(.76);transform-style:preserve-3d}
-.spark-card-trail{position:absolute;left:50%;top:108px;width:78px;height:72px;transform:translateX(-50%);pointer-events:none;z-index:3}
+.spark-card-trail{position:absolute;left:50%;top:151px;width:78px;height:72px;transform:translateX(-50%) rotateX(-90deg);transform-origin:top center;pointer-events:none;z-index:3}
 .spark-card-ribbon{position:absolute;left:50%;top:0;width:34px;height:70px;transform:translateX(-50%);border-radius:50%;background:linear-gradient(180deg,rgba(255,226,139,.95),rgba(255,200,61,.62) 38%,rgba(255,176,30,0));background-size:100% 180%;filter:blur(5px);animation:alpha-card-ribbon 900ms ease-in-out infinite,alpha-card-flow 1250ms linear infinite}
 .spark-card-ribbon::before,.spark-card-ribbon::after{content:"";position:absolute;left:50%;top:5%;height:88%;border-radius:50%;transform:translateX(-50%);pointer-events:none}
 .spark-card-ribbon::before{width:9px;background:linear-gradient(180deg,rgba(255,245,190,.65),rgba(255,208,90,.2) 60%,transparent);filter:blur(2px);animation:alpha-card-core 720ms ease-in-out infinite}
