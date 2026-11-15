@@ -358,22 +358,22 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 
 }
 
-/* Bow Emote: rotate the complete upper body from the waist so it stays joined to the legs. */
+/* Bow Emote: rotate the complete upper body forward from the waist so it stays joined to the legs. */
 .product-art[data-item="bow-emote"] .product-glyph{display:none}
 .bow-card-model{perspective:420px;transform-style:preserve-3d}
 .bow-card-upper{position:absolute;inset:0;display:block;transform-style:preserve-3d;transform-origin:50% 87px;animation:alpha-card-bow-upper 2600ms ease-in-out infinite}
 .bow-card-upper .emote-card-head{transform-origin:50% 100%;animation:alpha-card-bow-head 2600ms ease-in-out infinite}
-@keyframes alpha-card-bow-upper{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(36deg)}}
-@keyframes alpha-card-bow-head{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(8deg)}}
+@keyframes alpha-card-bow-upper{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(-36deg)}}
+@keyframes alpha-card-bow-head{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(-8deg)}}
 
 .modal-art[data-item="bow-emote"] .player-upper-body{position:absolute;inset:0;transform-style:preserve-3d;transform-origin:50% 126px;animation:alpha-player-bow-upper 2600ms ease-in-out infinite}
 .modal-art[data-item="bow-emote"] .player-head{transform-origin:50% 100%;animation:alpha-player-bow-head 2600ms ease-in-out infinite}
 .modal-art[data-item="bow-emote"] .player-leg{top:126px}
-@keyframes alpha-player-bow-upper{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(36deg)}}
-@keyframes alpha-player-bow-head{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(8deg)}}
+@keyframes alpha-player-bow-upper{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(-36deg)}}
+@keyframes alpha-player-bow-head{0%,18%,82%,100%{transform:rotateX(0deg)}42%,60%{transform:rotateX(-8deg)}}
 
 @media(prefers-reduced-motion:reduce){
   .bow-card-upper,.bow-card-upper .emote-card-head,.modal-art[data-item="bow-emote"] .player-upper-body,.modal-art[data-item="bow-emote"] .player-head{animation:none}
-  .bow-card-upper,.modal-art[data-item="bow-emote"] .player-upper-body{transform:rotateX(36deg)}
-  .bow-card-upper .emote-card-head,.modal-art[data-item="bow-emote"] .player-head{transform:rotateX(8deg)}
+  .bow-card-upper,.modal-art[data-item="bow-emote"] .player-upper-body{transform:rotateX(-36deg)}
+  .bow-card-upper .emote-card-head,.modal-art[data-item="bow-emote"] .player-head{transform:rotateX(-8deg)}
 }
