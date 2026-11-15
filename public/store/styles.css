@@ -356,6 +356,8 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 @keyframes alpha-card-spark-leg{0%,100%{transform:rotateX(-16deg)}50%{transform:rotateX(16deg)}}
 @media(prefers-reduced-motion:reduce){.spark-card-trail i,.spark-card-model .emote-card-arm-left,.spark-card-model .emote-card-arm-right,.spark-card-model .emote-card-leg-left,.spark-card-model .emote-card-leg-right{animation:none}.spark-card-trail i{opacity:.8}
 
+}
+
 /* Bow Emote: the character performs a clear, respectful forward bow in both Store previews. */
 .product-art[data-item="bow-emote"] .product-glyph{display:none}
 .bow-card-model{perspective:420px;transform-style:preserve-3d}
