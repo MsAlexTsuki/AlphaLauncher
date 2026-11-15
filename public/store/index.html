@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#090a0d">
   <meta name="description" content="Explore the Alpha cosmetics collection prototype.">
   <title>Alpha Store — AlphaLauncher</title>
-  <link rel="stylesheet" href="./styles.css?v=spark-ground-trail-5">
+  <link rel="stylesheet" href="./styles.css?v=alpha-client-cosmetics-128">
 </head>
 <body>
   <div class="app-shell">
@@ -54,12 +54,15 @@
 
         <div class="catalogue-toolbar" id="catalogue-toolbar">
           <div class="filter-row" id="filter-row">
-            <button class="filter active" data-category="all">All items <span>06</span></button>
+            <button class="filter active" data-category="all">All items <span id="all-items-count">06</span></button>
             <button class="filter" data-category="capes">Capes</button>
             <button class="filter" data-category="emotes">Emotes</button>
             <button class="filter" data-category="nametags">Nametags</button>
             <button class="filter" data-category="effects">Effects</button>
+            <button class="filter" data-category="trails">Trails</button>
+            <button class="filter" data-category="chat">Chat</button>
             <button class="filter" data-category="ui">UI</button>
+            <button class="filter" data-category="other">Other</button>
           </div>
           <label class="sort-control">SORT BY
             <select id="sort-select">
@@ -133,6 +136,6 @@
       </div>
     </section>
   </div>
-  <script src="./app.js?v=spark-ground-trail-5"></script>
+  <script src="./app.js?v=alpha-client-cosmetics-128"></script>
 </body>
 </html>
