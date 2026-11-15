@@ -197,8 +197,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .player-cape{position:absolute;z-index:-1;left:24px;top:52px;width:68px;height:105px;transform:translateZ(-15px) rotateX(-5deg);transform-origin:top center;clip-path:polygon(7% 0,93% 0,100% 100%,50% 88%,0 100%);background:linear-gradient(135deg,#f6d77e,#b47b22 55%,#493116);opacity:0;backface-visibility:hidden}
 .player-nameplate{position:absolute;left:50%;top:-17px;transform:translateX(-50%) translateZ(22px);padding:3px 7px;border:1px solid #d8ad50;border-radius:3px;background:#17150f;color:#ffe39a;font:700 7px 'Space Grotesk';letter-spacing:.12em;white-space:nowrap;opacity:0}
 .player-cosmetic-mark{position:absolute;left:50%;top:77px;transform:translateX(-50%) translateZ(13px);color:#ffe39a;font:700 17px 'Space Grotesk';text-shadow:0 0 12px #ffc83d99;pointer-events:none}
-.player-effect{position:absolute;left:50%;top:108px;transform:translateX(-50%) translateZ(24px);font-size:25px;color:#ffe18a;text-shadow:0 0 15px #ffc83d;opacity:0;pointer-events:none}
-.modal-art[data-item="aurora-cape"] .player-cape,.modal-art[data-item="ember-cape"] .player-cape{opacity:1}
+.player-effect{position:absolute;left:50%;top:108px;transform:translateX(-50%) translateZ(24px);font-size:25px;color:#ffe18a;text-shadow:0 0 15px #ffc83d;opacity:0;pointer-events:none}.modal-art[data-item="aurora-cape"] .player-cape,.modal-art[data-item="ember-cape"] .player-cape{opacity:1}
 .modal-art[data-item="ember-cape"] .player-cape{background:linear-gradient(135deg,#ffd49a,#d75b2b 55%,#54221d)}
 .modal-art[data-item="alpha-tag"] .player-nameplate{opacity:1}
 .modal-art[data-item="spark-effect"] .player-effect{opacity:1}
@@ -276,10 +275,10 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .emote-card-arm-right{left:85px;animation:alpha-card-wave 750ms ease-in-out infinite alternate}
 .emote-card-leg-left,.emote-card-leg-right{position:absolute;top:87px;width:25px;height:48px;background:linear-gradient(90deg,#202936,#3a4658);border:2px solid #171b22;box-sizing:border-box}
 .emote-card-leg-left{left:31px}.emote-card-leg-right{left:60px}
-@keyframes alpha-card-wave{0%,10%{transform:rotate(0deg)}24%{transform:rotate(-135deg)}31%{transform:rotate(-145deg)}38%{transform:rotate(-125deg)}45%{transform:rotate(-145deg)}52%{transform:rotate(-125deg)}59%{transform:rotate(-135deg)}74%,100%{transform:rotate(0deg)}}
+@keyframes alpha-card-wave{0%,10%{transform:rotate(0deg)}24%{transform:rotate(135deg)}31%{transform:rotate(145deg)}38%{transform:rotate(125deg)}45%{transform:rotate(145deg)}52%{transform:rotate(125deg)}59%{transform:rotate(135deg)}74%,100%{transform:rotate(0deg)}}
 .modal-art[data-item="wave-emote"] .player-cosmetic-mark{display:none}
 .modal-art[data-item="wave-emote"] .player-arm-right{transform-origin:50% 0%;animation:alpha-player-wave 750ms ease-in-out infinite alternate}
-@keyframes alpha-player-wave{0%,10%{transform:rotateZ(0deg)}24%{transform:rotateZ(-135deg)}31%{transform:rotateZ(-145deg)}38%{transform:rotateZ(-125deg)}45%{transform:rotateZ(-145deg)}52%{transform:rotateZ(-125deg)}59%{transform:rotateZ(-135deg)}74%,100%{transform:rotateZ(0deg)}}
+@keyframes alpha-player-wave{0%,10%{transform:rotateZ(0deg)}24%{transform:rotateZ(135deg)}31%{transform:rotateZ(145deg)}38%{transform:rotateZ(125deg)}45%{transform:rotateZ(145deg)}52%{transform:rotateZ(125deg)}59%{transform:rotateZ(135deg)}74%,100%{transform:rotateZ(0deg)}}
 @media(prefers-reduced-motion:reduce){
   .emote-card-arm-right,.modal-art[data-item="wave-emote"] .player-arm-right{animation:none}
   .emote-card-arm-right{transform:rotate(0deg)}
@@ -397,8 +396,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 /* Match the detail model to Minecraft's 8x8 head, 8x12 torso and 4x12 Classic limbs. */
 .modal-art[data-item="bow-emote"] .player-model{width:116px;height:196px}
 .modal-art[data-item="bow-emote"] .player-head{left:34px;top:4px;width:48px;height:48px}
-.modal-art[data-item="bow-emote"] .player-body{left:34px;top:52px;width:48px;height:72px}
-.modal-art[data-item="bow-emote"] .player-arm{top:52px;width:24px;height:72px}
+.modal-art[data-item="bow-emote"] .player-body{left:34px;top:52px;width:48px;height:72px}.modal-art[data-item="bow-emote"] .player-arm{top:52px;width:24px;height:72px}
 .modal-art[data-item="bow-emote"] .player-arm-left{left:10px}
 .modal-art[data-item="bow-emote"] .player-arm-right{right:10px}
 .modal-art[data-item="bow-emote"] .player-leg{top:124px;width:24px;height:72px}
@@ -461,7 +459,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .wave-card-upper .emote-card-body{left:34px;top:48px;width:48px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-position:-120px -120px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-upper .emote-card-arm-left,.wave-card-upper .emote-card-arm-right{top:48px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-upper .emote-card-arm-left{left:10px;background-position:-216px -312px;animation:none}
-.wave-card-upper .emote-card-arm-right{left:81px;background-position:-264px -120px;transform-origin:1px 0% 0px;animation:alpha-card-wave 2600ms ease-in-out infinite}
+.wave-card-upper .emote-card-arm-right{left:81px;background-position:-264px -120px;transform-origin:0% 0%;animation:alpha-card-wave 2600ms ease-in-out infinite}
 .wave-card-model .emote-card-leg-left,.wave-card-model .emote-card-leg-right{top:120px;width:24px;height:72px;border:0;box-sizing:border-box;background-image:url("https://api.mcskin.me/skin/MsAlexTsuki");background-size:384px 384px;background-repeat:no-repeat;image-rendering:pixelated}
 .wave-card-model .emote-card-leg-left{left:34px;background-position:-120px -312px}
 .wave-card-model .emote-card-leg-right{left:58px;background-position:-24px -120px}
@@ -473,7 +471,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 .modal-art[data-item="wave-emote"] .player-body{left:34px;top:52px;width:48px;height:72px}
 .modal-art[data-item="wave-emote"] .player-arm{top:52px;width:24px;height:72px}
 .modal-art[data-item="wave-emote"] .player-arm-left{left:10px}
-.modal-art[data-item="wave-emote"] .player-arm-right{left:81px;right:auto;transform-origin:1px 0% 0px;animation:alpha-player-wave 2600ms ease-in-out infinite}
+.modal-art[data-item="wave-emote"] .player-arm-right{left:81px;right:auto;transform-origin:0% 0% 0px;animation:alpha-player-wave 2600ms ease-in-out infinite}
 .modal-art[data-item="wave-emote"] .player-leg{top:124px;width:24px;height:72px}
 .modal-art[data-item="wave-emote"] .player-leg-left{left:34px}
 .modal-art[data-item="wave-emote"] .player-leg-right{right:34px}
