@@ -109,7 +109,7 @@ export default function ClientModPermissionsManager() {
   const selectedFolderKey: string = selectedRankFolder;
   // Keep the complete Rank Permission folder tree visible, including empty folders.
   const PLAYER_PERMISSION_FOLDERS = [
-    ...CLIENT_RANK_FOLDERS.filter(folder => folder.key !== "founder"),
+    ...CLIENT_RANK_FOLDERS,
     ...MANAGEMENT_SUBFOLDERS,
     ...DONATOR_SUBFOLDERS,
   ];
