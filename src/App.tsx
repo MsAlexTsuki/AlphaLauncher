@@ -1190,9 +1190,9 @@ console.error("Developer permission check failed:", errorMessage);
     { name: "Play", icon: "▶" },
     { name: "Versions", icon: "▣" },
     { name: "Mods", icon: "◆" },
-    { name: "Store", icon: "◇" },
     { name: "Community", icon: "◉" },
     { name: "Friends", icon: "♧" },
+    { name: "Store", icon: "◇" },
     { name: "Developer", icon: "⌘" },
     { name: "Chats", icon: "✉" },
     { name: "Alpha Nexus", icon: "⌂" },
@@ -1281,7 +1281,7 @@ console.error("Developer permission check failed:", errorMessage);
               .filter((item) => item.name !== "Developer" || developerAuthorized || canManageReleases)
               .map((item) => (
               <span key={item.name}>
-                {item.name === "Developer" && <div className="nav-separator" />}
+                {(item.name === "Store" || item.name === "Developer") && <div className="nav-separator" />}
                 <button
                   type="button"
                   title={!sidebarExpanded ? item.name : undefined}
