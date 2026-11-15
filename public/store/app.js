@@ -110,8 +110,8 @@ const products = [
     "name": "Bow Emote",
     "category": "emotes",
     "label": "EMOTE",
-    "description": "AlphaClient cosmetic component: Bow Emote.",
-    "glyph": "↗",
+    "description": "A respectful bow: the character leans forward from the waist, briefly holds the pose, then returns upright.",
+    "glyph": "⌄",
     "art": "emote",
     "badge": "ALPHA CLIENT",
     "owned": false
@@ -829,8 +829,10 @@ function renderProducts() {
     const status = item.owned
       ? (isEquipped ? '<span class="card-status equipped">Equipped</span>' : '<span class="card-status">In collection</span>')
       : '<span class="card-status">Preview item</span>';
-    const artwork = item.id === "wave-emote"
-      ? '<div class="emote-card-model" role="img" aria-label="Minecraft character performing the Wave Emote"><span class="emote-card-head"></span><span class="emote-card-body"></span><span class="emote-card-arm-left"></span><span class="emote-card-arm-right"></span><span class="emote-card-leg-left"></span><span class="emote-card-leg-right"></span></div>'
+    const artwork = item.id === "bow-emote"
+      ? '<div class="emote-card-model bow-card-model" role="img" aria-label="Minecraft character performing a respectful bow"><span class="emote-card-head"></span><span class="emote-card-body"></span><span class="emote-card-arm-left"></span><span class="emote-card-arm-right"></span><span class="emote-card-leg-left"></span><span class="emote-card-leg-right"></span></div>'
+      : item.id === "wave-emote"
+        ? '<div class="emote-card-model" role="img" aria-label="Minecraft character performing the Wave Emote"><span class="emote-card-head"></span><span class="emote-card-body"></span><span class="emote-card-arm-left"></span><span class="emote-card-arm-right"></span><span class="emote-card-leg-left"></span><span class="emote-card-leg-right"></span></div>'
       : item.id === "spark-effect"
         ? '<div class="spark-card-scene" role="img" aria-label="Minecraft character walking away with a golden spark trail following directly behind"><span class="spark-card-trail" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="emote-card-model spark-card-model"><span class="emote-card-head"></span><span class="emote-card-body"></span><span class="emote-card-arm-left"></span><span class="emote-card-arm-right"></span><span class="emote-card-leg-left"></span><span class="emote-card-leg-right"></span></span></div>'
         : item.id === "alpha-tag"
@@ -889,7 +891,7 @@ function openDetails(id) {
   document.getElementById("modal-art").dataset.art = item.art;
   document.getElementById("modal-art").dataset.item = item.id;
   document.getElementById("player-cosmetic-mark").textContent = item.glyph;
-  document.querySelector(".player-preview-label").textContent = item.category === "nametags" ? "NAMEPLATE PREVIEW" : item.id === "spark-effect" ? "WALKING EFFECT PREVIEW" : "PLAYER PREVIEW";
+  document.querySelector(".player-preview-label").textContent = item.category === "nametags" ? "NAMEPLATE PREVIEW" : item.id === "spark-effect" ? "WALKING EFFECT PREVIEW" : item.id === "bow-emote" ? "BOW EMOTE PREVIEW" : "PLAYER PREVIEW";
   document.getElementById("modal-badge").textContent = item.badge;
   document.getElementById("modal-type").textContent = item.label;
   updateModalState(id);
