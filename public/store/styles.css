@@ -314,7 +314,7 @@ footer{display:flex;justify-content:space-between;gap:15px;border-top:1px solid 
 
 /* Golden Spark detail preview: preserve the existing trail and refine its continuous particle flow. */
 .modal-art[data-item="spark-effect"] .spark-trail{display:block}
-.spark-trail{display:none;position:absolute;left:50%;top:205px;width:112px;height:126px;transform:translateX(-50%);pointer-events:none;z-index:3}
+.spark-trail{display:none;position:absolute;left:50%;top:88px;width:112px;height:126px;transform:translateX(-50%) translateZ(-38px);pointer-events:none;z-index:3}
 .spark-ribbon{position:absolute;left:50%;top:0;width:48px;height:118px;transform:translateX(-50%);border-radius:50% 50% 45% 45%;background:linear-gradient(180deg,rgba(255,226,139,.95) 0%,rgba(255,200,61,.72) 24%,rgba(255,176,30,.3) 66%,rgba(255,176,30,0) 100%);background-size:100% 180%;filter:blur(7px);opacity:.85;animation:alpha-spark-ribbon 900ms ease-in-out infinite,alpha-spark-flow 1250ms linear infinite}
 .spark-ribbon::before,.spark-ribbon::after{content:"";position:absolute;left:50%;top:5%;height:88%;border-radius:50%;transform:translateX(-50%);pointer-events:none}
 .spark-ribbon::before{width:13px;background:linear-gradient(180deg,rgba(255,245,190,.68),rgba(255,208,90,.28) 55%,transparent);filter:blur(3px);animation:alpha-spark-core 720ms ease-in-out infinite}
