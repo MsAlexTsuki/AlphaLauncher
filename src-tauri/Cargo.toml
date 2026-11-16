@@ -1,6 +1,6 @@
 [package]
 name = "alphalauncher"
-version = "0.1.10"
+version = "0.1.11"
 description = "AlphaClient Launcher"
 authors = ["MsAlexTsuki"]
 edition = "2021"
