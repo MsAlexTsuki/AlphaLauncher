@@ -73,7 +73,7 @@ const ALPHACLIENT_UPDATE_ZIP_NAME: &str = "alphaclient-update.jar";
 const ALPHACLIENT_GITHUB_RELEASE_URL: &str = "https://api.github.com/repos/MsAlexTsuki/AlphaClient/releases/tags/Release";
 const ALPHACLIENT_OFFICIAL_MOD_JAR_NAME: &str = "AlphaClient.jar";
 
-const RECORDING_STUDIO_RELEASES_URL: &str = "https://api.github.com/repos/MsAlexTsuki/AlphaClient---Mod/releases?per_page=100";
+const RECORDING_STUDIO_RELEASES_URL: &str = "https://api.github.com/repos/MsAlexTsuki/AlphaClient/releases?per_page=100";
 const RECORDING_STUDIO_ASSET_PREFIX: &str = "AlphaRecordingStudio-";
 const RECORDING_STUDIO_JAR_NAME: &str = "AlphaRecordingStudio.jar";
 const RECORDING_STUDIO_MOD_ID: &str = "alpharecordingstudio";
