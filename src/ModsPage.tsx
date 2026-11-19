@@ -147,10 +147,10 @@ export default function ModsPage() {
     }
   };
 
-  const visibleMods = mods.filter((mod) => mod.file_name !== RECORDING_STUDIO_FILE);
+  const alphaClientMod = mods.find((mod) => mod.is_alphaclient);
+  const visibleMods = mods.filter((mod) => mod.file_name !== RECORDING_STUDIO_FILE && !mod.is_alphaclient);
   const enabledCount = visibleMods.filter((mod) => mod.enabled).length;
-  const customMods = visibleMods.filter((mod) => !mod.is_alphaclient);
-  const studioNeedsUpdate = recordingStudio?.installed
+    const studioNeedsUpdate = recordingStudio?.installed
     && recordingStudio.releaseAvailable
     && (recordingStudio.updateAvailable || !recordingStudio.installedVersion);
 
@@ -167,7 +167,7 @@ export default function ModsPage() {
       <section className="section-card" style={{ marginBottom: 18 }}>
         <div className="section-header">
           <div>
-            <span className="card-label">OFFICIAL ALPHA ADDON</span>
+            <span className="card-label">OFFICIAL ALPHA MODULES</span>
             <h3>Alpha Recording Studio</h3>
           </div>
           <span className="developer-status">
@@ -175,6 +175,22 @@ export default function ModsPage() {
               ? recordingStudio.enabled ? "Enabled" : "Disabled"
               : "Optional addon"}
           </span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 15px", marginBottom: 14, border: "1px solid var(--border)", borderRadius: 10, background: "rgba(255,255,255,0.018)" }}>
+          <div aria-hidden="true" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 42, height: 42, flex: "0 0 42px", borderRadius: 10, border: "1px solid rgba(255,200,61,0.2)", background: "rgba(255,200,61,0.08)", color: "var(--yellow)", fontWeight: 800 }}>
+            A
+          </div>
+          <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+            <strong style={{ display: "block", overflowWrap: "anywhere" }}>{alphaClientMod?.file_name ?? "AlphaClient.jar"}</strong>
+            <span style={{ display: "block", marginTop: 5, color: "var(--muted)", fontSize: 12 }}>
+              Official client · Managed by Alpha Launcher
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 auto" }}>
+            <span style={{ color: "var(--green)", fontSize: 11, fontWeight: 700, letterSpacing: "0.04em" }}>REQUIRED</span>
+            <button type="button" className="small-button" disabled title="AlphaClient is automatically loaded and cannot be disabled here.">Always on</button>
+          </div>
         </div>
 
         <p className="subtitle" style={{ marginTop: 0 }}>
@@ -295,8 +311,8 @@ export default function ModsPage() {
           <p className="subtitle">Reading the mods folder…</p>
         ) : visibleMods.length === 0 ? (
           <div style={{ padding: "24px 0" }}>
-            <h3 style={{ marginTop: 0 }}>No other mods found</h3>
-            <p className="subtitle">AlphaClient and the official Recording Studio addon are managed separately above. You can add other compatible Forge 1.8.9 .jar mods using the button above.</p>
+            <h3 style={{ marginTop: 0 }}>No custom mods found</h3>
+            <p className="subtitle">All official Alpha modules are managed above. You can add other compatible Forge 1.8.9 .jar mods using the button above.</p>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
