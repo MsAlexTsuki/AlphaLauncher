@@ -72,6 +72,11 @@ const ALPHACLIENT_VERSION_FILE: &str = "alpha-client-version.json";
 const ALPHACLIENT_UPDATE_ZIP_NAME: &str = "alphaclient-update.jar";
 const ALPHACLIENT_GITHUB_RELEASE_URL: &str = "https://api.github.com/repos/MsAlexTsuki/AlphaClient/releases/tags/Release";
 const ALPHACLIENT_OFFICIAL_MOD_JAR_NAME: &str = "AlphaClient.jar";
+
+const RECORDING_STUDIO_RELEASES_URL: &str = "https://api.github.com/repos/MsAlexTsuki/AlphaClient---Mod/releases?per_page=100";
+const RECORDING_STUDIO_ASSET_PREFIX: &str = "AlphaRecordingStudio-";
+const RECORDING_STUDIO_JAR_NAME: &str = "AlphaRecordingStudio.jar";
+const RECORDING_STUDIO_MOD_ID: &str = "alpharecordingstudio";
 const ALPHACLIENT_0_3_81_SHA256: &str = "fb2451cb5ce671a6f5b2f5229374ff1df02f0164eef83367d692f74cbb97fec2";
 
 const MINECRAFT_VERSION: &str = "1.8.9";
@@ -206,6 +211,24 @@ struct AlphaClientUpdateInfo {
     update_available: bool,
     update_configured: bool,
     changelog: String,
+}
+
+#[derive(Clone, Debug)]
+struct RecordingStudioReleaseAsset {
+    version: String,
+    download_url: String,
+    sha256: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RecordingStudioStatus {
+    installed: bool,
+    enabled: bool,
+    installed_version: Option<String>,
+    latest_version: Option<String>,
+    release_available: bool,
+    update_available: bool,
 }
 
 
@@ -5934,6 +5957,256 @@ async fn install_alphaclient()
 
 
 
+fn recording_studio_paths() -> Result<(PathBuf, PathBuf), String> {
+    let mods_dir = launcher_mods_directory()?;
+    let parent = mods_dir.parent()
+        .ok_or_else(|| "Could not determine the AlphaClient directory.".to_string())?;
+    Ok((
+        mods_dir.join(RECORDING_STUDIO_JAR_NAME),
+        parent.join("mods-disabled").join(RECORDING_STUDIO_JAR_NAME),
+    ))
+}
+
+fn recording_studio_version_from_jar(path: &Path) -> Option<String> {
+    let file = File::open(path).ok()?;
+    let mut archive = ZipArchive::new(file).ok()?;
+    let mut info = archive.by_name("mcmod.info").ok()?;
+    let mut contents = String::new();
+    info.read_to_string(&mut contents).ok()?;
+    let metadata = serde_json::from_str::<Value>(&contents).ok()?;
+    metadata.as_array()?.iter()
+        .find(|entry| entry.get("modid").and_then(Value::as_str) == Some(RECORDING_STUDIO_MOD_ID))
+        .and_then(|entry| entry.get("version").and_then(Value::as_str))
+        .map(str::to_string)
+}
+
+fn recording_studio_release_asset() -> Result<Option<RecordingStudioReleaseAsset>, String> {
+    let client = http_client()?;
+    let releases = client
+        .get(RECORDING_STUDIO_RELEASES_URL)
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28")
+        .send()
+        .map_err(|error| format!("Could not contact the Alpha Recording Studio release source: {}", error))?
+        .error_for_status()
+        .map_err(|error| format!("Alpha Recording Studio release lookup failed: {}", error))?
+        .json::<Vec<Value>>()
+        .map_err(|error| format!("Could not parse Alpha Recording Studio releases: {}", error))?;
+
+    let mut latest: Option<(Vec<u64>, RecordingStudioReleaseAsset)> = None;
+    for release in releases {
+        if release.get("draft").and_then(Value::as_bool).unwrap_or(false)
+            || release.get("prerelease").and_then(Value::as_bool).unwrap_or(false)
+        {
+            continue;
+        }
+
+        let assets = match release.get("assets").and_then(Value::as_array) {
+            Some(assets) => assets,
+            None => continue,
+        };
+
+        for asset in assets {
+            let asset_name = asset.get("name").and_then(Value::as_str).unwrap_or("");
+            let version = match asset_name
+                .strip_prefix(RECORDING_STUDIO_ASSET_PREFIX)
+                .and_then(|name| name.strip_suffix(".jar"))
+            {
+                Some(version) if version.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) => version,
+                _ => continue,
+            };
+            let parts = parse_version_parts(version);
+            if parts.is_empty() {
+                continue;
+            }
+            let download_url = match asset.get("browser_download_url").and_then(Value::as_str) {
+                Some(url) => url.to_string(),
+                None => continue,
+            };
+            let sha256 = asset.get("digest")
+                .and_then(Value::as_str)
+                .and_then(|digest| digest.strip_prefix("sha256:"))
+                .unwrap_or("")
+                .to_string();
+
+            let should_replace = latest.as_ref()
+                .map(|(current_parts, _)| {
+                    let length = parts.len().max(current_parts.len());
+                    (0..length).find_map(|index| {
+                        let candidate = *parts.get(index).unwrap_or(&0);
+                        let current = *current_parts.get(index).unwrap_or(&0);
+                        if candidate != current { Some(candidate > current) } else { None }
+                    }).unwrap_or(false)
+                })
+                .unwrap_or(true);
+
+            if should_replace {
+                latest = Some((parts, RecordingStudioReleaseAsset {
+                    version: version.to_string(),
+                    download_url,
+                    sha256,
+                }));
+            }
+        }
+    }
+
+    let (_, release) = match latest {
+        Some(latest) => latest,
+        None => return Ok(None),
+    };
+
+    if release.sha256.len() != 64
+        || !release.sha256.chars().all(|character| character.is_ascii_hexdigit())
+    {
+        return Err(format!(
+            "The Alpha Recording Studio {} release asset has no valid SHA-256 digest. Add a GitHub SHA-256 asset digest before publishing it to Launcher users.",
+            release.version
+        ));
+    }
+
+    Ok(Some(release))
+}
+
+fn recording_studio_file_sha256(path: &Path) -> Result<String, String> {
+    let bytes = fs::read(path)
+        .map_err(|error| format!("Could not read downloaded Recording Studio JAR: {}", error))?;
+    let digest = Sha256::digest(&bytes);
+    Ok(digest.iter().map(|byte| format!("{:02x}", byte)).collect())
+}
+
+fn get_recording_studio_status_internal() -> Result<RecordingStudioStatus, String> {
+    let (enabled_path, disabled_path) = recording_studio_paths()?;
+    let enabled = enabled_path.is_file();
+    let disabled = disabled_path.is_file();
+    let installed_path = if enabled { Some(&enabled_path) } else if disabled { Some(&disabled_path) } else { None };
+    let installed_version = installed_path.and_then(|path| recording_studio_version_from_jar(path));
+    let release = recording_studio_release_asset()?;
+    let latest_version = release.as_ref().map(|asset| asset.version.clone());
+    let update_available = match (&installed_version, &latest_version) {
+        (Some(installed), Some(latest)) => parse_version_parts(latest) != parse_version_parts(installed)
+            && parse_version_parts(latest) > parse_version_parts(installed),
+        _ => false,
+    };
+
+    Ok(RecordingStudioStatus {
+        installed: enabled || disabled,
+        enabled,
+        installed_version,
+        latest_version,
+        release_available: release.is_some(),
+        update_available,
+    })
+}
+
+fn install_recording_studio_internal() -> Result<String, String> {
+    if minecraft_process_is_running() {
+        return Err("Close Minecraft before installing or updating Alpha Recording Studio.".to_string());
+    }
+
+    let release = recording_studio_release_asset()?
+        .ok_or_else(|| "No official Alpha Recording Studio release is available yet.".to_string())?;
+    let root = alpha_client_directory()?;
+    let mods_dir = root.join("mods");
+    let disabled_dir = root.join("mods-disabled");
+    let downloads_dir = root.join("downloads");
+    fs::create_dir_all(&mods_dir).map_err(|error| format!("Could not create mods folder: {}", error))?;
+    fs::create_dir_all(&disabled_dir).map_err(|error| format!("Could not create disabled mods folder: {}", error))?;
+    fs::create_dir_all(&downloads_dir).map_err(|error| format!("Could not create downloads folder: {}", error))?;
+
+    let enabled_path = mods_dir.join(RECORDING_STUDIO_JAR_NAME);
+    let disabled_path = disabled_dir.join(RECORDING_STUDIO_JAR_NAME);
+    if enabled_path.is_file() && disabled_path.is_file() {
+        return Err("Two Alpha Recording Studio copies were found. Remove the duplicate before updating.".to_string());
+    }
+    let destination = if disabled_path.is_file() { disabled_path } else { enabled_path };
+    let temporary_path = downloads_dir.join("AlphaRecordingStudio.jar.download");
+    let backup_path = destination.with_file_name("AlphaRecordingStudio.jar.backup");
+
+    if temporary_path.exists() {
+        fs::remove_file(&temporary_path).map_err(|error| format!("Could not clear the previous temporary download: {}", error))?;
+    }
+
+    let client = http_client()?;
+    if let Err(error) = download_file(&client, &release.download_url, &temporary_path) {
+        let _ = fs::remove_file(&temporary_path);
+        return Err(error);
+    }
+
+    let downloaded_version = recording_studio_version_from_jar(&temporary_path);
+    if downloaded_version.as_deref() != Some(release.version.as_str()) {
+        let _ = fs::remove_file(&temporary_path);
+        return Err("The downloaded file is not the expected Alpha Recording Studio JAR or its version does not match the release.".to_string());
+    }
+
+    let downloaded_sha256 = recording_studio_file_sha256(&temporary_path)?;
+    if !downloaded_sha256.eq_ignore_ascii_case(&release.sha256) {
+        let _ = fs::remove_file(&temporary_path);
+        return Err("The Alpha Recording Studio download failed its SHA-256 integrity check.".to_string());
+    }
+
+    if backup_path.exists() {
+        fs::remove_file(&backup_path).map_err(|error| format!("Could not clear the previous Recording Studio backup: {}", error))?;
+    }
+    if destination.exists() {
+        fs::rename(&destination, &backup_path)
+            .map_err(|error| format!("Could not stage the installed Recording Studio version: {}", error))?;
+    }
+    if let Err(error) = fs::rename(&temporary_path, &destination) {
+        if backup_path.exists() {
+            let _ = fs::rename(&backup_path, &destination);
+        }
+        let _ = fs::remove_file(&temporary_path);
+        return Err(format!("Could not install Alpha Recording Studio: {}", error));
+    }
+    if backup_path.exists() {
+        fs::remove_file(&backup_path)
+            .map_err(|error| format!("Recording Studio was installed, but its backup could not be removed: {}", error))?;
+    }
+
+    Ok(format!("Alpha Recording Studio {} is installed. Restart Minecraft before using it.", release.version))
+}
+
+fn uninstall_recording_studio_internal() -> Result<String, String> {
+    if minecraft_process_is_running() {
+        return Err("Close Minecraft before uninstalling Alpha Recording Studio.".to_string());
+    }
+
+    let (enabled_path, disabled_path) = recording_studio_paths()?;
+    let mut removed = false;
+    for path in [&enabled_path, &disabled_path] {
+        if path.is_file() {
+            fs::remove_file(path)
+                .map_err(|error| format!("Could not uninstall Alpha Recording Studio: {}", error))?;
+            removed = true;
+        }
+    }
+
+    if removed {
+        Ok("Alpha Recording Studio was uninstalled. Its official Launcher entry remains available.".to_string())
+    } else {
+        Ok("Alpha Recording Studio is already uninstalled. Its official Launcher entry remains available.".to_string())
+    }
+}
+
+#[tauri::command]
+fn get_recording_studio_status() -> Result<RecordingStudioStatus, String> {
+    get_recording_studio_status_internal()
+}
+
+#[tauri::command]
+async fn install_recording_studio() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(install_recording_studio_internal)
+        .await
+        .map_err(|error| format!("Alpha Recording Studio installation task failed: {}", error))?
+}
+
+#[tauri::command]
+async fn uninstall_recording_studio() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(uninstall_recording_studio_internal)
+        .await
+        .map_err(|error| format!("Alpha Recording Studio uninstall task failed: {}", error))?
+}
+
 #[derive(Clone, Debug, Serialize)]
 struct LauncherMod {
     file_name: String,
@@ -6158,6 +6431,9 @@ pub fn run()
                 list_launcher_mods,
                 set_launcher_mod_enabled,
                 open_launcher_mods_folder,
+                get_recording_studio_status,
+                install_recording_studio,
+                uninstall_recording_studio,
                 start_microsoft_login,
                 logout_microsoft,
                 get_microsoft_account,
