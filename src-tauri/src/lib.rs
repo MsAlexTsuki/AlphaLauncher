@@ -6071,7 +6071,7 @@ fn recording_studio_file_sha256(path: &Path) -> Result<String, String> {
     let bytes = fs::read(path)
         .map_err(|error| format!("Could not read downloaded Recording Studio JAR: {}", error))?;
     let digest = Sha256::digest(&bytes);
-    Ok(digest.iter().map(|byte| format!("{:02x}", byte)).collect())
+    Ok(digest.iter().map(|byte| format!("{:02x}", byte)).collect::<Vec<_>>().join(""))
 }
 
 fn get_recording_studio_status_internal() -> Result<RecordingStudioStatus, String> {
@@ -6189,8 +6189,10 @@ fn uninstall_recording_studio_internal() -> Result<String, String> {
 }
 
 #[tauri::command]
-fn get_recording_studio_status() -> Result<RecordingStudioStatus, String> {
-    get_recording_studio_status_internal()
+async fn get_recording_studio_status() -> Result<RecordingStudioStatus, String> {
+    tauri::async_runtime::spawn_blocking(get_recording_studio_status_internal)
+        .await
+        .map_err(|error| format!("Alpha Recording Studio status task failed: {}", error))?
 }
 
 #[tauri::command]
