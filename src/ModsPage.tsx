@@ -164,107 +164,93 @@ export default function ModsPage() {
         </p>
       </div>
 
-      <section className="section-card" style={{ marginBottom: 18 }}>
+      <section className="section-card official-modules-card">
         <div className="section-header">
           <div>
             <span className="card-label">OFFICIAL ALPHA MODULES</span>
-            <h3>Alpha Recording Studio</h3>
+            <h3>Alpha modules</h3>
           </div>
-          <span className="developer-status">
-            {recordingStudio?.installed
-              ? recordingStudio.enabled ? "Enabled" : "Disabled"
-              : "Optional addon"}
-          </span>
+          <span className="developer-status">2 modules</span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 15px", marginBottom: 14, border: "1px solid var(--border)", borderRadius: 10, background: "rgba(255,255,255,0.018)" }}>
-          <div aria-hidden="true" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 42, height: 42, flex: "0 0 42px", borderRadius: 10, border: "1px solid rgba(255,200,61,0.2)", background: "rgba(255,200,61,0.08)", color: "var(--yellow)", fontWeight: 800 }}>
-            A
-          </div>
-          <div style={{ flex: "1 1 auto", minWidth: 0 }}>
-            <strong style={{ display: "block", overflowWrap: "anywhere" }}>{alphaClientMod?.file_name ?? "AlphaClient.jar"}</strong>
-            <span style={{ display: "block", marginTop: 5, color: "var(--muted)", fontSize: 12 }}>
-              Official client · Managed by Alpha Launcher
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 auto" }}>
-            <span style={{ color: "var(--green)", fontSize: 11, fontWeight: 700, letterSpacing: "0.04em" }}>REQUIRED</span>
-            <button type="button" className="small-button" disabled title="AlphaClient is automatically loaded and cannot be disabled here.">Always on</button>
-          </div>
-        </div>
+        <div className="alpha-module-list">
+          <article className="alpha-module-row">
+            <div className="alpha-module-icon" aria-hidden="true">A</div>
+            <div className="alpha-module-copy">
+              <strong>{alphaClientMod?.file_name ?? "AlphaClient.jar"}</strong>
+              <span>Official Minecraft client · Managed by Alpha Launcher</span>
+            </div>
+            <div className="alpha-module-actions">
+              <span className="alpha-module-state required">REQUIRED</span>
+              <button type="button" className="small-button" disabled title="AlphaClient is automatically loaded and cannot be disabled here.">Always on</button>
+            </div>
+          </article>
 
-        <p className="subtitle" style={{ marginTop: 0 }}>
-          Recording Studio and Build Timelapse tools for Minecraft 1.8.9. This is an optional addon; AlphaClient works without it.
-        </p>
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0 }}>
-            <strong style={{ display: "block" }}>
-              {recordingStudio?.installed
-                ? `Installed version: ${recordingStudio.installedVersion ?? "Unknown"}`
-                : "Not installed"}
-            </strong>
-            <span style={{ display: "block", marginTop: 5, color: "var(--muted)", fontSize: 12 }}>
-              {recordingStudio?.releaseAvailable
-                ? `Latest release: ${recordingStudio.latestVersion ?? "Available"}`
-                : recordingStudioError
-                  ? "Release information could not be checked."
-                  : "No published Recording Studio release is currently available."}
-            </span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            {recordingStudio?.installed ? (
-              <>
-                <button
-                  type="button"
-                  className="small-button"
-                  disabled={busyRecordingStudio}
-                  onClick={() => void toggleRecordingStudio()}
-                >
-                  {busyRecordingStudio ? "Working…" : recordingStudio.enabled ? "Disable" : "Enable"}
-                </button>
-                {studioNeedsUpdate && (
-                  <button
-                    type="button"
-                    className="small-button"
-                    disabled={busyRecordingStudio}
-                    onClick={() => void installOrUpdateRecordingStudio()}
-                  >
-                    {busyRecordingStudio ? "Updating…" : "Update"}
-                  </button>
+          <article className="alpha-module-row recording-studio-module">
+            <div className="alpha-module-icon recording-studio-icon" aria-hidden="true">
+              <span>REC</span>
+            </div>
+            <div className="alpha-module-copy">
+              <div className="alpha-module-title-line">
+                <strong>Alpha Recording Studio</strong>
+                <span className={`alpha-module-state ${recordingStudio?.installed ? recordingStudio.enabled ? "enabled" : "disabled" : "optional"}`}>
+                  {recordingStudio?.installed ? recordingStudio.enabled ? "ENABLED" : "DISABLED" : "OPTIONAL"}
+                </span>
+              </div>
+              <span>Recording and build timelapse tools for Minecraft 1.8.9</span>
+              <div className="alpha-module-meta">
+                {recordingStudio?.installed
+                  ? <span>Installed <b>v{recordingStudio.installedVersion ?? "Unknown"}</b></span>
+                  : <span>Not installed</span>}
+                {recordingStudio?.releaseAvailable && (
+                  <span>Latest release <b>v{recordingStudio.latestVersion ?? "Available"}</b></span>
                 )}
+                {!recordingStudio?.releaseAvailable && recordingStudioError && (
+                  <span>Release information unavailable</span>
+                )}
+              </div>
+            </div>
+            <div className="alpha-module-actions recording-studio-actions">
+              {recordingStudio?.installed ? (
+                <>
+                  <button type="button" className="small-button" disabled={busyRecordingStudio} onClick={() => void toggleRecordingStudio()}>
+                    {busyRecordingStudio ? "Working…" : recordingStudio.enabled ? "Disable" : "Enable"}
+                  </button>
+                  {studioNeedsUpdate && (
+                    <button type="button" className="small-button primary" disabled={busyRecordingStudio} onClick={() => void installOrUpdateRecordingStudio()}>
+                      {busyRecordingStudio ? "Updating…" : "Update"}
+                    </button>
+                  )}
+                  <button type="button" className="small-button" disabled={busyRecordingStudio} onClick={() => void uninstallRecordingStudio()}>
+                    Uninstall
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
-                  className="small-button"
-                  disabled={busyRecordingStudio}
-                  onClick={() => void uninstallRecordingStudio()}
+                  className="small-button primary"
+                  disabled={busyRecordingStudio || !recordingStudio?.releaseAvailable}
+                  onClick={() => void installOrUpdateRecordingStudio()}
+                  title={!recordingStudio?.releaseAvailable ? "The official addon release is not available yet." : undefined}
                 >
-                  Uninstall
+                  {busyRecordingStudio ? "Installing…" : "Install"}
                 </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="small-button"
-                disabled={busyRecordingStudio || !recordingStudio?.releaseAvailable}
-                onClick={() => void installOrUpdateRecordingStudio()}
-                title={!recordingStudio?.releaseAvailable ? "The official addon release is not available yet." : undefined}
-              >
-                {busyRecordingStudio ? "Installing…" : "Install"}
-              </button>
-            )}
-          </div>
+              )}
+            </div>
+          </article>
         </div>
 
+        <p className="alpha-module-footnote">
+          AlphaClient is always required. Recording Studio is an optional addon and can be installed or removed independently.
+        </p>
         {recordingStudioError && (
           <p className="launch-error" role="alert" style={{ marginBottom: 0, marginTop: 12 }}>
             Could not check Recording Studio releases: {recordingStudioError}
           </p>
         )}
         {recordingStudio?.installed && (
-          <p className="subtitle" style={{ marginBottom: 0, marginTop: 12 }}>
-            Uninstall removes the local addon files only. Alpha Recording Studio remains listed here and can be installed again.
+          <p className="alpha-module-footnote uninstall-note">
+            Uninstall removes the local addon files only. Its official entry remains here, so it can be installed again later.
           </p>
         )}
       </section>
