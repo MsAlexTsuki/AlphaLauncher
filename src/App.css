@@ -8431,3 +8431,88 @@ button:not(:disabled):active {
   border-radius: 12px;
   background: #090a0d;
 }
+
+
+/* Official Alpha modules: keep each product in its own consistent module row. */
+.official-modules-card { margin-bottom: 18px; }
+.alpha-module-list { display: grid; gap: 10px; }
+.alpha-module-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 14px 15px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: linear-gradient(110deg, rgba(255,255,255,.028), rgba(255,255,255,.012));
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.alpha-module-row:hover {
+  border-color: var(--border-hover);
+  background: linear-gradient(110deg, rgba(255,200,61,.045), rgba(255,255,255,.014));
+}
+.alpha-module-icon {
+  display: flex;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255,200,61,.22);
+  border-radius: 11px;
+  background: rgba(255,200,61,.085);
+  color: var(--yellow);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+}
+.recording-studio-icon {
+  background: linear-gradient(145deg, rgba(255,200,61,.16), rgba(255,200,61,.045));
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+.alpha-module-copy { display: flex; flex: 1 1 auto; flex-direction: column; gap: 5px; min-width: 0; }
+.alpha-module-copy > strong, .alpha-module-title-line > strong { color: var(--text); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.alpha-module-copy > span { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.alpha-module-title-line { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.alpha-module-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .045em;
+  white-space: nowrap;
+}
+.alpha-module-state.required, .alpha-module-state.enabled {
+  border-color: rgba(57,220,145,.23);
+  background: rgba(57,220,145,.075);
+  color: var(--green);
+}
+.alpha-module-state.disabled { border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.035); }
+.alpha-module-state.optional { border-color: rgba(255,200,61,.22); background: rgba(255,200,61,.07); color: var(--yellow); }
+.alpha-module-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 0 0 auto; }
+.alpha-module-actions .small-button { min-height: 32px; }
+.alpha-module-actions .small-button.primary {
+  border-color: rgba(255,200,61,.38);
+  background: rgba(255,200,61,.11);
+  color: var(--yellow-light);
+}
+.alpha-module-actions .small-button.primary:hover:not(:disabled) {
+  border-color: rgba(255,200,61,.65);
+  background: rgba(255,200,61,.17);
+}
+.alpha-module-meta { display: flex; align-items: center; gap: 7px 16px; flex-wrap: wrap; margin-top: 2px; color: var(--muted-2); font-size: 10px; }
+.alpha-module-meta b { color: var(--muted); font-weight: 700; }
+.alpha-module-footnote { margin: 12px 2px 0; color: var(--muted-2); font-size: 10px; line-height: 1.55; }
+.alpha-module-footnote.uninstall-note { margin-top: 5px; }
+@media (max-width: 680px) {
+  .alpha-module-row { align-items: flex-start; flex-wrap: wrap; }
+  .alpha-module-copy { flex-basis: calc(100% - 60px); }
+  .alpha-module-actions { width: 100%; padding-left: 56px; justify-content: flex-start; flex-wrap: wrap; }
+  .alpha-module-title-line { align-items: flex-start; }
+}
