@@ -344,11 +344,6 @@ export default function ModsPage() {
           </div>
         )}
 
-        {!loading && customMods.length === 0 && visibleMods.some((mod) => mod.is_alphaclient) && (
-          <p className="subtitle" style={{ marginBottom: 0, marginTop: 14 }}>
-            No custom mods yet. Add compatible Forge 1.8.9 mods to the folder to see them here.
-          </p>
-        )}
       </section>
     </div>
   );
