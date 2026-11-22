@@ -3328,8 +3328,15 @@ fn download_forge_library(
 
     let url =
         url.unwrap_or_else(|| {
+            let repository =
+                library
+                    .get("url")
+                    .and_then(Value::as_str)
+                    .unwrap_or("https://libraries.minecraft.net/");
+
             format!(
-                "https://libraries.minecraft.net/{}",
+                "{}/{}",
+                repository.trim_end_matches('/'),
                 relative
             )
         });
