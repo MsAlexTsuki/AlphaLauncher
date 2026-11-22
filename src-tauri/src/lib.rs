@@ -99,6 +99,11 @@ const FORGE_VERSION_NAME: &str =
 const FORGE_UNIVERSAL_JAR_NAME: &str =
     "forge-1.8.9-11.15.1.2318-1.8.9.jar";
 
+// The installer archive stores the universal JAR with the "-universal" suffix.
+// The extracted library must keep FORGE_UNIVERSAL_JAR_NAME for Minecraft's classpath.
+const FORGE_INSTALLER_UNIVERSAL_JAR_NAME: &str =
+    "forge-1.8.9-11.15.1.2318-1.8.9-universal.jar";
+
 const VERSION_MANIFEST_URL: &str =
     "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
 
@@ -3483,7 +3488,7 @@ fn install_forge_from_installer(
         let mut forge_file =
             archive
                 .by_name(
-                    FORGE_UNIVERSAL_JAR_NAME
+                    FORGE_INSTALLER_UNIVERSAL_JAR_NAME
                 )
                 .map_err(|error| {
                     format!(
